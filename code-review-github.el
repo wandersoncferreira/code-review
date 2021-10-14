@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
 ;; Homepage: https://github.com/wandersoncferreira/code-review-github
-;; Package-Requires: ((emacs "25.1") (a "0.1.1"))
+;; Package-Requires: ((emacs "25.1") (deferred "0.5.1") (a "0.1.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -20,6 +20,7 @@
 ;;; Code:
 
 (require 'ghub)
+(require 'deferred)
 (require 'a)
 
 (defgroup code-review-github nil
@@ -51,10 +52,23 @@ CALLBACK to call back when done."
               nil
               :unpaginate t
               :headers code-review-github-diffheader
-              :auth 'code-review-github
+              :auth 'code-review
               :host code-review-github-host
               :callback callback
               :errorback #'code-review-github-errback)))
+
+(defun code-review-github-get-diff-deferred (pr-alist)
+  "Get a pull request or its diff.
+PR-ALIST is an alist representing a PR,
+NEEDS-DIFF t to return a diff nil to return the pr object
+return a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (code-review-github-get-diff
+     pr-alist
+     (apply-partially (lambda (d v &rest _)
+                        (deferred:callback-post d v))
+                      d))
+    d))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
