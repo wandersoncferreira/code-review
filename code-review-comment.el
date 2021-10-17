@@ -37,37 +37,66 @@
   "Variable to hold the cursor position where the comment will be added.
 For internal usage only.")
 
+(defvar code-review-comment-hold-metadata nil
+  "For internal usage only.")
+
 ;;;###autoload
 (defun code-review-comment-add ()
   "Add comment."
   (interactive)
-  (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-    (with-current-buffer buffer
-      (insert code-review-comment-buffer-msg)
-      (insert ?\n))
-    (setq code-review-comment-hold-cursor-pos (line-beginning-position))
-    (switch-to-buffer-other-window buffer)
-    (code-review-comment-mode)))
+  ;;; save metadata to attach to local comment at commit phase
+  (with-slots (type value) (magit-current-section)
+    (setq code-review-comment-hold-metadata
+          (cond
+           ((string-equal type "hunk")
+            `((reply? . nil)
+              (database-id . nil)
+              (author . "@bartuka")))
+           ((string-equal type "comment")
+            `((reply? . t)
+              (database-id . ,(a-get value 'databaseId))
+              (position ,(or (a-get value 'position)
+                             (a-get value 'originalPosition)))))
+           (t
+            (progn
+              (message "You can only comment on HUNK or COMMENTS.")
+              nil)))))
+  (when code-review-comment-hold-metadata
+    (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
+      (with-current-buffer buffer
+        (insert code-review-comment-buffer-msg)
+        (insert ?\n))
+      (setq code-review-comment-hold-cursor-pos (line-beginning-position))
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
 
 ;;;###autoload
 (defun code-review-comment-commit ()
   "Commit comment."
   (interactive)
   (let* ((buffer (get-buffer code-review-comment-buffer-name))
-         (comment (with-current-buffer buffer
-                    (save-excursion
-                      (buffer-substring-no-properties (point-min) (point-max))))))
+         (comment-text (with-current-buffer buffer
+                         (save-excursion
+                           (buffer-substring-no-properties (point-min) (point-max)))))
+         (metadata (a-assoc code-review-comment-hold-metadata 'body comment-text)))
     (kill-buffer buffer)
     (with-current-buffer (get-buffer "*Code Review*")
       (let ((inhibit-read-only t))
         (goto-char code-review-comment-hold-cursor-pos)
         (forward-line)
-        (insert "local @bartuka TBD: Magit help!")
-        (insert ?\n)
-        (dolist (l (split-string comment "\n"))
-          (when (not (string-match-p code-review-comment-buffer-msg l))
-            (insert l)
-            (insert "\n")))))
+        (magit-insert-section (local-comment-header metadata)
+          (insert "local @bartuka TBD: Magit help!")
+          (put-text-property
+           (line-beginning-position)
+           (1+ (line-end-position))
+           'font-lock-face
+           'magit-diff-hunk-heading)
+          (magit-insert-heading)
+          (magit-insert-section (local-comment metadata)
+            (dolist (l (split-string comment-text "\n"))
+              (when (not (string-match-p code-review-comment-buffer-msg l))
+                (insert l)
+                (insert "\n")))))))
     (other-window 1)))
 
 
