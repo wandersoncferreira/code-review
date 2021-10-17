@@ -170,6 +170,22 @@
              (message "Done submitting review"))))))
       (code-review-section-build-buffer code-review-pr-alist))))
 
+;;;###autoload
+(defun code-review-forge-pr-at-point ()
+  "Review the forge pull request at point."
+  (interactive)
+  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
+         (repo    (forge-get-repository pullreq)))
+
+    (if (not (forge-pullreq-p pullreq))
+        (message "We can only review PRs at the moment. You tried on something else.")
+      (progn
+        (setq forge-current-dir default-directory)
+        (code-review-section-build-buffer (a-alist 'owner   (oref repo owner)
+                                                   'repo    (oref repo name)
+                                                   'apihost (oref repo apihost)
+                                                   'num     (oref pullreq number)))))))
+
 
 ;;;###autoload
 (defun code-review-approve ()
