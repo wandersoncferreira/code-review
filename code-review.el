@@ -26,6 +26,9 @@
 
 (defconst code-review-buffer-name "*Code Review*")
 
+(defvar code-review-pr-alist nil
+  "For internal usage only.")
+
 (defmacro code-review-with-buffer (&rest body)
   "Include BODY in the buffer."
   (declare (indent 0))
@@ -63,6 +66,7 @@
 
 (defun code-review-section-build-buffer (pr-alist)
   "Build code review buffer given a PR-ALIST with basic info about target repo."
+  (setq code-review-pr-alist pr-alist)
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-github-get-diff-deferred pr-alist))
@@ -111,13 +115,77 @@
   (code-review-section-build-buffer
    (code-review-pr-from-url url)))
 
+(defun code-review-build-submit-structure ()
+  "Return A-LIST with replies and reviews to submit."
+  (let ((replies nil)
+        (review-comments nil)
+        (body nil))
+    (with-current-buffer (get-buffer code-review-buffer-name)
+      (save-excursion
+        (goto-char (point-min))
+        (magit-wash-sequence
+         (lambda ()
+           (magit-insert-section (_)
+             (with-slots (type value) (magit-current-section)
+               (when (string-equal type "local-comment")
+                 (let-alist value
+                   (if .reply?
+                       (push value replies)
+                     (push value review-comments)))))
+             (forward-line))))))
+    (let* ((partial-review `((commit_id . (a-get code-review-pr-alist 'sha))
+                             (body . "Default msg")))
+           (review (if (equal nil review-comments)
+                       partial-review
+                     (a-assoc partial-review 'comments review-comments))))
+      `((replies . ,replies)
+        (review . ,review)))))
+
+;;;###autoload
+(defun code-review-submit ()
+  "Submit your review."
+  (interactive)
+  (let ((state (completing-read "Your veredict about the PR: "
+                                (list "APPROVE"
+                                      "REQUEST_CHANGES"
+                                      "COMMENT"))))
+    ;; (let ((response (code-review-build-submit-structure)))
+    ;;   (let-alist response
+    ;;     (if (and (not .replies) (not .review))
+    ;;         (message "Your review is empty")
+    ;;       (progn
+    ;;         (when .replies
+    ;;           (code-review-github-post-replies
+    ;;            code-review-pr-alist
+    ;;            .replies
+    ;;            (lambda (&rest _)
+    ;;              (message "Done submitting review replies"))))
+    ;;         (when .review
+    ;;           (code-review-github-post-review
+    ;;            code-review-pr-alist
+    ;;            (a-assoc .review 'event state)
+    ;;            (lambda (&rest _)
+    ;;              (message "Done submitting review"))))))))
+    ))
+
 ;;; transient
+
+(transient-define-prefix code-review (review)
+  "Approve, Reject, or Request changes to a Review."
+  [("a" "Approve" code-review-submit)
+   ("r" "Reject" code-review-submit)
+   ("c" "Request Changes" code-review-submit)])
+
 (define-transient-command code-review-transient-api ()
   "Code Review"
   ["Comments"
    ("a" "Add" code-review-comment-add)
    ("e" "Edit" code-review-comment-edit)
    ("d" "Delete" code-review-comment-delete)]
+  ["Review"
+   ("a" "Add main comment" code-review-comment)
+   ("e" "Edit main comment" code-review-comment)
+   ("s" "Submit" code-review)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
