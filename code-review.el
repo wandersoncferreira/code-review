@@ -106,15 +106,6 @@
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))
 
-;;; Public APIs
-
-;;;###autoload
-(defun code-review-start (url)
-  "Start review given PR URL."
-  (interactive "sPR URL: ")
-  (code-review-section-build-buffer
-   (code-review-utils-pr-from-url url)))
-
 (defun code-review-build-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
   (let ((replies nil)
@@ -141,6 +132,15 @@
                               'comments review-comments))))
       `((replies . ,replies)
         (review . ,review)))))
+
+;;; Public APIs
+
+;;;###autoload
+(defun code-review-start (url)
+  "Start review given PR URL."
+  (interactive "sPR URL: ")
+  (code-review-section-build-buffer
+   (code-review-utils-pr-from-url url)))
 
 ;;;###autoload
 (defun code-review-submit ()
@@ -185,8 +185,6 @@
                                                    'repo    (oref repo name)
                                                    'apihost (oref repo apihost)
                                                    'num     (oref pullreq number)))))))
-
-
 ;;;###autoload
 (defun code-review-approve ()
   "Approve current PR."
