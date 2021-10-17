@@ -65,10 +65,62 @@ return a deferred object"
   (let ((d (deferred:new #'identity)))
     (code-review-github-get-diff
      pr-alist
+     (apply-partially
+      (lambda (d v &rest _)
+        (deferred:callback-post d v))
+      d))
+    d))
+
+(defun code-review-github-get-pr-info (pr-alist callback)
+  "Get PR details from PR-ALIST and dispatch to CALLBACK."
+  (let-alist pr-alist
+    (let ((query (format "query {
+  repository(name: \"%s\", owner: \"%s\") {
+    pullRequest(number: %s){
+      headRef { target{ oid } }
+      number
+      title
+      state
+      bodyText
+      comments(first:50) {
+        nodes { author { login } bodyText }
+      }
+      reviews(first: 50) {
+        nodes { author { login } bodyText state
+          comments(first: 50) {
+            nodes {
+              bodyText
+              originalPosition
+              position
+              outdated
+              path
+              databaseId
+            }
+          }
+        }
+      }
+    }
+  }
+}" .repo .owner .num)))
+      (ghub-graphql query
+                    '()
+                    :auth 'code-review
+                    :host code-review-github-host
+                    :callback callback
+                    :errorback #'code-review-github-errback))))
+
+(defun code-review-github-get-pr-info-deferred (pr-alist)
+  "Get the code reviews on a PR.
+PR-ALIST is an alist representing a PR
+returns a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (code-review-github-get-pr-info
+     pr-alist
      (apply-partially (lambda (d v &rest _)
                         (deferred:callback-post d v))
                       d))
     d))
+
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

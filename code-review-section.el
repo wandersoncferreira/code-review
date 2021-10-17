@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: tools
 ;; Homepage: https://github.com/wandersoncferreira/code-review-section
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -19,178 +19,131 @@
 ;;
 ;;; Code:
 
+(require 'magit-utils)
 (require 'magit-section)
+(require 'magit-diff)
 (require 'code-review-github)
-(require 'code-review-diff)
-(require 'transient)
-(require 'posframe)
 
-(defmacro code-review-section-with-buffer (&rest body)
-  "Include BODY in the buffer."
-  (declare (indent 0))
-  `(let ((buffer (get-buffer-create "*section demo*")))
-     (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-         (erase-buffer)
-         (magit-section-mode)
-         (magit-insert-section (demo-buffer)
-           ,@body)))
-     (switch-to-buffer-other-window buffer)))
+(defvar code-review-section-first-hunk-header-pos nil
+  "Hold the first hunk header position.
+For internal usage only.")
 
-(save-excursion
-  (search-forward-regexp "@@ " nil t))
+(defvar code-review-section-grouped-comments nil
+  "Hold the grouped comments info.
+Used by the overwritten version of `magit-diff-wash-hunk'.
+For internal usage only.")
 
-(defun code-review-section-insert-hunk (line beg end)
-  "BEG and END of hunk initial LINE."
-  (magit-insert-section (beg)
-    (delete-region beg end)
-    (insert line)
-    (put-text-property
-     (line-beginning-position)
-     (1+ (line-end-position))
-     'font-lock-face
-     'magit-diff-hunk-heading)
-    (magit-insert-heading)
-    (let* ((beg2 (save-excursion (forward-line) (line-beginning-position)))
-           (end2 (or (save-excursion
-                       (when (search-forward-regexp "@@ " nil t)
-                         (line-beginning-position)))
-                     (buffer-end 1)))
-           (hunk (buffer-substring beg2 end2)))
-      (delete-region beg2 end2)
-      (dolist (l (split-string (substring-no-properties hunk) "\n"))
-        (insert l)
-        (cond
-         ((code-review-diff-added? l)
-          (put-text-property
-           (line-beginning-position)
-           (1+ (line-end-position))
-           'font-lock-face
-           'magit-diff-added))
-         ((code-review-diff-removed? l)
-          (put-text-property
-           (line-beginning-position)
-           (1+ (line-end-position))
-           'font-lock-face
-           'magit-diff-removed))
-         ((string-match-p "^local" l)
-          (magit-insert-section (comment)
-            (let* ((beg-l (line-beginning-position))
-                   (end-l (line-end-position))
-                   (comment (buffer-substring beg-l end-l)))
-              (delete-region beg-l end-l)
-              (magit-insert-heading "COMMENT")
-              (magit-insert-section (com)
-                (insert comment))))))
-        (insert "\n"))
-      (kill-line))))
+(defun code-review-section-diff-pos ()
+  "Compute the true diff position by discounting additional lines in the buffer."
+  (let ((curr-pos (line-number-at-pos)))
+    (- curr-pos code-review-section-first-hunk-header-pos)))
 
-(defun code-review-section-insert-header (line)
-  "Current LINE."
-  (magit-insert-section (line)
-    (put-text-property
-     (line-beginning-position)
-     (1+ (line-end-position))
-     'font-lock-face
-     'diff-header)
-    (forward-line)))
+(defun add-comment-here? (grouped-comments)
+  "Verify if a comment should be added at point based on GROUPED-COMMENTS."
+  (a-get grouped-comments (code-review-section-diff-pos)))
 
-(defun code-review-section-insert-file-header (line)
-  "Current LINE."
-  (magit-insert-section (line)
-    (put-text-property
-     (line-beginning-position)
-     (1+ (line-end-position))
-     'font-lock-face
-     'diff-file-header)
-    (forward-line)))
-
-(defun code-review-wash ()
-  (unless (eobp)
-    (let* ((beg  (line-beginning-position))
-           (end (line-end-position))
-           (line (buffer-substring beg end)))
-      (cond
-       ((code-review-diff-hunk? line)
-        (code-review-section-insert-hunk line beg end))
-
-       ((code-review-diff-header? line)
-        (code-review-section-insert-header line))
-
-       ((code-review-diff-file-header? line)
-        (code-review-section-insert-file-header line))
-
-       (t
-        (magit-insert-section (demo-file)
-          (forward-line)))))))
-
-(defun code-review-section-build-buffer (pr-alist)
-  "PR-ALIST."
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-github-get-diff-deferred pr-alist)))
-    (deferred:nextc it
-      (lambda (x)
-        (code-review-section-with-buffer
-          (magit-insert-section (demo)
-            (save-excursion
-              (insert (a-get (-first-item x) 'message)))
-            (magit-wash-sequence
-             (lambda ()
-               (code-review-wash))))
-          (goto-char (point-min)))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
-
-(setq segure nil)
-
-(setq diff-pos nil)
-
-(defun code-review-add-comment ()
-  (interactive)
-  (let ((buffer (get-buffer-create "*section comment*")))
-    (with-current-buffer buffer
-      (insert ";;; Write your comment \n"))
-    (setq diff-pos (line-beginning-position))
-    (switch-to-buffer-other-window buffer)))
-
-(defun code-review-commit-comment ()
-  (interactive)
-  (let ((str  (with-current-buffer (get-buffer-create "*section comment*")
-                (save-excursion
-                  (buffer-substring-no-properties (point-min) (point-max))))))
-    (kill-buffer "*section comment*")
-    (with-current-buffer (get-buffer "*section demo*")
-      (let ((inhibit-read-only t))
-        (goto-char diff-pos)
-        (insert "local @bartuka:")
-        (dolist (l (split-string str "\n"))
-          (when (not (string-match-p ";;; Write your comment" l))
+(defun code-review-section-insert-comment (grouped-comments)
+  "Insert GROUPED-COMMENTS in the buffer."
+  (dolist (c (a-get grouped-comments (code-review-section-diff-pos)))
+    (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+      (magit-insert-section (comment c)
+        (insert (format "Reviewed by @%s[%s]:"
+                        (a-get c 'author)
+                        (a-get c 'state)))
+        (put-text-property
+         (line-beginning-position)
+         (1+ (line-end-position))
+         'font-lock-face
+         'magit-diff-hunk-heading)
+        (magit-insert-heading)
+        (magit-insert-section (comment c)
+          (dolist (l body-lines)
             (insert l)
-            (insert "\n")))
-        (let* ((beg (point-min))
-               (end (point-max))
-               (whole-buffer (buffer-substring beg end)))
-          (erase-buffer)
-          (goto-char (point-min))
-          (magit-insert-section (comments)
-            (save-excursion
-              (insert (substring-no-properties whole-buffer)))
-            (magit-wash-sequence
-             (lambda ()
-               (code-review-wash)))))))))
+            (insert "\n")))))))
 
-;; (code-review-section-build-buffer
-;;  '((owner . "eval-all-software")
-;;    (repo . "tempo")
-;;    (num . 98)))
+(defun magit-diff-wash-hunk ()
+  "Overwrite the original Magit function on `magit-diff.el' file.
+Code Review inserts PR comments sections in the diff buffer."
+  (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
 
-;; (code-review-section-build-buffer
-;;  '((owner . "charignon")
-;;    (repo . "github-review")
-;;    (num . 63)))
+    ;;; code-review specific code.
+    ;;; I need to set a reference point for the first hunk header
+    ;;; so the positioning of comments is done correctly.
+    (when (not code-review-section-first-hunk-header-pos)
+      (setq code-review-section-first-hunk-header-pos
+            (+ 1 (line-number-at-pos))))
 
+    (let* ((heading  (match-string 0))
+           (ranges   (mapcar (lambda (str)
+                               (mapcar #'string-to-number
+                                       (split-string (substring str 1) ",")))
+                             (split-string (match-string 1))))
+           (about    (match-string 2))
+           (combined (= (length ranges) 3))
+           (value    (cons about ranges)))
+      (magit-delete-line)
+      (magit-insert-section section (hunk value)
+        (insert (propertize (concat heading "\n")
+                            'font-lock-face 'magit-diff-hunk-heading))
+        (magit-insert-heading)
+        (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
+          ;;; code-review specific code.
+          ;;; add code comments
+          (if (add-comment-here? code-review-section-grouped-comments)
+              (code-review-section-insert-comment code-review-section-grouped-comments)
+            (forward-line)))
+        (oset section end (point))
+        (oset section washer 'magit-diff-paint-hunk)
+        (oset section combined combined)
+        (if combined
+            (oset section from-ranges (butlast ranges))
+          (oset section from-range (car ranges)))
+        (oset section to-range (car (last ranges)))
+        (oset section about about)))
+    t))
+
+(defun code-review-section-insert-headers (pull-request)
+  "Insert header with PULL-REQUEST data."
+  (let-alist pull-request
+    (magit-insert-section (_)
+      (insert (format "%-11s" "Title: ") .title)
+      (magit-insert-heading)
+      (magit-insert-section (_)
+        (insert (format "%-11s" "State: ") (or (format "%s\n" .state) "none\n")))
+      (magit-insert-section (_)
+        (insert (format "%-11s" "Refs: ") "tbd\n"))
+      (magit-insert-section (_)
+        (insert (format "%-11s" "Milestone: ") "tbd\n"))
+      (magit-insert-section (_)
+        (insert (format "%-11s" "Labels: ") "tbd\n"))
+      (magit-insert-section (_)
+        (insert (format "%-11s" "Assignees: ") "tbd\n"))
+      (magit-insert-section (_)
+        (insert (format "%-11s" "Review-Requests: ") "tbd\n"))))
+  (insert ?\n))
+
+(defun code-review-section-insert-commits ()
+  "Insert commits section."
+  (magit-insert-section (commits)
+    (insert "Commits")
+    (magit-insert-heading))
+  (insert ?\n))
+
+(defun code-review-section-wash (pull-request grouped-comments)
+  "Format buffer text with PULL-REQUEST and GROUPED-COMMENTS info."
+
+  ;;; unfortunately, this data needs to be passed to a magit function
+  ;;; deep in the call stack.
+  (setq code-review-section-grouped-comments grouped-comments)
+
+  (let-alist pull-request
+    (magit-insert-section (_)
+      (setq header-line-format
+            (concat (propertize " " 'display '(space :align-to 0))
+                    (format "#%s: %s" .number .title)))
+      (code-review-section-insert-headers pull-request)
+      (code-review-section-insert-commits)
+      (magit-diff-wash-diff ()))))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here
