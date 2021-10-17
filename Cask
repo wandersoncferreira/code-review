@@ -9,4 +9,4 @@
 
 (development
   (depends-on "undercover")
-  (depends-on "buttercoup"))
+  (depends-on "buttercup"))
