@@ -94,6 +94,7 @@
                 (code-review-section-insert-headers pull-request)
                 (code-review-section-insert-commits)
                 (code-review-section-insert-pr-description pull-request)
+                (code-review-section-insert-feedback-heading)
                 (magit-wash-sequence
                  (apply-partially #'code-review-section-wash grouped-comments)))
               (goto-char (point-min)))))))

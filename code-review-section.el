@@ -271,6 +271,16 @@ Code Review inserts PR comments sections in the diff buffer."
         (insert ?\n)
         (insert ?\n)))))
 
+(defun code-review-section-insert-feedback-heading ()
+  "Insert feedback heading."
+  (magit-insert-section (feedback)
+    (insert "Your Review Feedback")
+    (magit-insert-heading)
+    (magit-insert-section (feedback-text)
+      (insert "Leave a comment here.")
+      (insert ?\n)
+      (insert ?\n))))
+
 (defun code-review-section-local-comment? ()
   "Do we have a local comment at point? TBD."
   (when (looking-at "local")
