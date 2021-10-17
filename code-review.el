@@ -206,7 +206,6 @@
   (a-assoc code-review-pr-alist 'event "REQUEST_CHANGE")
   (code-review-submit))
 
-
 ;;; transient
 
 (transient-define-prefix code-review (review)
