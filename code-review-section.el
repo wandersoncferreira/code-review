@@ -257,6 +257,16 @@ Code Review inserts PR comments sections in the diff buffer."
     (magit-insert-heading))
   (insert ?\n))
 
+(defun code-review-section-local-comment? ()
+  "Do we have a local comment at point? TBD."
+  (when (looking-at "local")
+    t))
+
+(defun code-review-section-wash-local-comment ()
+  "Format local comment in the diff buffer TBD."
+  (magit-insert-section (local-comment "")
+    (forward-line)))
+
 (defun code-review-section-wash (grouped-comments)
   "Format buffer text with PULL-REQUEST and GROUPED-COMMENTS info."
 

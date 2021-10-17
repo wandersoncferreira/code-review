@@ -21,6 +21,7 @@
 
 (require 'magit-section)
 (require 'code-review-section)
+(require 'code-review-comment)
 (require 'code-review-utils)
 
 (defconst code-review-buffer-name "*Code Review*")
@@ -110,31 +111,13 @@
   (code-review-section-build-buffer
    (code-review-pr-from-url url)))
 
-;;;###autoload
-(defun code-review-add-comment ()
-  "Add comment."
-  (interactive)
-  (message " ADDED "))
-
-;;;###autoload
-(defun code-review-edit-comment ()
-  "Add comment."
-  (interactive)
-  (message " EDIT "))
-
-;;;###autoload
-(defun code-review-delete-comment ()
-  "Add comment."
-  (interactive)
-  (message " DELETED "))
-
 ;;; transient
 (define-transient-command code-review-transient-api ()
   "Code Review"
   ["Comments"
-   ("a" "Add" code-review-add-comment)
-   ("e" "Edit" code-review-edit-comment)
-   ("d" "Delete" code-review-delete-comment)]
+   ("a" "Add" code-review-comment-add)
+   ("e" "Edit" code-review-comment-edit)
+   ("d" "Delete" code-review-comment-delete)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
