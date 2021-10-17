@@ -30,7 +30,8 @@
             (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
             map))
 
-(defconst code-review-comment-buffer-name "*Code Review Comment*")
+(defconst code-review-comment-buffer-name "*Code Review Comment*"
+  "Name of comment buffer.")
 
 (defconst code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment")
 
@@ -41,10 +42,15 @@
 For internal usage only.")
 
 (defvar code-review-comment-writing-feedback nil
-  "For internal usage only.")
+  "Differentiate between a regular comment from the main feedback comment.
+For internal usage only.")
 
 (defvar code-review-comment-hold-metadata nil
-  "For internal usage only.")
+  "Metadata to be attached to the comment section.
+For internal usage only.")
+
+
+;;; Public APIs
 
 ;;;###autoload
 (defun code-review-comment-add ()
@@ -122,9 +128,8 @@ For internal usage only.")
               (magit-insert-heading)
               (magit-insert-section (local-comment metadata)
                 (dolist (l (split-string comment-cleaned "\n"))
-                  (when (not (string-match-p code-review-comment-buffer-msg l))
-                    (insert l)
-                    (insert "\n")))))))))
+                  (insert l)
+                  (insert "\n"))))))))
     (other-window 1)))
 
 
