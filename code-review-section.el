@@ -281,6 +281,21 @@ Code Review inserts PR comments sections in the diff buffer."
       (insert ?\n)
       (insert ?\n))))
 
+(defun code-review-section-insert-feedback (feedback)
+  "Add review FEEDBACK."
+  (with-current-buffer (get-buffer "*Code Review*")
+    (save-excursion
+      (goto-char (point-min))
+      (magit-wash-sequence
+       (lambda ()
+         (with-slots (type value) (magit-current-section)
+           (if (string-equal type 'feedback-text)
+               (let ((inhibit-read-only t))
+                 ;;; improve this to abort going over the whole buffer after we add the text
+                 (delete-region (line-beginning-position) (line-end-position))
+                 (insert feedback))
+             (forward-line))))))))
+
 (defun code-review-section-local-comment? ()
   "Do we have a local comment at point? TBD."
   (when (looking-at "local")

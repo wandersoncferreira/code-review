@@ -33,9 +33,14 @@
 
 (defconst code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment")
 
+(defconst code-review-comment-feedback-msg ";;; Leave a comment here.")
+
 (defvar code-review-comment-hold-cursor-pos nil
   "Variable to hold the cursor position where the comment will be added.
 For internal usage only.")
+
+(defvar code-review-comment-writing-feedback nil
+  "For internal usage only.")
 
 (defvar code-review-comment-hold-metadata nil
   "For internal usage only.")
@@ -71,32 +76,49 @@ For internal usage only.")
       (code-review-comment-mode))))
 
 ;;;###autoload
+(defun code-review-comment-add-feedback ()
+  "Add review FEEDBACK."
+  (interactive)
+  (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
+    (with-current-buffer buffer
+      (insert code-review-comment-feedback-msg)
+      (insert ?\n))
+    (switch-to-buffer-other-window buffer)
+    (setq code-review-comment-writing-feedback t)
+    (code-review-comment-mode)))
+
+;;;###autoload
 (defun code-review-comment-commit ()
   "Commit comment."
   (interactive)
   (let* ((buffer (get-buffer code-review-comment-buffer-name))
          (comment-text (with-current-buffer buffer
                          (save-excursion
-                           (buffer-substring-no-properties (point-min) (point-max)))))
-         (metadata (a-assoc code-review-comment-hold-metadata 'body comment-text)))
+                           (buffer-substring-no-properties (point-min) (point-max))))))
     (kill-buffer buffer)
-    (with-current-buffer (get-buffer "*Code Review*")
-      (let ((inhibit-read-only t))
-        (goto-char code-review-comment-hold-cursor-pos)
-        (forward-line)
-        (magit-insert-section (local-comment-header metadata)
-          (insert "local @bartuka TBD: Magit help!")
-          (put-text-property
-           (line-beginning-position)
-           (1+ (line-end-position))
-           'font-lock-face
-           'magit-diff-hunk-heading)
-          (magit-insert-heading)
-          (magit-insert-section (local-comment metadata)
-            (dolist (l (split-string comment-text "\n"))
-              (when (not (string-match-p code-review-comment-buffer-msg l))
-                (insert l)
-                (insert "\n")))))))
+    (if code-review-comment-writing-feedback
+        (progn
+          (setq code-review-pr-alist
+                (a-assoc code-review-pr-alist 'feedback comment-text))
+          (code-review-section-insert-feedback comment-text))
+      (with-current-buffer (get-buffer "*Code Review*")
+        (let ((metadata (a-assoc code-review-comment-hold-metadata 'body comment-text)))
+          (let ((inhibit-read-only t))
+            (goto-char code-review-comment-hold-cursor-pos)
+            (forward-line)
+            (magit-insert-section (local-comment-header metadata)
+              (insert "local @bartuka TBD: Magit help!")
+              (put-text-property
+               (line-beginning-position)
+               (1+ (line-end-position))
+               'font-lock-face
+               'magit-diff-hunk-heading)
+              (magit-insert-heading)
+              (magit-insert-section (local-comment metadata)
+                (dolist (l (split-string comment-text "\n"))
+                  (when (not (string-match-p code-review-comment-buffer-msg l))
+                    (insert l)
+                    (insert "\n")))))))))
     (other-window 1)))
 
 

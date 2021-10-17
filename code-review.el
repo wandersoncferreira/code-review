@@ -138,7 +138,7 @@
                      (push value review-comments)))))
              (forward-line))))))
     (let* ((partial-review `((commit_id . ,(a-get code-review-pr-alist 'sha))
-                             (body . "Default msg")))
+                             (body . ,(a-get code-review-pr-alist 'feedback))))
            (review (if (equal nil review-comments)
                        partial-review
                      (a-assoc partial-review 'comments review-comments))))
@@ -206,7 +206,7 @@
    ("e" "Edit" code-review-comment-edit)
    ("d" "Delete" code-review-comment-delete)]
   ["Review"
-   ("a" "Add main comment" code-review-comment-add)
+   ("a" "Add main comment" code-review-comment-add-feedback)
    ("e" "Edit main comment" code-review-comment-add)
    ("s" "Submit" code-review)]
   ["Quit"
