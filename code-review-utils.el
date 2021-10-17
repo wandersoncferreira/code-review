@@ -44,5 +44,13 @@
   "Verify if IDENTIFIER is present in IDENTIFIERS."
   (-contains-p identifiers identifier))
 
+(defun code-review-utils-clean-msg (msg text-to-remove)
+  "Remove TEXT-TO-REMOVE from MSG."
+  (replace-regexp-in-string
+   (concat text-to-remove "\n")
+   ""
+   text-to-remove))
+
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

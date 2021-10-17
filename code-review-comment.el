@@ -20,6 +20,7 @@
 ;;; Code:
 
 (require 'code-review-section)
+(require 'code-review-utils)
 
 ;;;###autoload
 (define-minor-mode code-review-comment-mode
@@ -97,12 +98,18 @@ For internal usage only.")
                            (buffer-substring-no-properties (point-min) (point-max))))))
     (kill-buffer buffer)
     (if code-review-comment-writing-feedback
-        (progn
-          (setq code-review-pr-alist
-                (a-assoc code-review-pr-alist 'feedback comment-text))
-          (code-review-section-insert-feedback comment-text))
+        (let ((comment-cleaned (code-review-utils-clean-msg
+                                comment-text
+                                code-review-comment-feedback-msg)))
+          (setq code-review-pr-alist (a-assoc code-review-pr-alist 'feedback comment-cleaned))
+          (code-review-section-insert-feedback comment-cleaned))
       (with-current-buffer (get-buffer "*Code Review*")
-        (let ((metadata (a-assoc code-review-comment-hold-metadata 'body comment-text)))
+        (let ((comment-cleaned (code-review-utils-clean-msg
+                                comment-text
+                                code-review-comment-buffer-msg))
+              (metadata (a-assoc code-review-comment-hold-metadata
+                                 'body
+                                 comment-cleaned)))
           (let ((inhibit-read-only t))
             (goto-char code-review-comment-hold-cursor-pos)
             (forward-line)
@@ -115,7 +122,7 @@ For internal usage only.")
                'magit-diff-hunk-heading)
               (magit-insert-heading)
               (magit-insert-section (local-comment metadata)
-                (dolist (l (split-string comment-text "\n"))
+                (dolist (l (split-string comment-cleaned "\n"))
                   (when (not (string-match-p code-review-comment-buffer-msg l))
                     (insert l)
                     (insert "\n")))))))))
