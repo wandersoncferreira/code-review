@@ -56,5 +56,13 @@
   (or (magit-get "github.user")
       (magit-get "user.name")))
 
+(defun code-review-utils-pr-from-url (url)
+  "Extract a pr alist from a pull request URL."
+  (save-match-data
+    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
+         (a-alist 'num   (match-string 3 url)
+                  'repo  (match-string 2 url)
+                  'owner (match-string 1 url)))))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

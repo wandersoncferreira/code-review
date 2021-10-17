@@ -66,9 +66,13 @@
 
 (defun code-review-section-build-buffer (pr-alist)
   "Build code review buffer given a PR-ALIST with basic info about target repo."
+
+  ;;; small set of stateful variables used around the project that need to be
+  ;;; reset everytime we build the diff buffer.
   (setq code-review-section-first-hunk-header-pos nil
         code-review-section-written-comments-count nil
         code-review-section-written-comments-ident nil)
+
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-github-get-diff-deferred pr-alist))
@@ -102,14 +106,6 @@
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))
 
-(defun code-review-pr-from-url (url)
-  "Extract a pr alist from a pull request URL."
-  (save-match-data
-    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
-         (a-alist 'num   (match-string 3 url)
-                  'repo  (match-string 2 url)
-                  'owner (match-string 1 url)))))
-
 ;;; Public APIs
 
 ;;;###autoload
@@ -117,7 +113,7 @@
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (code-review-section-build-buffer
-   (code-review-pr-from-url url)))
+   (code-review-utils-pr-from-url url)))
 
 (defun code-review-build-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
@@ -141,7 +137,8 @@
                              (body . ,(a-get code-review-pr-alist 'feedback))))
            (review (if (equal nil review-comments)
                        partial-review
-                     (a-assoc partial-review 'comments review-comments))))
+                     (a-assoc partial-review
+                              'comments review-comments))))
       `((replies . ,replies)
         (review . ,review)))))
 
@@ -204,16 +201,22 @@
    ("r" "Reject" code-review-reject)
    ("c" "Request Changes" code-review-request-changes)])
 
+(transient-define-prefix code-review-comments (comment)
+  "Add, Edit, Delete comments."
+  [("a" "Add" code-review-comment-add)
+   ("e" "Edit" code-review-comment-edit)
+   ("d" "Delete" code-review-comment-delete)])
+
 (define-transient-command code-review-transient-api ()
   "Code Review"
-  ["Comments"
-   ("a" "Add" code-review-comment-add)
-   ("e" "Edit" code-review-comment-edit)
-   ("d" "Delete" code-review-comment-delete)]
+  ["Comment"
+   ("c" "Comment" code-review-comments)]
   ["Review"
    ("a" "Add main comment" code-review-comment-add-feedback)
    ("e" "Edit main comment" code-review-comment-add)
    ("s" "Submit" code-review)]
+  ["Fast track"
+   ("l" "LGTM - Approved" code-review-add-comment)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
