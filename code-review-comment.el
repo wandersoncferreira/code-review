@@ -106,30 +106,19 @@ For internal usage only.")
         (let ((comment-cleaned (code-review-utils-clean-msg
                                 comment-text
                                 code-review-comment-feedback-msg)))
-          (setq code-review-pr-alist (a-assoc code-review-pr-alist 'feedback comment-cleaned))
+          (setq code-review-pr-alist
+                (a-assoc code-review-pr-alist 'feedback comment-cleaned))
+          (setq code-review-comment-writing-feedback nil)
           (code-review-section-insert-feedback comment-cleaned))
-      (with-current-buffer (get-buffer "*Code Review*")
-        (let ((comment-cleaned (code-review-utils-clean-msg
-                                comment-text
-                                code-review-comment-buffer-msg))
-              (metadata (a-assoc code-review-comment-hold-metadata
-                                 'body
-                                 comment-cleaned)))
-          (let ((inhibit-read-only t))
-            (goto-char code-review-comment-hold-cursor-pos)
-            (forward-line)
-            (magit-insert-section (local-comment-header metadata)
-              (insert (format "[local comment] - @%s:" (code-review-utils-get-user)))
-              (put-text-property
-               (line-beginning-position)
-               (1+ (line-end-position))
-               'font-lock-face
-               'magit-diff-hunk-heading)
-              (magit-insert-heading)
-              (magit-insert-section (local-comment metadata)
-                (dolist (l (split-string comment-cleaned "\n"))
-                  (insert l)
-                  (insert "\n"))))))))
+      (let* ((comment-cleaned (code-review-utils-clean-msg
+                               comment-text
+                               code-review-comment-buffer-msg))
+             (metadata (a-assoc code-review-comment-hold-metadata
+                                'body comment-cleaned
+                                'cursor-pos code-review-comment-hold-cursor-pos)))
+        (setq code-review-comment-hold-metadata nil
+              code-review-comment-hold-cursor-pos nil)
+        (code-review-section-insert-local-comment comment-cleaned metadata)))
     (other-window 1)))
 
 

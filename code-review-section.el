@@ -296,6 +296,25 @@ Code Review inserts PR comments sections in the diff buffer."
                  (insert feedback))
              (forward-line))))))))
 
+(defun code-review-section-insert-local-comment (local-comment metadata)
+  "Insert a LOCAL-COMMENT and attach section METADATA."
+  (with-current-buffer (get-buffer "*Code Review*")
+    (let ((inhibit-read-only t))
+      (goto-char (a-get metadata 'cursor-pos))
+      (forward-line)
+      (magit-insert-section (local-comment-header metadata)
+        (insert (format "[local comment] - @%s:" (code-review-utils-get-user)))
+        (put-text-property
+         (line-beginning-position)
+         (1+ (line-end-position))
+         'font-lock-face
+         'magit-diff-hunk-heading)
+        (magit-insert-heading)
+        (magit-insert-section (local-comment metadata)
+          (dolist (l (split-string local-comment "\n"))
+            (insert l)
+            (insert "\n")))))))
+
 (defun code-review-section-wash (grouped-comments)
   "Format buffer text with PULL-REQUEST and GROUPED-COMMENTS info."
 

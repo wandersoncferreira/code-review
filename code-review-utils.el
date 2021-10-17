@@ -49,7 +49,7 @@
   (replace-regexp-in-string
    (concat text-to-remove "\n")
    ""
-   text-to-remove))
+   msg))
 
 (defun code-review-utils-get-user ()
   "Get user from forge or from user profile as fallback."
