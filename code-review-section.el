@@ -25,7 +25,15 @@
 (require 'code-review-github)
 
 (defvar code-review-section-first-hunk-header-pos nil
-  "Hold the first hunk header position.
+  "A-LIST to hold the first hunk header position for each path.
+For internal usage only.")
+
+(defvar code-review-section-written-comments-count nil
+  "A-LIST to hold how many lines of comments written for each path.
+For internal usage only.")
+
+(defvar code-review-section-written-comments-ident nil
+  "LIST to hold the identifiers comments written.
 For internal usage only.")
 
 (defvar code-review-section-grouped-comments nil
@@ -33,19 +41,36 @@ For internal usage only.")
 Used by the overwritten version of `magit-diff-wash-hunk'.
 For internal usage only.")
 
+(defvar code-review-section-file nil
+  "For internal usage only.")
+
 (defun code-review-section-diff-pos ()
   "Compute the true diff position by discounting additional lines in the buffer."
-  (let ((curr-pos (line-number-at-pos)))
-    (- curr-pos code-review-section-first-hunk-header-pos)))
+  (let ((curr-pos (line-number-at-pos))
+        (hunk-pos (or (alist-get code-review-section-file
+                                 code-review-section-first-hunk-header-pos
+                                 nil nil 'equal)
+                      0))
+        (comments-written-pos (or (alist-get code-review-section-file
+                                             code-review-section-written-comments-count
+                                             nil nil 'equal)
+                                  0)))
+    (- curr-pos
+       hunk-pos
+       comments-written-pos)))
 
-(defun add-comment-here? (grouped-comments)
-  "Verify if a comment should be added at point based on GROUPED-COMMENTS."
-  (a-get grouped-comments (code-review-section-diff-pos)))
 
-(defun code-review-section-insert-comment (grouped-comments)
-  "Insert GROUPED-COMMENTS in the buffer."
-  (dolist (c (a-get grouped-comments (code-review-section-diff-pos)))
+(defun code-review-section-insert-comment (comments)
+  "Insert COMMENTS in the buffer."
+  (dolist (c comments)
     (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+
+      (setq code-review-section-written-comments-count
+            (code-review-utils-update-count-comments-written
+             code-review-section-written-comments-count
+             code-review-section-file
+             (+ 1 (length body-lines))))
+
       (magit-insert-section (comment c)
         (insert (format "Reviewed by @%s[%s]:"
                         (a-get c 'author)
@@ -61,6 +86,39 @@ For internal usage only.")
             (insert l)
             (insert "\n")))))))
 
+(defun magit-diff-insert-file-section
+    (file orig status modes rename header &optional long-status)
+  "Overwrite the original Magit function on `magit-diff.el' file."
+
+  ;;; code-review specific code.
+  ;;; I need to set a reference point for the first hunk header
+  ;;; so the positioning of comments is done correctly.
+  (setq code-review-section-file (substring-no-properties file))
+
+  (magit-insert-section section
+    (file file (or (equal status "deleted")
+                   (derived-mode-p 'magit-status-mode)))
+    (insert (propertize (format "%-10s %s" status
+                                (if (or (not orig) (equal orig file))
+                                    file
+                                  (format "%s -> %s" orig file)))
+                        'font-lock-face 'magit-diff-file-heading))
+    (when long-status
+      (insert (format " (%s)" long-status)))
+    (magit-insert-heading)
+    (unless (equal orig file)
+      (oset section source orig))
+    (oset section header header)
+    (when modes
+      (magit-insert-section (hunk '(chmod))
+        (insert modes)
+        (magit-insert-heading)))
+    (when rename
+      (magit-insert-section (hunk '(rename))
+        (insert rename)
+        (magit-insert-heading)))
+    (magit-wash-sequence #'magit-diff-wash-hunk)))
+
 (defun magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
 Code Review inserts PR comments sections in the diff buffer."
@@ -69,9 +127,11 @@ Code Review inserts PR comments sections in the diff buffer."
     ;;; code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
-    (when (not code-review-section-first-hunk-header-pos)
-      (setq code-review-section-first-hunk-header-pos
-            (+ 1 (line-number-at-pos))))
+    (setf code-review-section-first-hunk-header-pos
+          (code-review-utils-update-first-hunk-pos
+           code-review-section-first-hunk-header-pos
+           code-review-section-file
+           (+ 1 (line-number-at-pos))))
 
     (let* ((heading  (match-string 0))
            (ranges   (mapcar (lambda (str)
@@ -89,9 +149,18 @@ Code Review inserts PR comments sections in the diff buffer."
         (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
           ;;; code-review specific code.
           ;;; add code comments
-          (if (add-comment-here? code-review-section-grouped-comments)
-              (code-review-section-insert-comment code-review-section-grouped-comments)
-            (forward-line)))
+          (let ((path-pos (code-review-utils-path-pos-key code-review-section-file (code-review-section-diff-pos))))
+            (if-let (grouped-comments (and
+                                       (not (code-review-utils-already-written?
+                                             code-review-section-written-comments-ident
+                                             path-pos))
+                                       (code-review-utils-get-comments
+                                        code-review-section-grouped-comments
+                                        path-pos)))
+                (progn
+                  (add-to-list 'code-review-section-written-comments-ident path-pos)
+                  (code-review-section-insert-comment grouped-comments))
+              (forward-line))))
         (oset section end (point))
         (oset section washer 'magit-diff-paint-hunk)
         (oset section combined combined)
@@ -129,21 +198,13 @@ Code Review inserts PR comments sections in the diff buffer."
     (magit-insert-heading))
   (insert ?\n))
 
-(defun code-review-section-wash (pull-request grouped-comments)
+(defun code-review-section-wash (grouped-comments)
   "Format buffer text with PULL-REQUEST and GROUPED-COMMENTS info."
 
   ;;; unfortunately, this data needs to be passed to a magit function
   ;;; deep in the call stack.
   (setq code-review-section-grouped-comments grouped-comments)
-
-  (let-alist pull-request
-    (magit-insert-section (_)
-      (setq header-line-format
-            (concat (propertize " " 'display '(space :align-to 0))
-                    (format "#%s: %s" .number .title)))
-      (code-review-section-insert-headers pull-request)
-      (code-review-section-insert-commits)
-      (magit-diff-wash-diff ()))))
+  (magit-diff-wash-diff ()))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here

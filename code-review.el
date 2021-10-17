@@ -21,6 +21,7 @@
 
 (require 'magit-section)
 (require 'code-review-section)
+(require 'code-review-utils)
 
 (defconst code-review-buffer-name "*Code Review*")
 
@@ -38,34 +39,28 @@
 
 (defun code-review-group-comments (pull-request)
   "Group comments in PULL-REQUEST to ease the access when building the buffer."
-  (let-alist pull-request
-    (let ((res (-reduce-from
-                (lambda (acc node)
-                  (if-let (comments (a-get-in node (list 'comments 'nodes)))
-                      (-reduce-from
-                       (lambda (acc-comment comment)
-                         (let ((comment-pos (a-get comment 'position))
-                               (comment-enriched (a-assoc comment
-                                                          'author (a-get-in node (list 'author 'login))
-                                                          'state (a-get node 'state))))
-                           (if (or (not acc-comment) (not (a-get acc-comment comment-pos)))
-                               (a-assoc acc-comment comment-pos (list comment-enriched))
-                             (a-update acc-comment comment-pos
-                                       (lambda (v)
-                                         (cons comment-enriched v))))))
-                       acc
-                       comments)
-                    acc))
-                nil
-                .reviews.nodes)))
-      (-reduce-from
-       (lambda (rvd k)
-         (a-update rvd k (lambda (v) (nreverse v))))
-       res
-       (a-keys res)))))
+  (-reduce-from
+   (lambda (acc node)
+     (let ((author (a-get-in node (list 'author 'login)))
+           (state (a-get node 'state)))
+       (if-let (comments (a-get-in node (list 'comments 'nodes)))
+           (-reduce-from
+            (lambda (grouped-comments comment)
+              (let-alist comment
+                (let ((comment-enriched (a-assoc comment 'author author 'state state))
+                      (path-pos (code-review-utils-path-pos-key .path .position)))
+                  (if (or (not grouped-comments)
+                          (not (code-review-utils-get-comments grouped-comments path-pos)))
+                      (a-assoc grouped-comments path-pos (list comment-enriched))
+                    (a-update grouped-comments path-pos (lambda (v) (append v (list comment-enriched))))))))
+            acc
+            comments)
+         acc)))
+   nil
+   (a-get-in pull-request (list 'reviews 'nodes))))
 
 (defun code-review-section-build-buffer (pr-alist)
-  "PR-ALIST."
+  "Build code review buffer given a PR-ALIST with basic info about target repo."
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-github-get-diff-deferred pr-alist))
@@ -80,8 +75,15 @@
                 (save-excursion
                   (insert (a-get (-first-item x) 'message))
                   (insert "\n"))
+                (setq header-line-format
+                      (concat (propertize " " 'display '(space :align-to 0))
+                              (format "#%s: %s"
+                                      (a-get pull-request 'number)
+                                      (a-get pull-request 'title))))
+                (code-review-section-insert-headers pull-request)
+                (code-review-section-insert-commits)
                 (magit-wash-sequence
-                 (apply-partially #'code-review-section-wash pull-request grouped-comments)))
+                 (apply-partially #'code-review-section-wash grouped-comments)))
               (goto-char (point-min)))))))
     (deferred:error it
       (lambda (err)
@@ -101,7 +103,9 @@
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (setq code-review-section-first-hunk-header-pos nil)
+  (setq code-review-section-first-hunk-header-pos nil
+        code-review-section-written-comments-count nil
+        code-review-section-written-comments-ident nil)
   (code-review-section-build-buffer
    (code-review-pr-from-url url)))
 
