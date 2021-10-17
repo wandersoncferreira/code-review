@@ -25,13 +25,14 @@ supports only Github.
 - [ ] Write tests to at least `utils` logic
 - [ ] Refactor many `a-list` access pattern
 - [ ] Group styling properties calls on `code-review-section`
-- [ ] Fill header
-  - [ ] Fix state style
-  - [ ] Get Refs
-  - [ ] Get Milestones
-  - [ ] Get Labels
-  - [ ] Get Assignee
-  - [ ] Get review requests
+- [x] Fill header
+  - [x] Fix state style
+  - [x] Get Refs
+  - [x] Get Milestones
+  - [x] Get Labels
+  - [x] Get Assignee
+  - [x] Get suggested-reviewers
+  - [x] Get project
 - [ ] Show others deliberations (nice!)
 - [ ] Implement list of Commits in the PR [BLOCKER]
 - [ ] Review a commit on RET [BLOCKER]

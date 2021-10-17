@@ -78,7 +78,35 @@ return a deferred object"
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number: %s){
       headRef { target{ oid } }
+      baseRefName
+      headRefName
       number
+      milestone {
+        title
+        progressPercentage
+      }
+      labels(first: 3) {
+        nodes {
+          name
+        }
+      }
+      assignees(first: 15) {
+        nodes {
+          name
+        }
+      }
+      projectCards(first: 3) {
+        nodes {
+          project {
+            name
+          }
+        }
+      }
+      suggestedReviewers {
+        reviewer {
+          name
+        }
+      }
       title
       state
       bodyText
