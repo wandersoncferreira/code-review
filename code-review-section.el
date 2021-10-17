@@ -59,32 +59,91 @@ For internal usage only.")
        hunk-pos
        comments-written-pos)))
 
+(defun code-review-section-insert-outdated-comment (comments)
+  "Insert outdated COMMENTS in the buffer."
+
+  ;;; hunk groups are necessary because we usually have multiple reviews about
+  ;;; the same original position accross different commits snapshots.
+  ;;; as github UI we will add those hunks and its comments
+  (let* ((hunk-groups (-group-by (lambda (el) (a-get el 'diffHunk)) comments))
+         (hunks (a-keys hunk-groups)))
+    (dolist (hunk hunks)
+      (let* ((diff-hunk-lines (split-string hunk "\n"))
+             (first-hunk-commit (-first-item (alist-get hunk hunk-groups nil nil 'equal))))
+
+        (setq code-review-section-written-comments-count
+              (code-review-utils-update-count-comments-written
+               code-review-section-written-comments-count
+               code-review-section-file
+               (+ 1 (length diff-hunk-lines))))
+
+        (magit-insert-section (comment first-hunk-commit)
+          (insert (format "Reviewed by %s[%s]: [OUTDATED]"
+                          (a-get first-hunk-commit 'author)
+                          (a-get first-hunk-commit 'state)))
+          (put-text-property
+           (line-beginning-position)
+           (1+ (line-end-position))
+           'font-lock-face
+           'magit-diff-hunk-heading)
+          (magit-insert-heading)
+          (magit-insert-section (hunk hunk)
+            (dolist (l diff-hunk-lines)
+              (insert l)
+              (insert "\n"))
+
+            (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
+              (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+
+                (setq code-review-section-written-comments-count
+                      (code-review-utils-update-count-comments-written
+                       code-review-section-written-comments-count
+                       code-review-section-file
+                       (+ 1 (length body-lines))))
+
+                (magit-insert-section (comment c)
+                  (insert (format "Reviewed by %s[%s]:"
+                                  (a-get c 'author)
+                                  (a-get c 'state)))
+                  (put-text-property
+                   (line-beginning-position)
+                   (1+ (line-end-position))
+                   'font-lock-face
+                   'magit-diff-hunk-heading)
+                  (magit-insert-heading)
+                  (magit-insert-section (comment c)
+                    (dolist (l body-lines)
+                      (insert l)
+                      (insert "\n"))))))))))))
 
 (defun code-review-section-insert-comment (comments)
-  "Insert COMMENTS in the buffer."
-  (dolist (c comments)
-    (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+  "Insert COMMENTS in the buffer.
+A quite good assumption: every comment in an outdated hunk will be outdated."
+  (if (a-get (-first-item comments) 'outdated)
+      (code-review-section-insert-outdated-comment comments)
+    (dolist (c comments)
+      (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
 
-      (setq code-review-section-written-comments-count
-            (code-review-utils-update-count-comments-written
-             code-review-section-written-comments-count
-             code-review-section-file
-             (+ 1 (length body-lines))))
+        (setq code-review-section-written-comments-count
+              (code-review-utils-update-count-comments-written
+               code-review-section-written-comments-count
+               code-review-section-file
+               (+ 1 (length body-lines))))
 
-      (magit-insert-section (comment c)
-        (insert (format "Reviewed by @%s[%s]:"
-                        (a-get c 'author)
-                        (a-get c 'state)))
-        (put-text-property
-         (line-beginning-position)
-         (1+ (line-end-position))
-         'font-lock-face
-         'magit-diff-hunk-heading)
-        (magit-insert-heading)
         (magit-insert-section (comment c)
-          (dolist (l body-lines)
-            (insert l)
-            (insert "\n")))))))
+          (insert (format "Reviewed by @%s[%s]:"
+                          (a-get c 'author)
+                          (a-get c 'state)))
+          (put-text-property
+           (line-beginning-position)
+           (1+ (line-end-position))
+           'font-lock-face
+           'magit-diff-hunk-heading)
+          (magit-insert-heading)
+          (magit-insert-section (comment c)
+            (dolist (l body-lines)
+              (insert l)
+              (insert "\n"))))))))
 
 (defun magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)

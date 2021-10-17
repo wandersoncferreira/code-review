@@ -91,6 +91,7 @@ return a deferred object"
             nodes {
               bodyText
               originalPosition
+              diffHunk
               position
               outdated
               path
