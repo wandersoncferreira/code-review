@@ -66,7 +66,9 @@
 
 (defun code-review-section-build-buffer (pr-alist)
   "Build code review buffer given a PR-ALIST with basic info about target repo."
-  (setq code-review-pr-alist pr-alist)
+  (setq code-review-section-first-hunk-header-pos nil
+        code-review-section-written-comments-count nil
+        code-review-section-written-comments-ident nil)
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-github-get-diff-deferred pr-alist))
@@ -86,6 +88,9 @@
                               (format "#%s: %s"
                                       (a-get pull-request 'number)
                                       (a-get pull-request 'title))))
+                (setq code-review-pr-alist
+                      (a-assoc pr-alist
+                               'sha .data.repository.pullRequest.headRef.target.oid))
                 (code-review-section-insert-headers pull-request)
                 (code-review-section-insert-commits)
                 (magit-wash-sequence
@@ -103,33 +108,12 @@
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
-;;;###autoload
-(defun code-review-approve ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'code-review-state "APPROVE"))
-
-;;;###autoload
-(defun code-review-reject ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'code-review-state "REJECT"))
-
-;;;###autoload
-(defun code-review-request-changes ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'code-review-state "REQUEST_CHANGE"))
-
 ;;; Public APIs
 
 ;;;###autoload
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (setq code-review-section-first-hunk-header-pos nil
-        code-review-section-written-comments-count nil
-        code-review-section-written-comments-ident nil)
   (code-review-section-build-buffer
    (code-review-pr-from-url url)))
 
@@ -151,7 +135,7 @@
                        (push value replies)
                      (push value review-comments)))))
              (forward-line))))))
-    (let* ((partial-review `((commit_id . (a-get code-review-pr-alist 'sha))
+    (let* ((partial-review `((commit_id . ,(a-get code-review-pr-alist 'sha))
                              (body . "Default msg")))
            (review (if (equal nil review-comments)
                        partial-review
@@ -163,24 +147,47 @@
 (defun code-review-submit ()
   "Submit your review."
   (interactive)
-  ;; (let ((response (code-review-build-submit-structure)))
-  ;;   (let-alist response
-  ;;     (if (and (not .replies) (not .review))
-  ;;         (message "Your review is empty")
-  ;;       (progn
-  ;;         (when .replies
-  ;;           (code-review-github-post-replies
-  ;;            code-review-pr-alist
-  ;;            .replies
-  ;;            (lambda (&rest _)
-  ;;              (message "Done submitting review replies"))))
-  ;;         (when .review
-  ;;           (code-review-github-post-review
-  ;;            code-review-pr-alist
-  ;;            (a-assoc .review 'event state)
-  ;;            (lambda (&rest _)
-  ;;              (message "Done submitting review"))))))))
-  )
+  (let ((response (code-review-build-submit-structure)))
+    (let-alist response
+      ;; (if (and (not .replies) (not .review.body))
+      ;;     (message "Your review is empty")
+      ;;   (progn
+      ;;     (when .replies
+      ;;       (code-review-github-post-replies
+      ;;        code-review-pr-alist
+      ;;        .replies
+      ;;        (lambda (&rest _)
+      ;;          (message "Done submitting review replies"))))
+      ;;     (when .review.body
+      ;;       (code-review-github-post-review
+      ;;        code-review-pr-alist
+      ;;        .review
+      ;;        (lambda (&rest _)
+      ;;          (message "Done submitting review"))))))
+      (code-review-section-build-buffer code-review-pr-alist))))
+
+
+;;;###autoload
+(defun code-review-approve ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "APPROVE")
+  (code-review-submit))
+
+;;;###autoload
+(defun code-review-reject ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "REJECT")
+  (code-review-submit))
+
+;;;###autoload
+(defun code-review-request-changes ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "REQUEST_CHANGE")
+  (code-review-submit))
+
 
 ;;; transient
 

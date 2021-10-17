@@ -131,7 +131,7 @@ CALLBACK will be called back when done"
     (ghub-post (format "/repos/%s/%s/pulls/%s/reviews" .owner .repo .num)
                nil
                :auth 'code-review
-               :payload review
+               :payload (a-assoc review 'event .event)
                :host code-review-github-host
                :errorback #'code-review-github-errback
                :callback callback)))
@@ -149,7 +149,7 @@ CALLBACK will be called back when done"
                (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
                                   .owner .repo .num database-id)
                           nil
-                          :payload body
+                          :payload (a-alist 'body body)
                           :headers code-review-github-diffheader
                           :auth 'code-review
                           :host code-review-github-host
