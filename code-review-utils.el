@@ -51,6 +51,10 @@
    ""
    text-to-remove))
 
+(defun code-review-utils-get-user ()
+  "Get user from forge or from user profile as fallback."
+  (or (magit-get "github.user")
+      (magit-get "user.name")))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
