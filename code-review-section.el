@@ -257,6 +257,20 @@ Code Review inserts PR comments sections in the diff buffer."
     (magit-insert-heading))
   (insert ?\n))
 
+(defun code-review-section-insert-pr-description (pull-request)
+  "Insert PULL-REQUEST description."
+  (magit-insert-section (_)
+    (insert "Description")
+    (magit-insert-heading)
+    (magit-insert-section (_)
+      (let-alist pull-request
+        (if (string-empty-p .bodyText)
+            (insert "No description provided.")
+          (insert .bodyText))
+        (insert ?\n)
+        (insert ?\n)
+        (insert ?\n)))))
+
 (defun code-review-section-local-comment? ()
   "Do we have a local comment at point? TBD."
   (when (looking-at "local")
