@@ -1,0 +1,17 @@
+name: CI
+on : [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v2
+      - uses: purcell/setup-emacs@master
+        with:
+          version: '27.1'
+      - uses: conao3/setup-cask@master
+        with:
+          version: 'snapshot'
+
+      - name: Run tests
+        run: make test
