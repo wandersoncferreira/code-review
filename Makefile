@@ -2,4 +2,4 @@
 
 test:
 	cask install
-	cask exec buttercup-run-discover -L test/
+	cask exec buttercup -L test/
