@@ -103,16 +103,22 @@
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
+;;;###autoload
 (defun code-review-approve ()
   "Approve current PR."
+  (interactive)
   (a-assoc code-review-pr-alist 'code-review-state "APPROVE"))
 
+;;;###autoload
 (defun code-review-reject ()
   "Approve current PR."
+  (interactive)
   (a-assoc code-review-pr-alist 'code-review-state "REJECT"))
 
+;;;###autoload
 (defun code-review-request-changes ()
   "Approve current PR."
+  (interactive)
   (a-assoc code-review-pr-alist 'code-review-state "REQUEST_CHANGE"))
 
 ;;; Public APIs
@@ -157,28 +163,24 @@
 (defun code-review-submit ()
   "Submit your review."
   (interactive)
-  (let ((state (completing-read "Your veredict about the PR: "
-                                (list "APPROVE"
-                                      "REQUEST_CHANGES"
-                                      "COMMENT"))))
-    ;; (let ((response (code-review-build-submit-structure)))
-    ;;   (let-alist response
-    ;;     (if (and (not .replies) (not .review))
-    ;;         (message "Your review is empty")
-    ;;       (progn
-    ;;         (when .replies
-    ;;           (code-review-github-post-replies
-    ;;            code-review-pr-alist
-    ;;            .replies
-    ;;            (lambda (&rest _)
-    ;;              (message "Done submitting review replies"))))
-    ;;         (when .review
-    ;;           (code-review-github-post-review
-    ;;            code-review-pr-alist
-    ;;            (a-assoc .review 'event state)
-    ;;            (lambda (&rest _)
-    ;;              (message "Done submitting review"))))))))
-    ))
+  ;; (let ((response (code-review-build-submit-structure)))
+  ;;   (let-alist response
+  ;;     (if (and (not .replies) (not .review))
+  ;;         (message "Your review is empty")
+  ;;       (progn
+  ;;         (when .replies
+  ;;           (code-review-github-post-replies
+  ;;            code-review-pr-alist
+  ;;            .replies
+  ;;            (lambda (&rest _)
+  ;;              (message "Done submitting review replies"))))
+  ;;         (when .review
+  ;;           (code-review-github-post-review
+  ;;            code-review-pr-alist
+  ;;            (a-assoc .review 'event state)
+  ;;            (lambda (&rest _)
+  ;;              (message "Done submitting review"))))))))
+  )
 
 ;;; transient
 
@@ -195,8 +197,8 @@
    ("e" "Edit" code-review-comment-edit)
    ("d" "Delete" code-review-comment-delete)]
   ["Review"
-   ("a" "Add main comment" code-review-comment)
-   ("e" "Edit main comment" code-review-comment)
+   ("a" "Add main comment" code-review-comment-add)
+   ("e" "Edit main comment" code-review-comment-add)
    ("s" "Submit" code-review)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
