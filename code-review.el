@@ -151,21 +151,26 @@
   (interactive)
   (let ((response (code-review-build-submit-structure)))
     (let-alist response
-      ;; (if (and (not .replies) (not .review.body))
-      ;;     (message "Your review is empty")
-      ;;   (progn
-      ;;     (when .replies
-      ;;       (code-review-github-post-replies
-      ;;        code-review-pr-alist
-      ;;        .replies
-      ;;        (lambda (&rest _)
-      ;;          (message "Done submitting review replies"))))
-      ;;     (when .review.body
-      ;;       (code-review-github-post-review
-      ;;        code-review-pr-alist
-      ;;        .review
-      ;;        (lambda (&rest _)
-      ;;          (message "Done submitting review"))))))
+      (cond
+       ((and (not .replies) (not .review.body))
+        (message "Your review is empty."))
+
+       ((not .review.body)
+        (message "You need to provide a feedback message."))
+
+       (t
+        (progn
+          (when .replies
+            (code-review-github-post-replies
+             code-review-pr-alist
+             .replies
+             (lambda (&rest _)
+               (message "Done submitting review replies"))))
+          (code-review-github-post-review
+           code-review-pr-alist
+           .review
+           (lambda (&rest _)
+             (message "Done submitting review"))))))
       (code-review-section-build-buffer code-review-pr-alist))))
 
 
