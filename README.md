@@ -32,6 +32,8 @@ supports only Github.
   - [ ] Get Assignee
   - [ ] Get review requests
 - [ ] Show others deliberations (nice!)
+- [ ] Implement list of Commits in the PR [BLOCKER]
+- [ ] Review a commit on RET [BLOCKER]
 - [ ] How to inform the two Magit functions overwrites?
   - are there any standard practice in emacs to make this more explicit?
 - [ ] Organize `utils` file
