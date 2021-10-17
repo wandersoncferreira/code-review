@@ -12,6 +12,7 @@ supports only Github.
 - [ ] Edit regular comment
 - [ ] Delete regular comment
 - [ ] LGTM! fast forward
+- [ ] Display the main body comments in the PR [Blocker]
 - [ ] Review transient to regular comment usability a priority
 - [ ] Move more functions to `utils` to ease maintenance
 - [ ] Another look at the code to avoid stateful values
