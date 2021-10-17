@@ -103,6 +103,18 @@
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
+(defun code-review-approve ()
+  "Approve current PR."
+  (a-assoc code-review-pr-alist 'code-review-state "APPROVE"))
+
+(defun code-review-reject ()
+  "Approve current PR."
+  (a-assoc code-review-pr-alist 'code-review-state "REJECT"))
+
+(defun code-review-request-changes ()
+  "Approve current PR."
+  (a-assoc code-review-pr-alist 'code-review-state "REQUEST_CHANGE"))
+
 ;;; Public APIs
 
 ;;;###autoload
@@ -172,9 +184,9 @@
 
 (transient-define-prefix code-review (review)
   "Approve, Reject, or Request changes to a Review."
-  [("a" "Approve" code-review-submit)
-   ("r" "Reject" code-review-submit)
-   ("c" "Request Changes" code-review-submit)])
+  [("a" "Approve" code-review-approve)
+   ("r" "Reject" code-review-reject)
+   ("c" "Request Changes" code-review-request-changes)])
 
 (define-transient-command code-review-transient-api ()
   "Code Review"
