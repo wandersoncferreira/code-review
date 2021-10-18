@@ -64,5 +64,36 @@
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
+
+;;; Borrowed from `forge-topic.el' -- Handling label overlay colors
+
+(defun code-review-utils--sanitize-color (color)
+  "Sanitize COLOR."
+  (cond ((x-color-values color) color)
+        ;; Discard alpha information.
+        ((string-match-p "\\`#.\\{4\\}\\'" color) (substring color 0 3))
+        ((string-match-p "\\`#.\\{8\\}\\'" color) (substring color 0 6))
+        (t "#000000"))) ; Use fallback instead of invalid color.
+
+(defun code-review-utils--contrast-color (color)
+  "Return black or white depending on the luminance of COLOR."
+  (if (> (code-review-utils--x-color-luminance color) 0.5) "black" "white"))
+
+;; Copy of `rainbow-x-color-luminance'.
+(defun code-review-utils--x-color-luminance (color)
+  "Calculate the luminance of a COLOR string (e.g. \"#ffaa00\", \"blue\").
+Return a value between 0 and 1."
+  (let ((values (x-color-values color)))
+    (code-review-utils--color-luminance (/ (nth 0 values) 256.0)
+                            (/ (nth 1 values) 256.0)
+                            (/ (nth 2 values) 256.0))))
+
+;; Copy of `rainbow-color-luminance'.
+;; Also see https://en.wikipedia.org/wiki/Relative_luminance.
+(defun code-review-utils--color-luminance (red green blue)
+  "Calculate the luminance of color composed of RED, GREEN and BLUE.
+Return a value between 0 and 1."
+  (/ (+ (* .2126 red) (* .7152 green) (* .0722 blue)) 256))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

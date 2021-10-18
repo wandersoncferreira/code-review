@@ -18,6 +18,9 @@ supports only Github.
 - [ ] Another look at the code to avoid stateful values
   - consider using a database like forge does?
 - [ ] BIG work on faces to distinguish several scenarios! [BLOCKER]!
+  - [x] Some initial improvements on header and main sections
+  - [ ] Improve comment sections
+  - [ ] Improve comment sections outdated
 - [ ] README examples and documentation
 - [ ] Change GITHUB specific code to use `cl-generic` [BLOCKER]!
 - [ ] Provide docs about requirements to add other forges

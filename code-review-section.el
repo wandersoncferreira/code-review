@@ -233,11 +233,11 @@ Code Review inserts PR comments sections in the diff buffer."
 (defun code-review-section-insert-headers (pull-request)
   "Insert header with PULL-REQUEST data."
   (let-alist pull-request
-    (let* ((label-names (-map (lambda (l) (a-get l 'name)) .labels.nodes))
-           (labels (string-join label-names " "))
-           (assignee-names (-map
+    (let* ((assignee-names (-map
                             (lambda (a)
-                              (concat "@" (a-get a 'name)))
+                              (format "%s (@%s)"
+                                      (a-get a 'name)
+                                      (a-get a 'login)))
                             .assignees.nodes))
            (assignees (string-join assignee-names ", "))
            (project-names (-map
@@ -247,59 +247,81 @@ Code Review inserts PR comments sections in the diff buffer."
            (projects (string-join project-names ", "))
            (reviewers (string-join .suggestedReviewers ", "))
            (suggested-reviewers (if (string-empty-p reviewers)
-                                    "No reviews"
+                                    (propertize "No reviews" 'font-lock-face 'magit-dimmed)
                                   reviewers)))
       (magit-insert-section (_)
-        (insert (format "%-22s" "Title: ") .title)
+        (insert (format "%-17s" "Title: ") .title)
         (magit-insert-heading)
         (magit-insert-section (_)
-          (insert (format "%-22s" "State: ") (or (format "%s" .state) "none"))
+          (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Refs: ") (format "%s ... %s" .baseRefName .headRefName))
+          (insert (format "%-17s" "Refs: "))
+          (insert .baseRefName)
+          (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
+          (insert .headRefName)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Milestone: ") (format "%s (%s%%)"
+          (insert (format "%-17s" "Milestone: ") (format "%s (%s%%)"
                                                          .milestone.title
                                                          .milestone.progressPercentage))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Labels: ") labels)
+          (insert (format "%-17s" "Labels: "))
+          (dolist (label .labels.nodes)
+            (insert (a-get label 'name))
+            (let* ((color (concat "#" (a-get label 'color)))
+                   (background (code-review-utils--sanitize-color color))
+                   (foreground (code-review-utils--contrast-color color))
+                   (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
+              (overlay-put o 'priority 2)
+              (overlay-put o 'evaporate t)
+              (overlay-put o 'font-lock-face
+                           `((:background ,background)
+                             (:foreground ,foreground)
+                             code-review-label)))
+            (insert " "))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Assignees: ") assignees)
+          (insert (format "%-17s" "Assignees: ") assignees)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Projects: ") projects)
+          (insert (format "%-17s" "Projects: ") projects)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-22s" "Suggested-Reviewers: ") suggested-reviewers)
+          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers)
           (insert ?\n)))))
   (insert ?\n))
+
+;;; faces used from magit:
+;; magit-section-heading
+;; magit-dimmed
+;; magit-hash
 
 (defun code-review-section-insert-commits (pull-request)
   "Insert commits from PULL-REQUEST."
   (let-alist pull-request
     (magit-insert-section (commits-header)
-      (insert "Commits")
+      (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
       (magit-insert-heading)
       (magit-insert-section (commits)
         (dolist (c .commits.nodes)
-          (insert (format "%-6s %s"
-                          (a-get-in c (list 'commit 'abbreviatedOid))
-                          (a-get-in c (list 'commit 'message))))
+          (insert (propertize
+                   (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
+                   'font-lock-face 'magit-hash)
+                  (a-get-in c (list 'commit 'message)))
           (insert ?\n)))))
   (insert ?\n))
 
 (defun code-review-section-insert-pr-description (pull-request)
   "Insert PULL-REQUEST description."
   (magit-insert-section (_)
-    (insert "Description")
+    (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
     (magit-insert-heading)
     (magit-insert-section (_)
       (let-alist pull-request
         (if (string-empty-p .bodyText)
-            (insert "No description provided.")
+            (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
           (insert .bodyText))
         (insert ?\n)
         (insert ?\n)
@@ -308,10 +330,10 @@ Code Review inserts PR comments sections in the diff buffer."
 (defun code-review-section-insert-feedback-heading ()
   "Insert feedback heading."
   (magit-insert-section (feedback)
-    (insert "Your Review Feedback")
+    (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
     (magit-insert-heading)
     (magit-insert-section (feedback-text)
-      (insert "Leave a comment here.")
+      (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))
       (insert ?\n)
       (insert ?\n))))
 

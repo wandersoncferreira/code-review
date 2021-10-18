@@ -88,11 +88,13 @@ return a deferred object"
       labels(first: 3) {
         nodes {
           name
+          color
         }
       }
       assignees(first: 15) {
         nodes {
           name
+          login
         }
       }
       projectCards(first: 3) {
