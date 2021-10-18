@@ -96,7 +96,7 @@
                       (a-assoc pr-alist
                                'sha .data.repository.pullRequest.headRef.target.oid))
                 (code-review-section-insert-headers pull-request)
-                (code-review-section-insert-commits)
+                (code-review-section-insert-commits pull-request)
                 (code-review-section-insert-pr-description pull-request)
                 (code-review-section-insert-feedback-heading)
                 (magit-wash-sequence

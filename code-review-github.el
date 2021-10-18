@@ -107,6 +107,15 @@ return a deferred object"
           name
         }
       }
+      commits(first: 100) {
+        totalCount
+        nodes {
+          commit {
+            abbreviatedOid
+            message
+          }
+        }
+      }
       title
       state
       bodyText

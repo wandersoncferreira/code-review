@@ -250,38 +250,45 @@ Code Review inserts PR comments sections in the diff buffer."
                                     "No reviews"
                                   reviewers)))
       (magit-insert-section (_)
-        (insert (format "%-11s" "Title: ") .title)
+        (insert (format "%-22s" "Title: ") .title)
         (magit-insert-heading)
         (magit-insert-section (_)
-          (insert (format "%-11s" "State: ") (or (format "%s" .state) "none"))
+          (insert (format "%-22s" "State: ") (or (format "%s" .state) "none"))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Refs: ") (format "%s ... %s" .baseRefName .headRefName))
+          (insert (format "%-22s" "Refs: ") (format "%s ... %s" .baseRefName .headRefName))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Milestone: ") (format "%s (%s%%)"
+          (insert (format "%-22s" "Milestone: ") (format "%s (%s%%)"
                                                          .milestone.title
                                                          .milestone.progressPercentage))
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Labels: ") labels)
+          (insert (format "%-22s" "Labels: ") labels)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Assignees: ") assignees)
+          (insert (format "%-22s" "Assignees: ") assignees)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Projects: ") projects)
+          (insert (format "%-22s" "Projects: ") projects)
           (insert ?\n))
         (magit-insert-section (_)
-          (insert (format "%-11s" "Suggested-Reviewers: ") suggested-reviewers)
+          (insert (format "%-22s" "Suggested-Reviewers: ") suggested-reviewers)
           (insert ?\n)))))
   (insert ?\n))
 
-(defun code-review-section-insert-commits ()
-  "Insert commits section."
-  (magit-insert-section (commits)
-    (insert "Commits")
-    (magit-insert-heading))
+(defun code-review-section-insert-commits (pull-request)
+  "Insert commits from PULL-REQUEST."
+  (let-alist pull-request
+    (magit-insert-section (commits-header)
+      (insert "Commits")
+      (magit-insert-heading)
+      (magit-insert-section (commits)
+        (dolist (c .commits.nodes)
+          (insert (format "%-6s %s"
+                          (a-get-in c (list 'commit 'abbreviatedOid))
+                          (a-get-in c (list 'commit 'message))))
+          (insert ?\n)))))
   (insert ?\n))
 
 (defun code-review-section-insert-pr-description (pull-request)
