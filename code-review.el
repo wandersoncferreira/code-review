@@ -88,10 +88,12 @@
                   (insert (a-get (-first-item x) 'message))
                   (insert "\n"))
                 (setq header-line-format
-                      (concat (propertize " " 'display '(space :align-to 0))
-                              (format "#%s: %s"
-                                      (a-get pull-request 'number)
-                                      (a-get pull-request 'title))))
+                      (propertize
+                       (format "#%s: %s"
+                               (a-get pull-request 'number)
+                               (a-get pull-request 'title))
+                       'font-lock-face
+                       'magit-section-heading))
                 (setq code-review-pr-alist
                       (a-assoc pr-alist
                                'sha .data.repository.pullRequest.headRef.target.oid))
