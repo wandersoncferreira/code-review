@@ -12,13 +12,13 @@ supports only Github.
 The Emacs everywhere goal continues. These are the main features of
 `code-review` to help you never leave Emacs to do Pull Request reviews.
 
-- Start review by URL using `code-review-start`
+- Start review from URL via `code-review-start`
 - Modern UI using [magit-section](https://emacsair.me/2020/01/23/magit-section/) and [transient](https://github.com/magit/transient)
-- Read to PR comments
+- Read Pull Request comments
 - Reply to comments
-- Include code suggestion
-- View `outdated` comments with right diff hunk context
-- Approve, Reject or Request changes in the PR
+- Include code suggestions
+- View `outdated` comments with the right diff hunk context
+- Approve, Reject or Request Changes for your PRs
 - Integrated with `forge-topic-view` via `code-review-forge-pr-at-point`
 - Fast track commands like "LGTM! Approved"
 - Review a single commit
@@ -64,3 +64,8 @@ Missing something? Please, [let us know](https://github.com/wandersoncferreira/c
 - [ ] How to inform the two Magit functions overwrites?
   - are there any standard practice in emacs to make this more explicit?
 - [ ] Organize `utils` file
+- [ ] Set labels (?)
+- [ ] Set project (?)
+- [ ] Move to draft (?)
+- [ ] Promote to ready to review (?)
+- [ ] Promote comment to new issue
