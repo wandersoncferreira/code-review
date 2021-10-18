@@ -1,5 +1,5 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
-![CI](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
+![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
 
 
 # Code Review
