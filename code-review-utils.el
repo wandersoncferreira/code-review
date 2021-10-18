@@ -114,5 +114,18 @@ Return a value between 0 and 1."
 Return a value between 0 and 1."
   (/ (+ (* .2126 red) (* .7152 green) (* .0722 blue)) 256))
 
+
+;;; SECTION
+
+(defun code-review-utils--section-diff-at-pos (hunks count-comments path curr-pos)
+  "HUNKS a-list for a given PATH compute true DIFF position at point.
+The value discounts any written comments tracked by COUNT-COMMENTS."
+  (let* ((get-or-0 (lambda (data key) (or (alist-get key data nil nil 'equal) 0)))
+         (hunk-pos (funcall get-or-0 hunks path))
+         (comments-written-pos (funcall get-or-0 count-comments path)))
+    (- curr-pos
+       hunk-pos
+       comments-written-pos)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

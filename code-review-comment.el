@@ -65,20 +65,20 @@ For internal usage only.")
   (interactive)
   ;;; save metadata to attach to local comment at commit phase
   (with-slots (type value) (magit-current-section)
-    (setq code-review-comment-hold-metadata
-          (cond
-           ((string-equal type "hunk")
-            `((reply? . nil)
-              (database-id . nil)))
-           ((string-equal type "comment")
-            `((reply? . t)
-              (database-id . ,(a-get value 'databaseId))
-              (position ,(or (a-get value 'position)
-                             (a-get value 'originalPosition)))))
-           (t
-            (progn
-              (message "You can only comment on HUNK or COMMENTS.")
-              nil)))))
+    (let-alist value
+      (setq code-review-comment-hold-metadata
+            (cond
+             ((string-equal type "hunk")
+              `((reply? . nil)
+                (database-id . nil)))
+             ((string-equal type "comment")
+              `((reply? . t)
+                (database-id . ,.databaseId)
+                (position ,(or .position .originalPosition))))
+             (t
+              (progn
+                (message "You can only comment on HUNK or COMMENTS.")
+                nil))))))
   (when code-review-comment-hold-metadata
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
       (with-current-buffer buffer

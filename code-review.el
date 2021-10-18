@@ -117,6 +117,7 @@
                 (save-excursion
                   (insert (a-get (-first-item x) 'message))
                   (insert "\n"))
+                (setq code-review-section-grouped-comments grouped-comments)
                 (setq header-line-format
                       (propertize
                        (format "#%s: %s"
@@ -132,7 +133,7 @@
                 (code-review-section-insert-pr-description pull-request)
                 (code-review-section-insert-feedback-heading)
                 (magit-wash-sequence
-                 (apply-partially #'code-review-section-wash grouped-comments)))
+                 (apply-partially #'magit-diff-wash-diff ())))
               (goto-char (point-min)))))))
     (deferred:error it
       (lambda (err)

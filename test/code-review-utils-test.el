@@ -62,5 +62,15 @@
 
 (describe "COLORS")
 
+(describe "SECTION"
+
+  (it "compute true diff position discounting written comment lines in the buffer."
+    (let* ((path "github.el")
+           (hunks (a-alist path 2))
+           (count-comments (a-alist path 3))
+           (curr-pos 10))
+      (expect (code-review-utils--section-diff-at-pos hunks count-comments path curr-pos)
+              :to-equal 5))))
+
 (provide 'code-review-utils-test)
 ;;; code-review-utils-test.el ends here

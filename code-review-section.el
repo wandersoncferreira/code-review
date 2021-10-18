@@ -49,21 +49,6 @@ For internal usage only.")
 (defvar code-review-section-file nil
   "For internal usage only.")
 
-(defun code-review-section-diff-pos ()
-  "Compute the true diff position by discounting additional lines in the buffer."
-  (let ((curr-pos (line-number-at-pos))
-        (hunk-pos (or (alist-get code-review-section-file
-                                 code-review-section-first-hunk-header-pos
-                                 nil nil 'equal)
-                      0))
-        (comments-written-pos (or (alist-get code-review-section-file
-                                             code-review-section-written-comments-count
-                                             nil nil 'equal)
-                                  0)))
-    (- curr-pos
-       hunk-pos
-       comments-written-pos)))
-
 (defun code-review-section-insert-outdated-comment (comments)
   "Insert outdated COMMENTS in the buffer."
 
@@ -99,6 +84,7 @@ For internal usage only.")
             (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
               (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
 
+                ;;; IDEA: move this to a database(?)
                 (setq code-review-section-written-comments-count
                       (code-review-utils-update-count-comments-written
                        code-review-section-written-comments-count
@@ -207,7 +193,15 @@ Code Review inserts PR comments sections in the diff buffer."
         (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
           ;;; code-review specific code.
           ;;; add code comments
-          (let ((path-pos (code-review-utils--comment-key code-review-section-file (code-review-section-diff-pos))))
+
+          (let* ((diff-pos (code-review-utils--section-diff-at-pos
+                            code-review-section-first-hunk-header-pos
+                            code-review-section-written-comments-count
+                            code-review-section-file
+                            (line-number-at-pos)))
+                 (path-pos (code-review-utils--comment-key
+                            code-review-section-file
+                            diff-pos)))
             (if-let (grouped-comments (and
                                        (not (code-review-utils--comment-already-written?
                                              code-review-section-written-comments-ident
@@ -292,11 +286,6 @@ Code Review inserts PR comments sections in the diff buffer."
           (insert ?\n)))))
   (insert ?\n))
 
-;;; faces used from magit:
-;; magit-section-heading
-;; magit-dimmed
-;; magit-hash
-
 (defun code-review-section-insert-commits (pull-request)
   "Insert commits from PULL-REQUEST."
   (let-alist pull-request
@@ -359,24 +348,11 @@ Code Review inserts PR comments sections in the diff buffer."
       (forward-line)
       (magit-insert-section (local-comment-header metadata)
         (insert (format "[local comment] - @%s:" (code-review-utils--git-get-user)))
-        (put-text-property
-         (line-beginning-position)
-         (1+ (line-end-position))
-         'font-lock-face
-         'magit-diff-hunk-heading)
         (magit-insert-heading)
         (magit-insert-section (local-comment metadata)
           (dolist (l (split-string local-comment "\n"))
             (insert l)
             (insert "\n")))))))
-
-(defun code-review-section-wash (grouped-comments)
-  "Format buffer text with PULL-REQUEST and GROUPED-COMMENTS info."
-
-  ;;; unfortunately, this data needs to be passed to a magit function
-  ;;; deep in the call stack.
-  (setq code-review-section-grouped-comments grouped-comments)
-  (magit-diff-wash-diff ()))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here
