@@ -1,25 +1,31 @@
-;;; code-review-section.el --- Helpers for the UI -*- lexical-binding: t; -*-
+;;; code-review-section.el --- UI -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Created: October 14, 2021
-;; Modified: October 14, 2021
-;; Version: 0.0.1
-;; Keywords: tools
-;; Homepage: https://github.com/wandersoncferreira/code-review-section
-;; Package-Requires: ((emacs "25.1"))
-;;
+
 ;; This file is not part of GNU Emacs.
-;;
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; For a full copy of the GNU General Public License
+;; see <http://www.gnu.org/licenses/>.
+
 ;;; Commentary:
 ;;
-;;
+;;  Code to build the UI.
 ;;
 ;;; Code:
 
-(require 'magit-utils)
 (require 'magit-section)
 (require 'magit-diff)
 
@@ -98,20 +104,15 @@ For internal usage only.")
                        code-review-section-file
                        (+ 1 (length body-lines))))
 
-                (magit-insert-section (comment c)
-                  (insert (format "Reviewed by %s[%s]:"
-                                  (a-get c 'author)
-                                  (a-get c 'state)))
-                  (put-text-property
-                   (line-beginning-position)
-                   (1+ (line-end-position))
-                   'font-lock-face
-                   'magit-diff-hunk-heading)
-                  (magit-insert-heading)
-                  (magit-insert-section (comment c)
+                (magit-insert-section (comment-outdated-heading c)
+                  (magit-insert-heading (format "Reviewed by %s[%s]:"
+                                                (a-get c 'author)
+                                                (a-get c 'state)))
+                  (magit-insert-section (comment-outdated c)
                     (dolist (l body-lines)
                       (insert l)
-                      (insert "\n"))))))))))))
+                      (insert "\n"))
+                    (insert ?\n)))))))))))
 
 (defun code-review-section-insert-comment (comments)
   "Insert COMMENTS in the buffer.
@@ -132,7 +133,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                                  (a-get c 'author)
                                  (a-get c 'state))))
             (add-face-text-property 0 (length heading)
-                                    'code-review-section-recent-comment t heading)
+                                    'code-review-recent-comment-heading t heading)
             (magit-insert-heading heading))
           (magit-insert-section (comment c)
             (dolist (l body-lines)
@@ -274,7 +275,7 @@ Code Review inserts PR comments sections in the diff buffer."
               (overlay-put o 'font-lock-face
                            `((:background ,background)
                              (:foreground ,foreground)
-                             code-review-label)))
+                             forge-topic-label)))
             (insert " "))
           (insert ?\n))
         (magit-insert-section (_)

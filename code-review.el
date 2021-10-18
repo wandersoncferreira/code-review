@@ -7,20 +7,36 @@
 ;; Created: October 14, 2021
 ;; Modified: October 14, 2021
 ;; Version: 0.0.1
-;; Keywords: tools
+;; Keywords: git, tools, vc
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
-;;
-;; This file is not part of GNU Emacs.
-;;
+;; Package-Requires: ((emacs "25.1") (magit "3.3.0") (s "1.12.0") (ghub "2.0") (dash "2.11.0") (deferred "0.5.1") (a "0.1.1"))
+
+;; This file is not part of GNU Emacs
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; For a full copy of the GNU General Public License
+;; see <http://www.gnu.org/licenses/>.
 ;;; Commentary:
 ;;
+;; `code-review` lets you submit code review with Emacs.
 ;;
+;; Currently only supports Github but contains extension points to other forges.
 ;;
+
 ;;; Code:
 
 (require 'magit-section)
 (require 'code-review-section)
+(require 'code-review-github)
 (require 'code-review-comment)
 (require 'code-review-utils)
 
