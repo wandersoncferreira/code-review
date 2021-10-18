@@ -2,6 +2,7 @@
 ;;; Commentary:
 ;;; Code:
 
+(require 'a)
 (require 'buttercup)
 (require 'code-review-utils)
 

@@ -26,6 +26,10 @@
 ;;
 ;;; Code:
 
+(require 'a)
+(require 'dash)
+(require 'magit-git)
+
 (defun code-review-utils-path-pos-key (path pos)
   "Define a key using PATH and POS."
   (format "%s:%s" path pos))
