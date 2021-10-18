@@ -30,41 +30,50 @@
 (require 'dash)
 (require 'magit-git)
 
-(defun code-review-utils-path-pos-key (path pos)
+;;; COMMENTS
+
+(defun code-review-utils--comment-key (path pos)
   "Define a key using PATH and POS."
   (format "%s:%s" path pos))
 
-(defun code-review-utils-get-comments (grouped-comments path-pos)
+(defun code-review-utils--comment-get (grouped-comments path-pos)
   "Get comments from GROUPED-COMMENTS located by PATH-POS key."
   (alist-get path-pos grouped-comments nil nil 'equal))
 
-(defun code-review-utils-update-first-hunk-pos (hunks path hunk-pos)
+(defun code-review-utils--comment-mark-hunk-pos (hunks path hunk-pos)
   "Update the HUNKS a-list to include new HUNK-POS in PATH."
   (if (not (alist-get path hunks nil nil 'equal))
       (a-assoc hunks path hunk-pos)
     hunks))
 
-(defun code-review-utils-update-count-comments-written (count-comments path length)
-  "Update COUNT-COMMENTS written by PATH using LENGTH."
-  (if-let (count (alist-get path count-comments nil nil 'equal))
-      (a-assoc count-comments path (+ count length))
-    (a-assoc count-comments path length)))
+(defun code-review-utils--comment-update-written-count (count-comments path comments)
+  "Update how many comment lines was written for a given PATH.
+COUNT-COMMENTS keep track of this value and compute line numbers
+using COMMENTS."
+  (let ((len(+ 1 (length comments))))
+    (if-let (count (alist-get path count-comments nil nil 'equal))
+        (a-assoc count-comments path (+ count len))
+      (a-assoc count-comments path len))))
 
-(defun code-review-utils-already-written? (identifiers identifier)
-  "Verify if IDENTIFIER is present in IDENTIFIERS."
-  (-contains-p identifiers identifier))
+(defun code-review-utils--comment-already-written? (identifiers comment-key)
+  "Verify if COMMENT-KEY is present in IDENTIFIERS."
+  (-contains-p identifiers comment-key))
 
-(defun code-review-utils-clean-msg (msg text-to-remove)
+(defun code-review-utils--comment-clean-msg (msg text-to-remove)
   "Remove TEXT-TO-REMOVE from MSG."
   (replace-regexp-in-string
-   (concat text-to-remove "\n")
+   (concat (concat text-to-remove "\n") "\\|" text-to-remove)
    ""
    msg))
 
-(defun code-review-utils-get-user ()
+;;; GIT
+
+(defun code-review-utils--git-get-user ()
   "Get user from forge or from user profile as fallback."
   (or (magit-get "github.user")
       (magit-get "user.name")))
+
+;;; URL PARSE
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
@@ -74,9 +83,9 @@
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
+;;; COLORS
 
-;;; Borrowed from `forge-topic.el' -- Handling label overlay colors
-
+;; Borrowed from `forge-topic.el' -- Handling label overlay colors
 (defun code-review-utils--sanitize-color (color)
   "Sanitize COLOR."
   (cond ((x-color-values color) color)

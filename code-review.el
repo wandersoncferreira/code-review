@@ -83,9 +83,9 @@
               (let-alist comment
                 (let* ((comment-enriched (a-assoc comment 'author author 'state state))
                        (handled-pos (or .position .originalPosition))
-                       (path-pos (code-review-utils-path-pos-key .path handled-pos)))
+                       (path-pos (code-review-utils--comment-key .path handled-pos)))
                   (if (or (not grouped-comments)
-                          (not (code-review-utils-get-comments grouped-comments path-pos)))
+                          (not (code-review-utils--comment-get grouped-comments path-pos)))
                       (a-assoc grouped-comments path-pos (list comment-enriched))
                     (a-update grouped-comments path-pos (lambda (v) (append v (list comment-enriched))))))))
             acc

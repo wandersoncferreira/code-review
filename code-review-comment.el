@@ -110,14 +110,14 @@ For internal usage only.")
                            (buffer-substring-no-properties (point-min) (point-max))))))
     (kill-buffer buffer)
     (if code-review-comment-writing-feedback
-        (let ((comment-cleaned (code-review-utils-clean-msg
+        (let ((comment-cleaned (code-review-utils--comment-clean-msg
                                 comment-text
                                 code-review-comment-feedback-msg)))
           (setq code-review-pr-alist
                 (a-assoc code-review-pr-alist 'feedback comment-cleaned))
           (setq code-review-comment-writing-feedback nil)
           (code-review-section-insert-feedback comment-cleaned))
-      (let* ((comment-cleaned (code-review-utils-clean-msg
+      (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                comment-text
                                code-review-comment-buffer-msg))
              (metadata (a-assoc code-review-comment-hold-metadata

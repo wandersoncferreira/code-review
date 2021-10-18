@@ -76,11 +76,12 @@ For internal usage only.")
       (let* ((diff-hunk-lines (split-string hunk "\n"))
              (first-hunk-commit (-first-item (alist-get hunk hunk-groups nil nil 'equal))))
 
+        ;;; IDEA: move this to a database(?)
         (setq code-review-section-written-comments-count
-              (code-review-utils-update-count-comments-written
+              (code-review-utils--comment-update-written-count
                code-review-section-written-comments-count
                code-review-section-file
-               (+ 1 (length diff-hunk-lines))))
+               diff-hunk-lines))
 
         (magit-insert-section (comment first-hunk-commit)
           (let ((heading (format "Reviewed by %s [%s] - [OUTDATED]"
@@ -122,11 +123,12 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     (dolist (c comments)
       (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
 
+        ;;; IDEA: move this to a database(?)
         (setq code-review-section-written-comments-count
-              (code-review-utils-update-count-comments-written
+              (code-review-utils--comment-update-written-count
                code-review-section-written-comments-count
                code-review-section-file
-               (+ 2 (length body-lines))))
+               body-lines))
 
         (magit-insert-section (comment c)
           (let ((heading (format "Reviewed by @%s [%s]: "
@@ -179,11 +181,12 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 Code Review inserts PR comments sections in the diff buffer."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
 
+    ;;; IDEA: move this to a database(?)
     ;;; code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
     (setf code-review-section-first-hunk-header-pos
-          (code-review-utils-update-first-hunk-pos
+          (code-review-utils--comment-mark-hunk-pos
            code-review-section-first-hunk-header-pos
            code-review-section-file
            (+ 1 (line-number-at-pos))))
@@ -204,12 +207,12 @@ Code Review inserts PR comments sections in the diff buffer."
         (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
           ;;; code-review specific code.
           ;;; add code comments
-          (let ((path-pos (code-review-utils-path-pos-key code-review-section-file (code-review-section-diff-pos))))
+          (let ((path-pos (code-review-utils--comment-key code-review-section-file (code-review-section-diff-pos))))
             (if-let (grouped-comments (and
-                                       (not (code-review-utils-already-written?
+                                       (not (code-review-utils--comment-already-written?
                                              code-review-section-written-comments-ident
                                              path-pos))
-                                       (code-review-utils-get-comments
+                                       (code-review-utils--comment-get
                                         code-review-section-grouped-comments
                                         path-pos)))
                 (progn
@@ -355,7 +358,7 @@ Code Review inserts PR comments sections in the diff buffer."
       (goto-char (a-get metadata 'cursor-pos))
       (forward-line)
       (magit-insert-section (local-comment-header metadata)
-        (insert (format "[local comment] - @%s:" (code-review-utils-get-user)))
+        (insert (format "[local comment] - @%s:" (code-review-utils--git-get-user)))
         (put-text-property
          (line-beginning-position)
          (1+ (line-end-position))
