@@ -22,7 +22,6 @@
 (require 'magit-utils)
 (require 'magit-section)
 (require 'magit-diff)
-(require 'code-review-github)
 
 (defvar code-review-section-first-hunk-header-pos nil
   "A-LIST to hold the first hunk header position for each path.

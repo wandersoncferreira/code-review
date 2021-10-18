@@ -43,8 +43,6 @@
   "Face for outdated comments"
   :group 'code-review)
 
-
-
 (defmacro code-review-with-buffer (&rest body)
   "Include BODY in the buffer."
   (declare (indent 0))
