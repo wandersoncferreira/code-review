@@ -19,6 +19,7 @@ supports only Github.
   - consider using a database like forge does?
 - [ ] BIG work on faces to distinguish several scenarios! [BLOCKER]!
   - [x] Some initial improvements on header and main sections
+  - [ ] Define colors for comment sections
   - [ ] Improve comment sections
   - [ ] Improve comment sections outdated
 - [ ] README examples and documentation

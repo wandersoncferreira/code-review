@@ -78,15 +78,13 @@ For internal usage only.")
                (+ 1 (length diff-hunk-lines))))
 
         (magit-insert-section (comment first-hunk-commit)
-          (insert (format "Reviewed by %s[%s]: [OUTDATED]"
-                          (a-get first-hunk-commit 'author)
-                          (a-get first-hunk-commit 'state)))
-          (put-text-property
-           (line-beginning-position)
-           (1+ (line-end-position))
-           'font-lock-face
-           'magit-diff-hunk-heading)
-          (magit-insert-heading)
+          (let ((heading (format "Reviewed by %s [%s] - [OUTDATED]"
+                                 (a-get first-hunk-commit 'author)
+                                 (a-get first-hunk-commit 'state))))
+            (add-face-text-property 0 (length heading)
+                                    'code-review-outdated-comment-heading
+                                    t heading)
+            (magit-insert-heading heading))
           (magit-insert-section (hunk hunk)
             (dolist (l diff-hunk-lines)
               (insert l)
@@ -128,22 +126,20 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
               (code-review-utils-update-count-comments-written
                code-review-section-written-comments-count
                code-review-section-file
-               (+ 1 (length body-lines))))
+               (+ 2 (length body-lines))))
 
         (magit-insert-section (comment c)
-          (insert (format "Reviewed by @%s[%s]:"
-                          (a-get c 'author)
-                          (a-get c 'state)))
-          (put-text-property
-           (line-beginning-position)
-           (1+ (line-end-position))
-           'font-lock-face
-           'magit-diff-hunk-heading)
-          (magit-insert-heading)
+          (let ((heading (format "Reviewed by @%s [%s]: "
+                                 (a-get c 'author)
+                                 (a-get c 'state))))
+            (add-face-text-property 0 (length heading)
+                                    'code-review-section-recent-comment t heading)
+            (magit-insert-heading heading))
           (magit-insert-section (comment c)
             (dolist (l body-lines)
               (insert l)
-              (insert "\n"))))))))
+              (insert "\n"))
+            (insert ?\n)))))))
 
 (defun magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)

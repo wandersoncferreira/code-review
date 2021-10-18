@@ -29,6 +29,22 @@
 (defvar code-review-pr-alist nil
   "For internal usage only.")
 
+;;; Faces
+
+(defface code-review-recent-comment-heading
+  '((((supports (:box t))) :inherit magit-branch-remote :box t)
+    (t                     :inherit magit-branch-remote :inverse-video t))
+  "Face for recent comments"
+  :group 'code-review)
+
+(defface code-review-outdated-comment-heading
+  '((((supports (:box t))) :inherit magit-cherry-equivalent :box t)
+    (t                     :inherit magit-cherry-equivalent :inverse-video t))
+  "Face for outdated comments"
+  :group 'code-review)
+
+
+
 (defmacro code-review-with-buffer (&rest body)
   "Include BODY in the buffer."
   (declare (indent 0))
