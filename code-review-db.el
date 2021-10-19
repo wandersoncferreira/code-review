@@ -231,36 +231,37 @@
 
 (defun code-review-db--curr-path-update (id curr-path)
   "Update pullreq (ID) with CURR-PATH."
-  (let* ((pr (code-review-db-get-pullreq id))
-         (buff (oref pr buffer))
-         (buf (if (eieio-object-p buff) buff (-first-item buff)))
-         (pr-id (oref pr id))
-         (path-id (uuidgen-4))
-         (db (code-review-db)))
-    (if (not buf)
-        (let* ((buf (code-review-buffer :id pr-id :pullreq pr-id))
-               (path (code-review-path :id path-id
-                                       :buffer pr-id
-                                       :name curr-path
-                                       :at-pos-p t)))
+  (when id
+    (let* ((pr (code-review-db-get-pullreq id))
+           (buff (oref pr buffer))
+           (buf (if (eieio-object-p buff) buff (-first-item buff)))
+           (pr-id (oref pr id))
+           (path-id (uuidgen-4))
+           (db (code-review-db)))
+      (if (not buf)
+          (let* ((buf (code-review-buffer :id pr-id :pullreq pr-id))
+                 (path (code-review-path :id path-id
+                                         :buffer pr-id
+                                         :name curr-path
+                                         :at-pos-p t)))
+            (emacsql-with-transaction db
+              (closql-insert db buf t)
+              (closql-insert db path t)))
+        (let* ((paths (oref buf paths)))
           (emacsql-with-transaction db
-            (closql-insert db buf t)
-            (closql-insert db path t)))
-      (let* ((paths (oref buf paths)))
-        (emacsql-with-transaction db
           ;;; disable all previous ones
-          (-map
-           (lambda (path)
-             (oset path at-pos-p nil)
-             (closql-insert db path t))
-           paths)
-          ;; save new one
-          (closql-insert db (code-review-path
-                             :id path-id
-                             :buffer (oref buf id)
-                             :name curr-path
-                             :at-pos-p t)
-                         t))))))
+            (-map
+             (lambda (path)
+               (oset path at-pos-p nil)
+               (closql-insert db path t))
+             paths)
+            ;; save new one
+            (closql-insert db (code-review-path
+                               :id path-id
+                               :buffer (oref buf id)
+                               :name curr-path
+                               :at-pos-p t)
+                           t)))))))
 
 (defun code-review-db--curr-path-head-pos-update (id curr-path hunk-head-pos)
   "Update pullreq (ID) on CURR-PATH using HUNK-HEAD-POS."
