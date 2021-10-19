@@ -349,5 +349,60 @@ Code Review inserts PR comments sections in the diff buffer."
             (insert l)
             (insert "\n")))))))
 
+(defmacro code-review-section--with-buffer (&rest body)
+  "Include BODY in the buffer."
+  (declare (indent 0))
+  `(let ((buffer (get-buffer-create code-review-buffer-name)))
+     (with-current-buffer buffer
+       (let ((inhibit-read-only t))
+         (erase-buffer)
+         (code-review-mode)
+         (magit-insert-section (review-buffer)
+           ,@body)))
+     (switch-to-buffer-other-window buffer)))
+
+(defun code-review-section--build-buffer (obj)
+  "Build code review buffer given an OBJ."
+  (deferred:$
+    (deferred:parallel
+      (lambda () (code-review-diff-deferred obj))
+      (lambda () (code-review-infos-deferred obj)))
+    (deferred:nextc it
+      (lambda (x)
+        (let-alist (-second-item x)
+          (let* ((pull-request .data.repository.pullRequest)
+                 (grouped-comments (code-review-comment-make-group pull-request)))
+            (code-review-section--with-buffer
+              (magit-insert-section (demo)
+                (save-excursion
+                  (insert (a-get (-first-item x) 'message))
+                  (insert "\n"))
+                (setq code-review-section-grouped-comments grouped-comments)
+                (setq header-line-format
+                      (propertize
+                       (format "#%s: %s"
+                               (a-get pull-request 'number)
+                               (a-get pull-request 'title))
+                       'font-lock-face
+                       'magit-section-heading))
+
+                (code-review-db--pullreq-sha-update
+                 (oref obj pullreq-id)
+                 .data.repository.pullRequest.headRef.target.oid)
+
+                (code-review-section-insert-headers pull-request)
+                (code-review-section-insert-commits pull-request)
+                (code-review-section-insert-pr-description pull-request)
+                (code-review-section-insert-feedback-heading)
+
+                (setq code-review-pullreq-id (oref obj pullreq-id))
+
+                (magit-wash-sequence
+                 (apply-partially #'magit-diff-wash-diff ())))
+              (goto-char (point-min)))))))
+    (deferred:error it
+      (lambda (err)
+        (message "Got an error from your VC provider %S!" err)))))
+
 (provide 'code-review-section)
 ;;; code-review-section.el ends here

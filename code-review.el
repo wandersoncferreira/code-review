@@ -64,126 +64,18 @@
   "Face for outdated comments"
   :group 'code-review)
 
-(defmacro code-review-with-buffer (&rest body)
-  "Include BODY in the buffer."
-  (declare (indent 0))
-  `(let ((buffer (get-buffer-create code-review-buffer-name)))
-     (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-         (erase-buffer)
-         (code-review-mode)
-         (magit-insert-section (review-buffer)
-           ,@body)))
-     (switch-to-buffer-other-window buffer)))
-
-(defun code-review-group-comments (pull-request)
-  "Group comments in PULL-REQUEST to ease the access when building the buffer."
-  (-reduce-from
-   (lambda (acc node)
-     (let ((author (a-get-in node (list 'author 'login)))
-           (state (a-get node 'state)))
-       (if-let (comments (a-get-in node (list 'comments 'nodes)))
-           (-reduce-from
-            (lambda (grouped-comments comment)
-              (let-alist comment
-                (let* ((comment-enriched (a-assoc comment 'author author 'state state))
-                       (handled-pos (or .position .originalPosition))
-                       (path-pos (code-review-utils--comment-key .path handled-pos)))
-                  (if (or (not grouped-comments)
-                          (not (code-review-utils--comment-get grouped-comments path-pos)))
-                      (a-assoc grouped-comments path-pos (list comment-enriched))
-                    (a-update grouped-comments path-pos (lambda (v) (append v (list comment-enriched))))))))
-            acc
-            comments)
-         acc)))
-   nil
-   (a-get-in pull-request (list 'reviews 'nodes))))
-
-(defun code-review-section-build-buffer (obj)
-  "Build code review buffer given an OBJ."
-
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-diff-deferred obj))
-      (lambda () (code-review-infos-deferred obj)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-second-item x)
-          (let* ((pull-request .data.repository.pullRequest)
-                 (grouped-comments (code-review-group-comments pull-request)))
-            (code-review-with-buffer
-              (magit-insert-section (demo)
-                (save-excursion
-                  (insert (a-get (-first-item x) 'message))
-                  (insert "\n"))
-                (setq code-review-section-grouped-comments grouped-comments)
-                (setq header-line-format
-                      (propertize
-                       (format "#%s: %s"
-                               (a-get pull-request 'number)
-                               (a-get pull-request 'title))
-                       'font-lock-face
-                       'magit-section-heading))
-
-                (code-review-db--pullreq-sha-update
-                 (oref obj pullreq-id)
-                 .data.repository.pullRequest.headRef.target.oid)
-
-                (code-review-section-insert-headers pull-request)
-                (code-review-section-insert-commits pull-request)
-                (code-review-section-insert-pr-description pull-request)
-                (code-review-section-insert-feedback-heading)
-
-                (setq code-review-pullreq-id (oref obj pullreq-id))
-
-                (magit-wash-sequence
-                 (apply-partially #'magit-diff-wash-diff ())))
-              (goto-char (point-min)))))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
-
-(defun code-review-build-submit-structure ()
-  "Return A-LIST with replies and reviews to submit."
-  (let ((replies nil)
-        (review-comments nil)
-        (body nil))
-    (with-current-buffer (get-buffer code-review-buffer-name)
-      (save-excursion
-        (goto-char (point-min))
-        (magit-wash-sequence
-         (lambda ()
-           (magit-insert-section (_)
-             (with-slots (type value) (magit-current-section)
-               (when (string-equal type "local-comment")
-                 (let-alist value
-                   (if .reply?
-                       (push value replies)
-                     (push value review-comments)))))
-             (forward-line))))))
-    (let* ((partial-review `((commit_id . ,(a-get code-review-pr-alist 'sha))
-                             (body . ,(a-get code-review-pr-alist 'feedback))))
-           (review (if (equal nil review-comments)
-                       partial-review
-                     (a-assoc partial-review
-                              'comments review-comments))))
-      `((replies . ,replies)
-        (review . ,review)))))
-
-;;; Public APIs
-
 ;;;###autoload
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (let ((obj (code-review-utils-build-obj url)))
-    (code-review-section-build-buffer obj)))
+    (code-review-section--build-buffer obj)))
 
 ;;;###autoload
 (defun code-review-submit ()
   "Submit your review."
   (interactive)
-  (let ((response (code-review-build-submit-structure)))
+  (let ((response (code-review-utils--gen-submit-structure)))
     (let-alist response
       (cond
        ((and (not .replies) (not .review.body))

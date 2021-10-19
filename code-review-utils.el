@@ -146,5 +146,33 @@ The value discounts any written comments tracked by COUNT-COMMENTS."
        hunk-pos
        comments-written-pos)))
 
+
+(defun code-review-utils--gen-submit-structure ()
+  "Return A-LIST with replies and reviews to submit."
+  (let ((replies nil)
+        (review-comments nil)
+        (body nil))
+    (with-current-buffer (get-buffer code-review-buffer-name)
+      (save-excursion
+        (goto-char (point-min))
+        (magit-wash-sequence
+         (lambda ()
+           (magit-insert-section (_)
+             (with-slots (type value) (magit-current-section)
+               (when (string-equal type "local-comment")
+                 (let-alist value
+                   (if .reply?
+                       (push value replies)
+                     (push value review-comments)))))
+             (forward-line))))))
+    (let* ((partial-review `((commit_id . ,(a-get code-review-pr-alist 'sha))
+                             (body . ,(a-get code-review-pr-alist 'feedback))))
+           (review (if (equal nil review-comments)
+                       partial-review
+                     (a-assoc partial-review
+                              'comments review-comments))))
+      `((replies . ,replies)
+        (review . ,review)))))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

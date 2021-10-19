@@ -56,6 +56,29 @@ For internal usage only.")
   "Metadata to be attached to the comment section.
 For internal usage only.")
 
+(defun code-review-comment-make-group (pull-request)
+  "Group comments in PULL-REQUEST to ease the access when building the buffer."
+  (-reduce-from
+   (lambda (acc node)
+     (let ((author (a-get-in node (list 'author 'login)))
+           (state (a-get node 'state)))
+       (if-let (comments (a-get-in node (list 'comments 'nodes)))
+           (-reduce-from
+            (lambda (grouped-comments comment)
+              (let-alist comment
+                (let* ((comment-enriched (a-assoc comment 'author author 'state state))
+                       (handled-pos (or .position .originalPosition))
+                       (path-pos (code-review-utils--comment-key .path handled-pos)))
+                  (if (or (not grouped-comments)
+                          (not (code-review-utils--comment-get grouped-comments path-pos)))
+                      (a-assoc grouped-comments path-pos (list comment-enriched))
+                    (a-update grouped-comments path-pos (lambda (v) (append v (list comment-enriched))))))))
+            acc
+            comments)
+         acc)))
+   nil
+   (a-get-in pull-request (list 'reviews 'nodes))))
+
 
 ;;; Public APIs
 
