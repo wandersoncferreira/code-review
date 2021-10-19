@@ -28,7 +28,19 @@
 
 (require 'ghub)
 (require 'deferred)
+(require 'code-review-core)
 (require 'a)
+
+
+(defclass code-review-github-repo (closql-object)
+  ((closql-class-prefix :initform "forge-")
+   (closql-class-suffix :initform "-repository")
+   (host                :initarg :host)
+   (owner               :initarg :owner)
+   (repo                :initarg :repo)
+   (number              :initarg :number)
+   (sha                 :initarg :sha)
+   (callback            :initform nil)))
 
 (defgroup code-review-github nil
   "Interact with GitHub REST and GraphQL APIs."
@@ -49,13 +61,12 @@
   "Error callback, displays the error message M."
   (message "Error talking to GitHub: %s" m))
 
-(defun code-review-github-get-diff (pr-alist callback)
-  "Get a pull request or its diff.
-PR-ALIST is an alist representing a PR,
-NEEDS-DIFF t to return a diff, nil to return the pr object
-CALLBACK to call back when done."
-  (let-alist pr-alist
-    (ghub-get (format "/repos/%s/%s/pulls/%s" .owner .repo .num)
+(cl-defmethod code-review-pullreq-diff ((github code-review-github-repo) callback)
+  "Get PR diff from GITHUB, run CALLBACK after answer."
+  (let ((owner (oref github owner))
+        (repo (oref github repo))
+        (num (oref github number)))
+    (ghub-get (format "/repos/%s/%s/pulls/%s" owner repo num)
               nil
               :unpaginate t
               :headers code-review-github-diffheader
@@ -64,24 +75,24 @@ CALLBACK to call back when done."
               :callback callback
               :errorback #'code-review-github-errback)))
 
-(defun code-review-github-get-diff-deferred (pr-alist)
-  "Get a pull request or its diff.
-PR-ALIST is an alist representing a PR,
-NEEDS-DIFF t to return a diff nil to return the pr object
-return a deferred object"
+(cl-defmethod code-review-diff-deferred ((github code-review-github-repo))
+  "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-github-get-diff
-     pr-alist
+    (prin1 "WAND! \n")
+    (code-review-pullreq-diff
+     github
      (apply-partially
       (lambda (d v &rest _)
         (deferred:callback-post d v))
       d))
     d))
 
-(defun code-review-github-get-pr-info (pr-alist callback)
-  "Get PR details from PR-ALIST and dispatch to CALLBACK."
-  (let-alist pr-alist
-    (let ((query (format "query {
+(cl-defmethod code-review-pullreq-infos ((github code-review-github-repo) callback)
+  "Get PR details from GITHUB and dispatch to CALLBACK."
+  (let* ((repo (oref github repo))
+         (owner (oref github owner))
+         (num (oref github number))
+         (query (format "query {
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number: %s){
       headRef { target{ oid } }
@@ -148,21 +159,19 @@ return a deferred object"
       }
     }
   }
-}" .repo .owner .num)))
-      (ghub-graphql query
-                    '()
-                    :auth 'code-review
-                    :host code-review-github-host
-                    :callback callback
-                    :errorback #'code-review-github-errback))))
+}" repo owner num)))
+    (ghub-graphql query
+                  '()
+                  :auth 'code-review
+                  :host code-review-github-host
+                  :callback callback
+                  :errorback #'code-review-github-errback)))
 
-(defun code-review-github-get-pr-info-deferred (pr-alist)
-  "Get the code reviews on a PR.
-PR-ALIST is an alist representing a PR
-returns a deferred object"
+(cl-defmethod code-review-infos-deferred ((github code-review-github-repo))
+  "Get PR infos from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-github-get-pr-info
-     pr-alist
+    (code-review-pullreq-infos
+     github
      (apply-partially (lambda (d v &rest _)
                         (deferred:callback-post d v))
                       d))

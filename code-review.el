@@ -41,6 +41,7 @@
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
+(require 'code-review-core)
 
 (defconst code-review-buffer-name "*Code Review*")
 
@@ -99,20 +100,17 @@
    (a-get-in pull-request (list 'reviews 'nodes))))
 
 (defun code-review-section-build-buffer (pullreq-id)
-  "Build code review buffer given a PR-ALIST with basic info about target repo."
+  "Build code review buffer given a PULLREQ-ID with basic info about target repo."
 
-  ;;; small set of stateful variables used around the project that need to be
-  ;;; reset everytime we build the diff buffer.
-  ;; (setq code-review-section-first-hunk-header-pos nil
-  ;;       code-review-section-written-comments-count nil
-  ;;       code-review-section-written-comments-ident nil)
-
-  (let ((pr-alist (code-review-db-get-pr-alist pullreq-id)))
+  (let ((pr-alist (code-review-db-get-pr-alist pullreq-id))
+        (obj (code-review-github-repo :owner "eval-all-software"
+                                      :repo "tempo"
+                                      :number "98")))
 
     (deferred:$
       (deferred:parallel
-        (lambda () (code-review-github-get-diff-deferred pr-alist))
-        (lambda () (code-review-github-get-pr-info-deferred pr-alist)))
+        (lambda () (code-review-diff-deferred obj))
+        (lambda () (code-review-infos-deferred obj)))
       (deferred:nextc it
         (lambda (x)
           (let-alist (-second-item x)
@@ -273,7 +271,7 @@
    ("e" "Edit main comment" code-review-comment-add)
    ("s" "Submit" code-review)]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-add-comment)]
+   ("l" "LGTM - Approved" code-review-comment-add)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

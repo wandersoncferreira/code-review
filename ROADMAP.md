@@ -20,8 +20,8 @@
 - [ ] Change GITHUB specific code to use `cl-generic` [BLOCKER]!
 - [ ] Provide docs about requirements to add other forges
 - [ ] Fix file dependencies
-- [ ] Write tests to at least `utils` logic
-- [ ] Refactor many `a-list` access pattern
+- [x] Write tests to at least `utils` logic
+- [x] Refactor many `a-list` access pattern
 - [ ] Group styling properties calls on `code-review-section`
 - [x] Fill header
   - [x] Fix state style
@@ -42,3 +42,4 @@
 - [ ] Move to draft (?)
 - [ ] Promote to ready to review (?)
 - [ ] Promote comment to new issue
+- [ ] Fix suggested changes code block
