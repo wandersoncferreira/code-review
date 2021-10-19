@@ -65,29 +65,6 @@
   :group 'code-review)
 
 ;;;###autoload
-(defun code-review-start (url)
-  "Start review given PR URL."
-  (interactive "sPR URL: ")
-  (let ((obj (code-review-utils-build-obj url)))
-    (code-review-section--build-buffer obj)))
-
-;;;###autoload
-(defun code-review-forge-pr-at-point ()
-  "Review the forge pull request at point."
-  (interactive)
-  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq)))
-
-    (if (not (forge-pullreq-p pullreq))
-        (message "We can only review PRs at the moment. You tried on something else.")
-      (let* ((pr-alist (a-alist 'owner   (oref repo owner)
-                                'repo    (oref repo name)
-                                'apihost (oref repo apihost)
-                                'num     (oref pullreq number)))
-             (obj (code-review-utils-build-obj pr-alist)))
-        (code-review-section-build-buffer obj)))))
-
-;;;###autoload
 (defun code-review-approve ()
   "Approve current PR."
   (interactive)
@@ -136,7 +113,33 @@
              (message "Done submitting review"))))))
       (code-review-section-build-buffer code-review-pr-alist))))
 
-;;; transient
+;;; Entrypoint
+
+
+;;;###autoload
+(defun code-review-start (url)
+  "Start review given PR URL."
+  (interactive "sPR URL: ")
+  (let ((obj (code-review-utils-build-obj url)))
+    (code-review-section--build-buffer obj)))
+
+;;;###autoload
+(defun code-review-forge-pr-at-point ()
+  "Review the forge pull request at point."
+  (interactive)
+  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
+         (repo    (forge-get-repository pullreq)))
+
+    (if (not (forge-pullreq-p pullreq))
+        (message "We can only review PRs at the moment. You tried on something else.")
+      (let* ((pr-alist (a-alist 'owner   (oref repo owner)
+                                'repo    (oref repo name)
+                                'apihost (oref repo apihost)
+                                'num     (oref pullreq number)))
+             (obj (code-review-utils-build-obj pr-alist)))
+        (code-review-section-build-buffer obj)))))
+
+;;; Transient
 
 (transient-define-prefix code-review (review)
   "Approve, Reject, or Request changes to a Review."
