@@ -40,12 +40,6 @@
   "Get comments from GROUPED-COMMENTS located by PATH-POS key."
   (alist-get path-pos grouped-comments nil nil 'equal))
 
-(defun code-review-utils--comment-mark-hunk-pos (hunks path hunk-pos)
-  "Update the HUNKS a-list to include new HUNK-POS in PATH."
-  (if (not (alist-get path hunks nil nil 'equal))
-      (a-assoc hunks path hunk-pos)
-    hunks))
-
 (defun code-review-utils--comment-update-written-count (count-comments path comments)
   "Update how many comment lines was written for a given PATH.
 COUNT-COMMENTS keep track of this value and compute line numbers
@@ -54,10 +48,6 @@ using COMMENTS."
     (if-let (count (alist-get path count-comments nil nil 'equal))
         (a-assoc count-comments path (+ count len))
       (a-assoc count-comments path len))))
-
-(defun code-review-utils--comment-already-written? (identifiers comment-key)
-  "Verify if COMMENT-KEY is present in IDENTIFIERS."
-  (-contains-p identifiers comment-key))
 
 (defun code-review-utils--comment-clean-msg (msg text-to-remove)
   "Remove TEXT-TO-REMOVE from MSG."
@@ -136,17 +126,6 @@ Return a value between 0 and 1."
 
 
 ;;; SECTION
-
-(defun code-review-utils--section-diff-at-pos (hunks count-comments path curr-pos)
-  "HUNKS a-list for a given PATH compute true DIFF position at point.
-The value discounts any written comments tracked by COUNT-COMMENTS."
-  (let* ((get-or-0 (lambda (data key) (or (alist-get key data nil nil 'equal) 0)))
-         (hunk-pos (funcall get-or-0 hunks path))
-         (comments-written-pos (funcall get-or-0 count-comments path)))
-    (- curr-pos
-       hunk-pos
-       comments-written-pos)))
-
 
 (defun code-review-utils--gen-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
