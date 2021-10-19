@@ -111,7 +111,7 @@
            .review
            (lambda (&rest _)
              (message "Done submitting review"))))))
-      (code-review-section-build-buffer code-review-pr-alist))))
+      (code-review-section--build-buffer code-review-pr-alist))))
 
 ;;; Entrypoint
 
@@ -120,7 +120,7 @@
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (let ((obj (code-review-utils-build-obj url)))
+  (let ((obj (code-review-utils-build-obj-from-url url)))
     (code-review-section--build-buffer obj)))
 
 ;;;###autoload
@@ -137,7 +137,7 @@
                                 'apihost (oref repo apihost)
                                 'num     (oref pullreq number)))
              (obj (code-review-utils-build-obj pr-alist)))
-        (code-review-section-build-buffer obj)))))
+        (code-review-section--build-buffer obj)))))
 
 ;;; Transient
 

@@ -175,7 +175,6 @@ Code Review inserts PR comments sections in the diff buffer."
                             'font-lock-face 'magit-diff-hunk-heading))
         (magit-insert-heading)
         (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
-
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
@@ -404,9 +403,9 @@ Code Review inserts PR comments sections in the diff buffer."
               (goto-char (point-min))
 
               (advice-remove 'magit-diff-insert-file-section
-                             :override #'code-review-section--magit-diff-insert-file-section)
+                             #'code-review-section--magit-diff-insert-file-section)
               (advice-remove 'magit-diff-wash-hunk
-                             :override #'code-review-section--magit-diff-wash-hunk))))))
+                             #'code-review-section--magit-diff-wash-hunk))))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))

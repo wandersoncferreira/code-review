@@ -71,14 +71,15 @@ using COMMENTS."
     (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
          (a-alist 'num   (match-string 3 url)
                   'repo  (match-string 2 url)
-                  'owner (match-string 1 url)))))
+                  'owner (match-string 1 url)
+                  'url url))))
 
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."
   (let-alist  pr-alist
     (let ((pullreq (code-review-db--pullreq-create pr-alist)))
       (cond
-       ((string-match "github" url)
+       ((string-match "github" .url)
         (code-review-github-repo :host "api.github.com"
                                  :owner .owner
                                  :repo .repo
