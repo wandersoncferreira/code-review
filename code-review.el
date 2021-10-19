@@ -34,16 +34,20 @@
 
 ;;; Code:
 
+(require 'closql)
 (require 'magit-section)
 (require 'code-review-section)
 (require 'code-review-github)
 (require 'code-review-comment)
 (require 'code-review-utils)
+(require 'code-review-db)
 
 (defconst code-review-buffer-name "*Code Review*")
 
 (defvar code-review-pr-alist nil
   "For internal usage only.")
+
+(defvar code-review-pullreq-id nil)
 
 ;;; Faces
 
@@ -94,50 +98,56 @@
    nil
    (a-get-in pull-request (list 'reviews 'nodes))))
 
-(defun code-review-section-build-buffer (pr-alist)
+(defun code-review-section-build-buffer (pullreq-id)
   "Build code review buffer given a PR-ALIST with basic info about target repo."
 
   ;;; small set of stateful variables used around the project that need to be
   ;;; reset everytime we build the diff buffer.
-  (setq code-review-section-first-hunk-header-pos nil
-        code-review-section-written-comments-count nil
-        code-review-section-written-comments-ident nil)
+  ;; (setq code-review-section-first-hunk-header-pos nil
+  ;;       code-review-section-written-comments-count nil
+  ;;       code-review-section-written-comments-ident nil)
 
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-github-get-diff-deferred pr-alist))
-      (lambda () (code-review-github-get-pr-info-deferred pr-alist)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-second-item x)
-          (let* ((pull-request .data.repository.pullRequest)
-                 (grouped-comments (code-review-group-comments pull-request)))
-            (code-review-with-buffer
-              (magit-insert-section (demo)
-                (save-excursion
-                  (insert (a-get (-first-item x) 'message))
-                  (insert "\n"))
-                (setq code-review-section-grouped-comments grouped-comments)
-                (setq header-line-format
-                      (propertize
-                       (format "#%s: %s"
-                               (a-get pull-request 'number)
-                               (a-get pull-request 'title))
-                       'font-lock-face
-                       'magit-section-heading))
-                (setq code-review-pr-alist
-                      (a-assoc pr-alist
-                               'sha .data.repository.pullRequest.headRef.target.oid))
-                (code-review-section-insert-headers pull-request)
-                (code-review-section-insert-commits pull-request)
-                (code-review-section-insert-pr-description pull-request)
-                (code-review-section-insert-feedback-heading)
-                (magit-wash-sequence
-                 (apply-partially #'magit-diff-wash-diff ())))
-              (goto-char (point-min)))))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
+  (let ((pr-alist (code-review-db-get-pr-alist pullreq-id)))
+
+    (deferred:$
+      (deferred:parallel
+        (lambda () (code-review-github-get-diff-deferred pr-alist))
+        (lambda () (code-review-github-get-pr-info-deferred pr-alist)))
+      (deferred:nextc it
+        (lambda (x)
+          (let-alist (-second-item x)
+            (let* ((pull-request .data.repository.pullRequest)
+                   (grouped-comments (code-review-group-comments pull-request)))
+              (code-review-with-buffer
+                (magit-insert-section (demo)
+                  (save-excursion
+                    (insert (a-get (-first-item x) 'message))
+                    (insert "\n"))
+                  (setq code-review-section-grouped-comments grouped-comments)
+                  (setq header-line-format
+                        (propertize
+                         (format "#%s: %s"
+                                 (a-get pull-request 'number)
+                                 (a-get pull-request 'title))
+                         'font-lock-face
+                         'magit-section-heading))
+
+                  (code-review-db--pullreq-sha-update
+                   pullreq-id .data.repository.pullRequest.headRef.target.oid)
+
+                  (code-review-section-insert-headers pull-request)
+                  (code-review-section-insert-commits pull-request)
+                  (code-review-section-insert-pr-description pull-request)
+                  (code-review-section-insert-feedback-heading)
+
+                  (setq code-review-pullreq-id pullreq-id)
+
+                  (magit-wash-sequence
+                   (apply-partially #'magit-diff-wash-diff ())))
+                (goto-char (point-min)))))))
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from your VC provider %S!" err))))))
 
 (defun code-review-build-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
@@ -172,8 +182,9 @@
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (code-review-section-build-buffer
-   (code-review-utils-pr-from-url url)))
+  (let* ((pr-alist (code-review-utils-pr-from-url url))
+         (pr (code-review-db--pullreq-create pr-alist)))
+    (code-review-section-build-buffer (oref pr id))))
 
 ;;;###autoload
 (defun code-review-submit ()

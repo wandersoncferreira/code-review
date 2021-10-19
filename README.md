@@ -36,8 +36,8 @@ Missing something? Please, [let us know](https://github.com/wandersoncferreira/c
 - [ ] Display the main body comments in the PR [Blocker]
 - [ ] Review transient to regular comment usability a priority
 - [ ] Move more functions to `utils` to ease maintenance
-- [ ] Another look at the code to avoid stateful values
-  - consider using a database like forge does?
+- [x] Another look at the code to avoid stateful values
+  - consider using a database like forge does? DBs are good! done!
 - [ ] BIG work on faces to distinguish several scenarios! [BLOCKER]!
   - [x] Some initial improvements on header and main sections
   - [ ] Define colors for comment sections

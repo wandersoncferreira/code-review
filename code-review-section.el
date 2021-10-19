@@ -28,26 +28,12 @@
 
 (require 'magit-section)
 (require 'magit-diff)
-
-(defvar code-review-section-first-hunk-header-pos nil
-  "A-LIST to hold the first hunk header position for each path.
-For internal usage only.")
-
-(defvar code-review-section-written-comments-count nil
-  "A-LIST to hold how many lines of comments written for each path.
-For internal usage only.")
-
-(defvar code-review-section-written-comments-ident nil
-  "LIST to hold the identifiers comments written.
-For internal usage only.")
+(require 'code-review-db)
 
 (defvar code-review-section-grouped-comments nil
   "Hold the grouped comments info.
 Used by the overwritten version of `magit-diff-wash-hunk'.
 For internal usage only.")
-
-(defvar code-review-section-file nil
-  "For internal usage only.")
 
 (defun code-review-section-insert-outdated-comment (comments)
   "Insert outdated COMMENTS in the buffer."
@@ -61,12 +47,9 @@ For internal usage only.")
       (let* ((diff-hunk-lines (split-string hunk "\n"))
              (first-hunk-commit (-first-item (alist-get hunk hunk-groups nil nil 'equal))))
 
-        ;;; IDEA: move this to a database(?)
-        (setq code-review-section-written-comments-count
-              (code-review-utils--comment-update-written-count
-               code-review-section-written-comments-count
-               code-review-section-file
-               diff-hunk-lines))
+        (code-review-db--curr-path-comment-count-update
+         code-review-pullreq-id
+         (+ 1 (length diff-hunk-lines)))
 
         (magit-insert-section (comment first-hunk-commit)
           (let ((heading (format "Reviewed by %s [%s] - [OUTDATED]"
@@ -84,12 +67,9 @@ For internal usage only.")
             (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
               (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
 
-                ;;; IDEA: move this to a database(?)
-                (setq code-review-section-written-comments-count
-                      (code-review-utils-update-count-comments-written
-                       code-review-section-written-comments-count
-                       code-review-section-file
-                       (+ 1 (length body-lines))))
+                (code-review-db--curr-path-comment-count-update
+                 code-review-pullreq-id
+                 (+ 2 (length body-lines)))
 
                 (magit-insert-section (comment-outdated-heading c)
                   (magit-insert-heading (format "Reviewed by %s[%s]:"
@@ -109,12 +89,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     (dolist (c comments)
       (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
 
-        ;;; IDEA: move this to a database(?)
-        (setq code-review-section-written-comments-count
-              (code-review-utils--comment-update-written-count
-               code-review-section-written-comments-count
-               code-review-section-file
-               body-lines))
+        (code-review-db--curr-path-comment-count-update
+         code-review-pullreq-id
+         (+ 2 (length body-lines)))
 
         (magit-insert-section (comment c)
           (let ((heading (format "Reviewed by @%s [%s]: "
@@ -133,10 +110,13 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' file."
 
-  ;;; code-review specific code.
+  ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
   ;;; so the positioning of comments is done correctly.
-  (setq code-review-section-file (substring-no-properties file))
+  (code-review-db--curr-path-update
+   code-review-pullreq-id
+   (substring-no-properties file))
+  ;;; --- end -- code-review specific code.
 
   (magit-insert-section section
     (file file (or (equal status "deleted")
@@ -167,15 +147,21 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 Code Review inserts PR comments sections in the diff buffer."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
 
-    ;;; IDEA: move this to a database(?)
-    ;;; code-review specific code.
+    ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
-    (setf code-review-section-first-hunk-header-pos
-          (code-review-utils--comment-mark-hunk-pos
-           code-review-section-first-hunk-header-pos
-           code-review-section-file
-           (+ 1 (line-number-at-pos))))
+    (when (eq 'code-review-mode (with-current-buffer (current-buffer)
+                                  major-mode))
+      (let* ((path (code-review-db--curr-path code-review-pullreq-id))
+             (path-name (oref path name))
+             (head-pos (oref path head-pos))
+             (at-pos-p (oref path at-pos-p)))
+        (when (not head-pos)
+          (let ((adjusted-pos (+ 1 (line-number-at-pos))))
+            (code-review-db--curr-path-head-pos-update code-review-pullreq-id path-name adjusted-pos)
+            (setq head-pos adjusted-pos)
+            (setq path-name path-name)))))
+    ;;; --- end -- code-review specific code.
 
     (let* ((heading  (match-string 0))
            (ranges   (mapcar (lambda (str)
@@ -191,28 +177,36 @@ Code Review inserts PR comments sections in the diff buffer."
                             'font-lock-face 'magit-diff-hunk-heading))
         (magit-insert-heading)
         (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
+
+          ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
-
-          (let* ((diff-pos (code-review-utils--section-diff-at-pos
-                            code-review-section-first-hunk-header-pos
-                            code-review-section-written-comments-count
-                            code-review-section-file
-                            (line-number-at-pos)))
-                 (path-pos (code-review-utils--comment-key
-                            code-review-section-file
-                            diff-pos)))
-            (if-let (grouped-comments (and
-                                       (not (code-review-utils--comment-already-written?
-                                             code-review-section-written-comments-ident
-                                             path-pos))
-                                       (code-review-utils--comment-get
-                                        code-review-section-grouped-comments
-                                        path-pos)))
-                (progn
-                  (add-to-list 'code-review-section-written-comments-ident path-pos)
-                  (code-review-section-insert-comment grouped-comments))
-              (forward-line))))
+          (if (eq 'code-review-mode (with-current-buffer (current-buffer)
+                                      major-mode))
+              (let* ((head-pos
+                      (code-review-db-get-curr-head-pos code-review-pullreq-id))
+                     (comment-written-pos
+                      (code-review-db-get-comment-written-pos code-review-pullreq-id))
+                     (diff-pos (- (line-number-at-pos)
+                                  head-pos
+                                  comment-written-pos))
+                     (path-name (code-review-db--curr-path-name code-review-pullreq-id))
+                     (path-pos (code-review-utils--comment-key path-name diff-pos)))
+                (if-let (grouped-comments (and
+                                           (not (code-review-db--comment-already-written?
+                                                 code-review-pullreq-id
+                                                 path-pos))
+                                           (code-review-utils--comment-get
+                                            code-review-section-grouped-comments
+                                            path-pos)))
+                    (progn
+                      (code-review-db--curr-path-comment-written-update
+                       code-review-pullreq-id
+                       path-pos)
+                      (code-review-section-insert-comment grouped-comments))
+                  (forward-line)))
+          ;;; --- end -- code-review specific code.
+            (forward-line)))
         (oset section end (point))
         (oset section washer 'magit-diff-paint-hunk)
         (oset section combined combined)
@@ -222,6 +216,7 @@ Code Review inserts PR comments sections in the diff buffer."
         (oset section to-range (car (last ranges)))
         (oset section about about)))
     t))
+(- 38 23 7)
 
 (defun code-review-section-insert-headers (pull-request)
   "Insert header with PULL-REQUEST data."
