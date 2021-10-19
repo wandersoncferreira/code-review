@@ -7,6 +7,7 @@
 (depends-on "dash")
 (depends-on "magit-section")
 (depends-on "magit")
+(depends-on "uuidgen")
 (depends-on "closql")
 
 (package-file "code-review.el")

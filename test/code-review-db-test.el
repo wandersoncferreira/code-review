@@ -108,9 +108,19 @@
     (setf code-review-database-file random-test-db
           code-review--db-connection nil))
 
+  (it "update which comment identifiers was written to buffer"
+    (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
+      (code-review-db--curr-path-update (oref pr id) "github.el")
+      (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
+      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
+      (let ((comment (code-review-db-get-curr-path-comment (oref pr id))))
+        (expect (oref comment identifiers)
+                :to-equal (list "github.el:30")))))
+
   (it "add comment written count to current path"
     (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
       (code-review-db--curr-path-update (oref pr id) "github.el")
+      (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
       (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (let ((comment (code-review-db-get-curr-path-comment (oref pr id))))
         (expect (oref comment loc-written)
@@ -119,27 +129,19 @@
   (it "update comment count to current path"
     (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
       (code-review-db--curr-path-update (oref pr id) "github.el")
+      (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
       (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (let ((comment (code-review-db-get-curr-path-comment (oref pr id))))
         (expect (oref comment loc-written)
                 :to-equal 84))))
 
-  (it "update which comment identifiers was written to buffer"
-    (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
-      (code-review-db--curr-path-update (oref pr id) "github.el")
-      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
-      (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
-      (let ((comment (code-review-db-get-curr-path-comment (oref pr id))))
-        (expect (oref comment identifiers)
-                :to-equal (list "github.el:30")))))
-
   (it "update which comment identifiers was written to buffer many calls"
     (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
       (code-review-db--curr-path-update (oref pr id) "github.el")
-      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
       (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:60")
+      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (let ((comment (code-review-db-get-curr-path-comment (oref pr id))))
         (expect (oref comment identifiers)
                 :to-have-same-items-as (list "github.el:30"
@@ -148,9 +150,9 @@
   (it "verify if a IDENTIFIER was already written to the buffer"
     (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
       (code-review-db--curr-path-update (oref pr id) "github.el")
-      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
       (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:60")
+      (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (expect (code-review-db--comment-already-written? (oref pr id) "github.el:30")
               :to-be t)
       (expect (code-review-db--comment-already-written? (oref pr id) "github.el:60")
@@ -163,6 +165,7 @@
   (it "get the line number for the comment written in the curr-path."
     (let ((pr (code-review-db--pullreq-create sample-pr-alist)))
       (code-review-db--curr-path-update (oref pr id) "github.el")
+      (code-review-db--curr-path-comment-written-update (oref pr id) "github.el:30")
       (code-review-db--curr-path-comment-count-update (oref pr id) 42)
       (expect (code-review-db-get-comment-written-pos (oref pr id))
               :to-equal 42))))
