@@ -38,6 +38,7 @@ Missing something? Please, [let us know](https://github.com/wandersoncferreira/c
 - [ ] Move more functions to `utils` to ease maintenance
 - [x] Another look at the code to avoid stateful values
   - consider using a database like forge does? DBs are good! done!
+  - [ ] Make DB functions safer to use out of order
 - [ ] BIG work on faces to distinguish several scenarios! [BLOCKER]!
   - [x] Some initial improvements on header and main sections
   - [ ] Define colors for comment sections
