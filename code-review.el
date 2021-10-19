@@ -72,6 +72,43 @@
     (code-review-section--build-buffer obj)))
 
 ;;;###autoload
+(defun code-review-forge-pr-at-point ()
+  "Review the forge pull request at point."
+  (interactive)
+  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
+         (repo    (forge-get-repository pullreq)))
+
+    (if (not (forge-pullreq-p pullreq))
+        (message "We can only review PRs at the moment. You tried on something else.")
+      (let* ((pr-alist (a-alist 'owner   (oref repo owner)
+                                'repo    (oref repo name)
+                                'apihost (oref repo apihost)
+                                'num     (oref pullreq number)))
+             (obj (code-review-utils-build-obj pr-alist)))
+        (code-review-section-build-buffer obj)))))
+
+;;;###autoload
+(defun code-review-approve ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "APPROVE")
+  (code-review-submit))
+
+;;;###autoload
+(defun code-review-reject ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "REJECT")
+  (code-review-submit))
+
+;;;###autoload
+(defun code-review-request-changes ()
+  "Approve current PR."
+  (interactive)
+  (a-assoc code-review-pr-alist 'event "REQUEST_CHANGE")
+  (code-review-submit))
+
+;;;###autoload
 (defun code-review-submit ()
   "Submit your review."
   (interactive)
@@ -98,42 +135,6 @@
            (lambda (&rest _)
              (message "Done submitting review"))))))
       (code-review-section-build-buffer code-review-pr-alist))))
-
-;;;###autoload
-(defun code-review-forge-pr-at-point ()
-  "Review the forge pull request at point."
-  (interactive)
-  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq)))
-
-    (if (not (forge-pullreq-p pullreq))
-        (message "We can only review PRs at the moment. You tried on something else.")
-      (progn
-        (setq forge-current-dir default-directory)
-        (code-review-section-build-buffer (a-alist 'owner   (oref repo owner)
-                                                   'repo    (oref repo name)
-                                                   'apihost (oref repo apihost)
-                                                   'num     (oref pullreq number)))))))
-;;;###autoload
-(defun code-review-approve ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'event "APPROVE")
-  (code-review-submit))
-
-;;;###autoload
-(defun code-review-reject ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'event "REJECT")
-  (code-review-submit))
-
-;;;###autoload
-(defun code-review-request-changes ()
-  "Approve current PR."
-  (interactive)
-  (a-assoc code-review-pr-alist 'event "REQUEST_CHANGE")
-  (code-review-submit))
 
 ;;; transient
 

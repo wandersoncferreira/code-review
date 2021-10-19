@@ -83,24 +83,25 @@ using COMMENTS."
                   'repo  (match-string 2 url)
                   'owner (match-string 1 url)))))
 
+(defun code-review-utils-build-obj (pr-alist)
+  "Return obj from PR-ALIST."
+  (let-alist  pr-alist
+    (let ((pullreq (code-review-db--pullreq-create pr-alist)))
+      (cond
+       ((string-match "github" url)
+        (code-review-github-repo :host "api.github.com"
+                                 :owner .owner
+                                 :repo .repo
+                                 :number .num
+                                 :pullreq-id (oref pullreq id)))
+       (t
+        (message "Forge not supported"))))))
 
-(defun code-review-utils-build-obj (url)
-  "Return obj URL."
+(defun code-review-utils-build-obj-from-url (url)
+  "Return obj from URL."
   (let ((pr-alist (code-review-utils-pr-from-url url)))
-    (let-alist  pr-alist
-      (let ((pullreq (code-review-db--pullreq-create pr-alist)))
-        (cond
-         ((string-match "github" url)
-          (code-review-github-repo :host "api.github.com"
-                                   :owner .owner
-                                   :repo .repo
-                                   :number .num
-                                   :pullreq-id (oref pullreq id)))
-         (t
-          (message "Forge not supported")))))))
+    (code-review-utils-build-obj pr-alist)))
 
-(code-review-utils-build-obj
- "https://gitahub.com/eval-all-software/tempo/pull/98")
 
 ;;; COLORS
 
