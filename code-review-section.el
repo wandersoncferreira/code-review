@@ -106,7 +106,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
               (insert "\n"))
             (insert ?\n)))))))
 
-(defun magit-diff-insert-file-section
+(defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' file."
 
@@ -142,7 +142,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
         (magit-insert-heading)))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
-(defun magit-diff-wash-hunk ()
+(defun code-review-section--magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
 Code Review inserts PR comments sections in the diff buffer."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
@@ -150,17 +150,15 @@ Code Review inserts PR comments sections in the diff buffer."
     ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
-    (when (eq 'code-review-mode (with-current-buffer (current-buffer)
-                                  major-mode))
-      (let* ((path (code-review-db--curr-path code-review-pullreq-id))
-             (path-name (oref path name))
-             (head-pos (oref path head-pos))
-             (at-pos-p (oref path at-pos-p)))
-        (when (not head-pos)
-          (let ((adjusted-pos (+ 1 (line-number-at-pos))))
-            (code-review-db--curr-path-head-pos-update code-review-pullreq-id path-name adjusted-pos)
-            (setq head-pos adjusted-pos)
-            (setq path-name path-name)))))
+    (let* ((path (code-review-db--curr-path code-review-pullreq-id))
+           (path-name (oref path name))
+           (head-pos (oref path head-pos))
+           (at-pos-p (oref path at-pos-p)))
+      (when (not head-pos)
+        (let ((adjusted-pos (+ 1 (line-number-at-pos))))
+          (code-review-db--curr-path-head-pos-update code-review-pullreq-id path-name adjusted-pos)
+          (setq head-pos adjusted-pos)
+          (setq path-name path-name))))
     ;;; --- end -- code-review specific code.
 
     (let* ((heading  (match-string 0))
@@ -216,7 +214,7 @@ Code Review inserts PR comments sections in the diff buffer."
         (oset section to-range (car (last ranges)))
         (oset section about about)))
     t))
-(- 38 23 7)
+
 
 (defun code-review-section-insert-headers (pull-request)
   "Insert header with PULL-REQUEST data."
@@ -363,6 +361,10 @@ Code Review inserts PR comments sections in the diff buffer."
 
 (defun code-review-section--build-buffer (obj)
   "Build code review buffer given an OBJ."
+  (advice-add 'magit-diff-insert-file-section
+              :override #'code-review-section--magit-diff-insert-file-section)
+  (advice-add 'magit-diff-wash-hunk
+              :override #'code-review-section--magit-diff-wash-hunk)
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-diff-deferred obj))
@@ -399,7 +401,12 @@ Code Review inserts PR comments sections in the diff buffer."
 
                 (magit-wash-sequence
                  (apply-partially #'magit-diff-wash-diff ())))
-              (goto-char (point-min)))))))
+              (goto-char (point-min))
+
+              (advice-remove 'magit-diff-insert-file-section
+                             :override #'code-review-section--magit-diff-insert-file-section)
+              (advice-remove 'magit-diff-wash-hunk
+                             :override #'code-review-section--magit-diff-wash-hunk))))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))
