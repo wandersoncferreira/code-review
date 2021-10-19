@@ -56,6 +56,42 @@ using COMMENTS."
    ""
    msg))
 
+(defun code-review-utils--clean-suggestion (suggestion)
+  "Clean SUGGESTION comment."
+  (let ((res (-reduce-from
+              (lambda (acc line)
+                (let ((str (string-trim line)))
+                  (cond
+                   ((string-empty-p str)
+                    acc)
+
+                   ((string-match-p "Suggested change" str)
+                    (a-update acc 'block (lambda (v)
+                                           (cons str v))))
+
+                   (t
+                    (if (not (a-get acc 'negative))
+                        (-> acc
+                            (a-update 'block (lambda (v)
+                                               (cons (format "-   %s" str) v)))
+                            (a-assoc 'negative t))
+                      (-> acc
+                          (a-update 'block (lambda (v)
+                                             (cons (format "+   %s" str) v)))
+                          (a-assoc 'negative nil)))))))
+              (a-alist 'negative nil
+                       'block (list))
+              (split-string suggestion "\n"))))
+    (nreverse (a-get res 'block))))
+
+(defun code-review-utils--split-comment (comment)
+  "Clean and split the COMMENT in lines."
+  (if (string-match-p "Suggested change" comment)
+      (code-review-utils--clean-suggestion comment)
+    (split-string comment "\n")))
+
+(code-review-utils--split-comment testando)
+
 ;;; GIT
 
 (defun code-review-utils--git-get-user ()

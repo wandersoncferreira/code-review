@@ -65,7 +65,7 @@ For internal usage only.")
               (insert "\n"))
 
             (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
-              (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+              (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
 
                 (code-review-db--curr-path-comment-count-update
                  code-review-pullreq-id
@@ -87,7 +87,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
   (if (a-get (-first-item comments) 'outdated)
       (code-review-section-insert-outdated-comment comments)
     (dolist (c comments)
-      (let ((body-lines (split-string (a-get c 'bodyText) "\n")))
+      (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
 
         (code-review-db--curr-path-comment-count-update
          code-review-pullreq-id

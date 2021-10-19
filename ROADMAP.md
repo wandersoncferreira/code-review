@@ -42,4 +42,4 @@
 - [ ] Move to draft (?)
 - [ ] Promote to ready to review (?)
 - [ ] Promote comment to new issue
-- [ ] Fix suggested changes code block
+- [x] Fix suggested changes code block
