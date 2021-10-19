@@ -39,6 +39,7 @@
    (owner               :initarg :owner)
    (repo                :initarg :repo)
    (number              :initarg :number)
+   (pullreq-id          :initarg :pullreq-id)
    (sha                 :initarg :sha)
    (callback            :initform nil)))
 
@@ -78,7 +79,6 @@
 (cl-defmethod code-review-diff-deferred ((github code-review-github-repo))
   "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (prin1 "WAND! \n")
     (code-review-pullreq-diff
      github
      (apply-partially

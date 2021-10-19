@@ -31,5 +31,6 @@
 (cl-defgeneric code-review-send-replies (obj)
   "Send review comment replies stored in OBJ to the forge.")
 
+
 (provide 'code-review-core)
 ;;; code-review-core.el ends here
