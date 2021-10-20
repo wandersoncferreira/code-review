@@ -34,9 +34,10 @@
 - [ ] Show others deliberations (nice!)
 - [x] Implement list of Commits in the PR [BLOCKER]
 - [ ] Review a commit on RET [BLOCKER]
-- [ ] How to inform the two Magit functions overwrites?
+- [x] How to inform the two Magit functions overwrites?
   - are there any standard practice in emacs to make this more explicit?
-- [ ] Organize `utils` file
+  - using `advice-add` and `advice-remove`
+- [x] Organize `utils` file
 - [ ] Set labels (?)
 - [ ] Set project (?)
 - [ ] Move to draft (?)
