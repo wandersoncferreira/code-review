@@ -5,7 +5,7 @@
 - [ ] Edit regular comment
 - [ ] Delete regular comment
 - [ ] LGTM! fast forward
-- [ ] Display the main body comments in the PR [Blocker]
+- [x] Display the main body comments in the PR [Blocker]
 - [ ] Review transient to regular comment usability a priority
 - [ ] Move more functions to `utils` to ease maintenance
 - [x] Another look at the code to avoid stateful values
@@ -44,3 +44,4 @@
 - [ ] Promote to ready to review (?)
 - [ ] Promote comment to new issue
 - [x] Fix suggested changes code block
+- [ ] Support images (?)

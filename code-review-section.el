@@ -106,6 +106,26 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
               (insert "\n"))
             (insert ?\n)))))))
 
+(defun code-review-section-insert-general-comments (pull-request)
+  "Insert general comments for the PULL-REQUEST in the buffer."
+  (magit-insert-section (conversation)
+    (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
+    (magit-insert-heading)
+    (insert ?\n)
+    (dolist (c (a-get-in pull-request (list 'comments 'nodes)))
+      (magit-insert-section (general-comment c)
+        (insert (propertize
+                 (format "@%s" (a-get-in c (list 'author 'login)))
+                 'font-lock-face
+                 'magit-log-author))
+        (magit-insert-heading)
+        (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
+          (dolist (l body-lines)
+            (insert l)
+            (insert ?\n)))))
+    (insert ?\n)
+    (insert ?\n)))
+
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' file."
@@ -395,6 +415,7 @@ Code Review inserts PR comments sections in the diff buffer."
                 (code-review-section-insert-commits pull-request)
                 (code-review-section-insert-pr-description pull-request)
                 (code-review-section-insert-feedback-heading)
+                (code-review-section-insert-general-comments pull-request)
 
                 (setq code-review-pullreq-id (oref obj pullreq-id))
 
