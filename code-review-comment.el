@@ -54,15 +54,15 @@
 
 ;;; internal vars
 
-(defvar-local comment-cursor-pos nil
+(defvar comment-cursor-pos nil
   "Variable to hold the cursor position where the comment will be added.
 For internal usage only.")
 
-(defvar-local comment-feedback? nil
+(defvar comment-feedback? nil
   "Differentiate between a regular comment from the main feedback comment.
 For internal usage only.")
 
-(defvar-local comment-metadata nil
+(defvar comment-metadata nil
   "Metadata to be attached to the comment section.
 For internal usage only.")
 
@@ -91,7 +91,6 @@ For internal usage only.")
    nil
    (a-get-in pull-request (list 'reviews 'nodes))))
 
-
 (defun code-review-comment--hold-metadata ()
   "Save metadata to attach to local comment at commit phase."
   (with-slots (type value) (magit-current-section)
@@ -105,6 +104,10 @@ For internal usage only.")
                `((reply? . t)
                  (database-id . ,.databaseId)
                  (position ,(or .position .originalPosition))))
+              ((-contains-p '(local-comment
+                              local-comment-header)
+                            type)
+               value)
               (t
                (progn
                  (message "You can only comment on HUNK or COMMENTS.")
@@ -118,6 +121,7 @@ For internal usage only.")
 (defun code-review-comment-add ()
   "Add comment."
   (interactive)
+  (code-review-comment--hold-metadata)
   (when comment-metadata
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
       (with-current-buffer buffer
@@ -171,7 +175,27 @@ For internal usage only.")
 (defun code-review-comment-edit ()
   "Add comment."
   (interactive)
-  (message " EDIT "))
+  (let ((section (magit-current-section)))
+    (if section
+        (with-slots (type value) section
+          (let-alist value
+            (if (-contains-p '(local-comment
+                               local-comment-header
+                               feedback
+                               feedback-header)
+                             type)
+                (progn
+                  (code-review-comment--hold-metadata)
+                  (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
+                    (with-current-buffer buffer
+                      (insert .body)
+                      (insert ?\n)
+                      (goto-char (point-min)))
+                    (setq comment-cursor-pos (line-beginning-position))
+                    (switch-to-buffer-other-window buffer)
+                    (code-review-comment-mode)))
+              (message "Edit not supported in this section"))))
+      (message "You should call me on a section"))))
 
 ;;;###autoload
 (defun code-review-comment-delete ()
