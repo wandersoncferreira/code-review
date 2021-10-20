@@ -45,3 +45,6 @@
 - [ ] Promote comment to new issue
 - [x] Fix suggested changes code block
 - [ ] Support images (?)
+- [ ] Add how many changed files in the PR
+- [ ] Identifies if the request is draft
+- [ ] Change bodyText for body (markdown) and use markdown syntax in comments ?? o.O (we can at least get images and quotes right..)
