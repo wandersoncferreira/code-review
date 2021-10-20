@@ -45,9 +45,6 @@
 
 (defconst code-review-buffer-name "*Code Review*")
 
-(defvar code-review-pr-alist nil
-  "For internal usage only.")
-
 (defvar code-review-pullreq-id nil)
 
 ;;; Faces

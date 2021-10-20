@@ -37,24 +37,36 @@
             (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
             map))
 
-(defconst code-review-comment-buffer-name "*Code Review Comment*"
-  "Name of comment buffer.")
+(defcustom code-review-comment-buffer-name "*Code Review Comment*"
+  "Name of comment buffer."
+  :group 'code-review
+  :type 'string)
 
-(defconst code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment")
+(defcustom code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment"
+  "Helper text on top of comment buffer."
+  :group 'code-review
+  :type 'string)
 
-(defconst code-review-comment-feedback-msg ";;; Leave a comment here.")
+(defcustom code-review-comment-feedback-msg ";;; Leave a comment here."
+  "Default text to feedback slot."
+  :group 'code-review
+  :type 'string)
 
-(defvar code-review-comment-hold-cursor-pos nil
+;;; internal vars
+
+(defvar-local comment-cursor-pos nil
   "Variable to hold the cursor position where the comment will be added.
 For internal usage only.")
 
-(defvar code-review-comment-writing-feedback nil
+(defvar-local comment-feedback? nil
   "Differentiate between a regular comment from the main feedback comment.
 For internal usage only.")
 
-(defvar code-review-comment-hold-metadata nil
+(defvar-local comment-metadata nil
   "Metadata to be attached to the comment section.
 For internal usage only.")
+
+;;; general functons
 
 (defun code-review-comment-make-group (pull-request)
   "Group comments in PULL-REQUEST to ease the access when building the buffer."
@@ -80,34 +92,38 @@ For internal usage only.")
    (a-get-in pull-request (list 'reviews 'nodes))))
 
 
+(defun code-review-comment--hold-metadata ()
+  "Save metadata to attach to local comment at commit phase."
+  (with-slots (type value) (magit-current-section)
+    (let-alist value
+      (let ((metadata
+             (cond
+              ((string-equal type "hunk")
+               `((reply? . nil)
+                 (database-id . nil)))
+              ((string-equal type "comment")
+               `((reply? . t)
+                 (database-id . ,.databaseId)
+                 (position ,(or .position .originalPosition))))
+              (t
+               (progn
+                 (message "You can only comment on HUNK or COMMENTS.")
+                 nil)))))
+        (setq comment-metadata metadata)))))
+
+
 ;;; Public APIs
 
 ;;;###autoload
 (defun code-review-comment-add ()
   "Add comment."
   (interactive)
-  ;;; save metadata to attach to local comment at commit phase
-  (with-slots (type value) (magit-current-section)
-    (let-alist value
-      (setq code-review-comment-hold-metadata
-            (cond
-             ((string-equal type "hunk")
-              `((reply? . nil)
-                (database-id . nil)))
-             ((string-equal type "comment")
-              `((reply? . t)
-                (database-id . ,.databaseId)
-                (position ,(or .position .originalPosition))))
-             (t
-              (progn
-                (message "You can only comment on HUNK or COMMENTS.")
-                nil))))))
-  (when code-review-comment-hold-metadata
+  (when comment-metadata
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
       (with-current-buffer buffer
         (insert code-review-comment-buffer-msg)
         (insert ?\n))
-      (setq code-review-comment-hold-cursor-pos (line-beginning-position))
+      (setq comment-cursor-pos (line-beginning-position))
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
 
@@ -120,7 +136,7 @@ For internal usage only.")
       (insert code-review-comment-feedback-msg)
       (insert ?\n))
     (switch-to-buffer-other-window buffer)
-    (setq code-review-comment-writing-feedback t)
+    (setq comment-feedback? t)
     (code-review-comment-mode)))
 
 ;;;###autoload
@@ -131,25 +147,24 @@ For internal usage only.")
          (comment-text (with-current-buffer buffer
                          (save-excursion
                            (buffer-substring-no-properties (point-min) (point-max))))))
-    (kill-buffer buffer)
-    (if code-review-comment-writing-feedback
-        (let ((comment-cleaned (code-review-utils--comment-clean-msg
-                                comment-text
-                                code-review-comment-feedback-msg)))
-          (setq code-review-pr-alist
-                (a-assoc code-review-pr-alist 'feedback comment-cleaned))
-          (setq code-review-comment-writing-feedback nil)
-          (code-review-section-insert-feedback comment-cleaned))
+    (if comment-feedback?
+        (let ((comment-cleaned
+               (code-review-utils--comment-clean-msg
+                comment-text
+                code-review-comment-feedback-msg)))
+          (code-review-section-insert-feedback comment-cleaned)
+          (setq comment-feedback? nil))
       (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                comment-text
                                code-review-comment-buffer-msg))
-             (metadata (a-assoc code-review-comment-hold-metadata
+             (metadata (a-assoc comment-metadata
                                 'body comment-cleaned
-                                'cursor-pos code-review-comment-hold-cursor-pos)))
-        (setq code-review-comment-hold-metadata nil
-              code-review-comment-hold-cursor-pos nil)
+                                'cursor-pos comment-cursor-pos)))
+        (setq comment-metadata nil
+              comment-cursor-pos nil)
         (code-review-section-insert-local-comment comment-cleaned metadata)))
-    (other-window 1)))
+    (other-window 1)
+    (kill-buffer buffer)))
 
 
 ;;;###autoload
