@@ -19,6 +19,9 @@
   (list "This need to be changed"
         "Improve this code please"))
 
+(defconst sample-suggestion-comment
+  "Suggested change\n        \n          \n    \n\n        \n      \n    \n    \n      \n          \n            \n               :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.12\"}\n          \n          \n            \n               :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.14\"}")
+
 (describe "COMMENTS"
 
   (it "are grouped by path and position"
@@ -47,7 +50,13 @@
     (expect (code-review-utils--comment-update-written-count sample-comment-written-lines "github.el" sample-comment-lines)
             :to-equal (a-alist "github.el" 3))
     (expect (code-review-utils--comment-update-written-count (a-alist "github.el" 5) "github.el" sample-comment-lines)
-            :to-equal (a-alist "github.el" 8))))
+            :to-equal (a-alist "github.el" 8)))
+
+  (it "clean suggestion code blocks and add 'hunk-like' appearance."
+    (expect (code-review-utils--clean-suggestion sample-suggestion-comment)
+            :to-equal `("Suggested change"
+                        "-   :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.12\"}"
+                        "+   :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.14\"}"))))
 
 (describe "GIT")
 
@@ -58,7 +67,8 @@
             :to-equal (a-alist
                        'num "98"
                        'repo "tempo"
-                       'owner "eval-all-software"))))
+                       'owner "eval-all-software"
+                       'url "https://github.com/eval-all-software/tempo/pull/98"))))
 
 (describe "COLORS")
 

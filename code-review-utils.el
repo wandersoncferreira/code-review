@@ -164,11 +164,15 @@ Return a value between 0 and 1."
 
 ;;; SECTION
 
-(defun code-review-utils--gen-submit-structure ()
+(defun code-review-utils--gen-submit-structure (pullreq-id)
   "Return A-LIST with replies and reviews to submit."
-  (let ((replies nil)
-        (review-comments nil)
-        (body nil))
+  (let* ((replies nil)
+         (review-comments nil)
+         (body nil)
+         (pullreq (code-review-db-get-pullreq pullreq-id))
+         (obj (code-review-github-repo :owner (oref pullreq owner)
+                                       :repo (oref pullreq repo)
+                                       :number (oref pullreq number))))
     (with-current-buffer (get-buffer code-review-buffer-name)
       (save-excursion
         (goto-char (point-min))
@@ -182,14 +186,15 @@ Return a value between 0 and 1."
                        (push value replies)
                      (push value review-comments)))))
              (forward-line))))))
-    (let* ((partial-review `((commit_id . ,(a-get code-review-pr-alist 'sha))
-                             (body . ,(a-get code-review-pr-alist 'feedback))))
+    (let* ((partial-review `((commit_id . ,(oref pullreq sha))
+                             (body . ,(oref pullreq feedback))))
            (review (if (equal nil review-comments)
                        partial-review
                      (a-assoc partial-review
                               'comments review-comments))))
-      `((replies . ,replies)
-        (review . ,review)))))
+      (oset obj replies replies)
+      (oset obj review review)
+      obj)))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

@@ -68,50 +68,46 @@
 (defun code-review-approve ()
   "Approve current PR."
   (interactive)
-  (a-assoc code-review-pr-alist 'event "APPROVE")
-  (code-review-submit))
+  (code-review-submit "APPROVE"))
 
 ;;;###autoload
 (defun code-review-reject ()
   "Approve current PR."
   (interactive)
-  (a-assoc code-review-pr-alist 'event "REJECT")
-  (code-review-submit))
+  (code-review-submit "REJECT"))
 
 ;;;###autoload
 (defun code-review-request-changes ()
   "Approve current PR."
   (interactive)
-  (a-assoc code-review-pr-alist 'event "REQUEST_CHANGE")
-  (code-review-submit))
+  (code-review-submit "REQUEST_CHANGE"))
 
 ;;;###autoload
-(defun code-review-submit ()
-  "Submit your review."
+(defun code-review-submit (event)
+  "Submit your review with a final veredict (EVENT)."
   (interactive)
-  (let ((response (code-review-utils--gen-submit-structure)))
-    (let-alist response
-      (cond
-       ((and (not .replies) (not .review.body))
-        (message "Your review is empty."))
+  (let ((obj (code-review-utils--gen-submit-structure
+              code-review-pullreq-id)))
+    (oset obj event event)
+    (cond
+     ((and (not (oref obj replies)) (a-get (oref obj review) 'body))
+      (message "Your review is empty."))
 
-       ((not .review.body)
-        (message "You need to provide a feedback message."))
+     ((not (a-get (oref obj review) 'body))
+      (message "You need to provide a feedback message."))
 
-       (t
-        (progn
-          (when .replies
-            (code-review-github-post-replies
-             code-review-pr-alist
-             .replies
-             (lambda (&rest _)
-               (message "Done submitting review replies"))))
-          (code-review-github-post-review
-           code-review-pr-alist
-           .review
+     (t
+      (progn
+        (when (oref obj replies)
+          (code-review-send-replies
+           obj
            (lambda (&rest _)
-             (message "Done submitting review"))))))
-      (code-review-section--build-buffer code-review-pr-alist))))
+             (message "Done submitting review replies"))))
+        (code-review-send-review
+         obj
+         (lambda (&rest _)
+           (message "Done submitting review"))))))
+    (code-review-section--build-buffer obj)))
 
 ;;; Entrypoint
 

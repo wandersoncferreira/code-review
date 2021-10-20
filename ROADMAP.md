@@ -10,14 +10,14 @@
 - [ ] Move more functions to `utils` to ease maintenance
 - [x] Another look at the code to avoid stateful values
   - consider using a database like forge does? DBs are good! done!
-  - [ ] Make DB functions safer to use out of order
+  - [x] Make DB functions safer to use
 - [ ] BIG work on faces to distinguish several scenarios! [BLOCKER]!
   - [x] Some initial improvements on header and main sections
   - [ ] Define colors for comment sections
   - [ ] Improve comment sections
   - [ ] Improve comment sections outdated
 - [ ] README examples and documentation
-- [ ] Change GITHUB specific code to use `cl-generic` [BLOCKER]!
+- [x] Change GITHUB specific code to use `cl-generic` [BLOCKER]!
 - [ ] Provide docs about requirements to add other forges
 - [ ] Fix file dependencies
 - [x] Write tests to at least `utils` logic
