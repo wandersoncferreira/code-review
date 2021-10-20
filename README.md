@@ -26,3 +26,12 @@ The Emacs everywhere goal continues. These are the main features of
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
 
+# Thanks
+
+Thanks [Laurent Charignon](https://github.com/charignon) for the awesome
+[github-review](https://github.com/charignon/github-review) package and
+stewardship. Github Review made me more familiar with the problem domain and
+`code-review` is an attempt to build on top of it.
+
+Thanks [Ag Ibragimov](https://github.com/agzam) for the amazing idea to use
+`magit-section` to build a more suitable interface to this problem.
