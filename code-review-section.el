@@ -538,10 +538,10 @@ Code Review inserts PR comments sections in the diff buffer."
           (progn
             (goto-char .cursor-pos)
             (forward-line)))
-        (magit-insert-section (local-comment-header metadata)
+        (magit-insert-section (code-review:local-comment-header metadata)
           (magit-insert-heading
             (format "[local comment] - @%s:" (code-review-utils--git-get-user)))
-          (magit-insert-section (local-comment metadata)
+          (magit-insert-section (code-review:local-comment local-comment metadata)
             (insert (string-trim local-comment))
             (insert ?\n)))))))
 

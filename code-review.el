@@ -100,11 +100,47 @@
             (message "Can only be called from a commit section.")))
       (message "Can only be called from a commit section."))))
 
+;;; buffer keymaps
+
 (defvar magit-code-review:commit-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-commit-at-point)
     map)
   "Keymap for the `commit' section.")
+
+(defvar magit-code-review:local-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-edit)
+    (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
+    map)
+  "Keymap for the `local-comment' section.")
+
+(defvar magit-code-review:local-comment-header-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-edit)
+    (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
+    map)
+  "Keymap for the `local-comment-header' section.")
+
+(defvar magit-hunk-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add)
+    map)
+  "Keymap for the `hunk' section.")
+
+(defvar magit-code-review:feedback-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-feedback)
+    map)
+  "Keymap for the `feedback' section.")
+
+(defvar magit-code-review:feedback-header-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-feedback)
+    map)
+  "Keymap for the `feedback' section.")
+
+;;; public functions
 
 ;;;###autoload
 (defun code-review-approve ()
