@@ -47,6 +47,28 @@
 
 (defvar code-review-pullreq-id nil)
 
+(defcustom code-review-headers-hook
+  '(code-review-section-insert-header-title
+    code-review-section-insert-title
+    code-review-section-insert-state
+    code-review-section-insert-ref
+    code-review-section-insert-milestone
+    code-review-section-insert-labels
+    code-review-section-insert-assignee
+    code-review-section-insert-project
+    code-review-section-insert-suggested-reviewers)
+  "Hook run to insert headers into the code review buffer.")
+
+(defcustom code-review-sections-hook
+  '(code-review-section-insert-headers
+    code-review-section-insert-commits
+    code-review-section-insert-pr-description
+    code-review-section-insert-feedback-heading
+    code-review-section-insert-general-comments)
+  "Hook run to insert sections into a code review buffer."
+  :group 'code-review
+  :type 'hook)
+
 ;;; Faces
 
 (defface code-review-recent-comment-heading

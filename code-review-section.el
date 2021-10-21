@@ -40,6 +40,193 @@ For internal usage only.")
 Used by the overwritten version of `magit-diff-wash-hunk'.
 For internal usage only.")
 
+(defvar code-review-pullreq-info nil
+  "Hold the pull-request data.
+For internal usage only.")
+
+
+;;; headers
+
+(defun code-review-section-insert-header-title ()
+  "Insert the title header line."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (setq header-line-format
+            (propertize
+             (format "#%s: %s" .number .title)
+             'font-lock-face
+             'magit-section-heading)))))
+
+(defun code-review-section-insert-title ()
+  "Insert the title of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:title .title)
+        (insert (format "%-17s" "Title: ") .title)
+        (insert ?\n)))))
+
+(defun code-review-section-insert-state ()
+  "Insert the state of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:state .state)
+        (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
+        (insert ?\n)))))
+
+(defun code-review-section-insert-ref ()
+  "Insert the state of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:ref `((base . ,.baseRefName)
+                                               (head . ,.headRefName)))
+        (insert (format "%-17s" "Refs: "))
+        (insert .baseRefName)
+        (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
+        (insert .headRefName)
+        (insert ?\n)))))
+
+(defun code-review-section-insert-milestone ()
+  "Insert the milestone of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
+                                                     (progress . ,.milestone.progressPercentage)))
+        (insert (format "%-17s" "Milestone: ")
+                (format "%s (%s%%)"
+                        .milestone.title
+                        .milestone.progressPercentage))
+        (insert ?\n)))))
+
+(defun code-review-section-insert-labels ()
+  "Insert the labels of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:labels .labels.nodes)
+        (insert (format "%-17s" "Labels: "))
+        (dolist (label .labels.nodes)
+          (insert (a-get label 'name))
+          (let* ((color (concat "#" (a-get label 'color)))
+                 (background (code-review-utils--sanitize-color color))
+                 (foreground (code-review-utils--contrast-color color))
+                 (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
+            (overlay-put o 'priority 2)
+            (overlay-put o 'evaporate t)
+            (overlay-put o 'font-lock-face
+                         `((:background ,background)
+                           (:foreground ,foreground)
+                           forge-topic-label)))
+          (insert " "))
+        (insert ?\n)))))
+
+(defun code-review-section-insert-assignee ()
+  "Insert the assignee of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (let* ((assignee-names (-map
+                              (lambda (a)
+                                (format "%s (@%s)"
+                                        (a-get a 'name)
+                                        (a-get a 'login)))
+                              .assignees.nodes))
+             (assignees (string-join assignee-names ", ")))
+        (magit-insert-section (code-review:assignee assignees)
+          (insert (format "%-17s" "Assignees: ") assignees)
+          (insert ?\n))))))
+
+(defun code-review-section-insert-project ()
+  "Insert the project of the header buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (let* ((project-names (-map
+                             (lambda (p)
+                               (a-get-in p (list 'project 'name)))
+                             .projectCards.nodes))
+             (projects (string-join project-names ", ")))
+        (magit-insert-section (code-review:project projects)
+          (insert (format "%-17s" "Projects: ") projects)
+          (insert ?\n))))))
+
+(defun code-review-section-insert-suggested-reviewers ()
+  "Insert the suggested reviewers."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (let* ((reviewers (string-join .suggestedReviewers ", "))
+             (suggested-reviewers (if (string-empty-p reviewers)
+                                      (propertize "No reviews" 'font-lock-face 'magit-dimmed)
+                                    reviewers)))
+        (magit-insert-section (code-review:reviewers suggested-reviewers)
+          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers))))))
+
+(defun code-review-section-insert-headers ()
+  "Insert all the headers."
+  (magit-insert-headers 'code-review-headers-hook))
+
+;;; next sections
+
+(defun code-review-section-insert-commits ()
+  "Insert commits from PULL-REQUEST."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:commits-header)
+        (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
+        (magit-insert-heading)
+        (magit-insert-section (code-review:commits-body)
+          (dolist (c .commits.nodes)
+            (let ((commit-value `((sha ,(a-get-in c (list 'commit 'abbreviatedOid))))))
+              (magit-insert-section (code-review:commit commit-value)
+                (insert (propertize
+                         (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
+                         'font-lock-face 'magit-hash)
+                        (a-get-in c (list 'commit 'message)))))
+            (insert ?\n)))
+        (insert ?\n)))))
+
+
+(defun code-review-section-insert-pr-description ()
+  "Insert PULL-REQUEST description."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:pr-description-header)
+        (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
+        (magit-insert-heading)
+        (magit-insert-section (code-review:pr-description)
+          (if (string-empty-p .bodyText)
+              (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
+            (insert .bodyText))
+          (insert ?\n)
+          (insert ?\n))))))
+
+(defun code-review-section-insert-feedback-heading ()
+  "Insert feedback heading."
+  (magit-insert-section (code-review:feedback-header)
+    (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
+    (magit-insert-heading)
+    (magit-insert-section (code-review:feedback)
+      (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))
+      (insert ?\n))
+    (insert ?\n)))
+
+(defun code-review-section-insert-general-comments ()
+  "Insert general comments for the PULL-REQUEST in the buffer."
+  (when code-review-pullreq-info
+    (let-alist code-review-pullreq-info
+      (magit-insert-section (code-review:conversation-header)
+        (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
+        (magit-insert-heading)
+        (dolist (c .comments.nodes)
+          (magit-insert-section (code-review:general-comment c)
+            (insert (propertize
+                     (format "@%s" (a-get-in c (list 'author 'login)))
+                     'font-lock-face
+                     'magit-log-author))
+            (magit-insert-heading)
+            (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
+              (dolist (l body-lines)
+                (insert l)
+                (insert ?\n)))))
+        (insert ?\n)))))
+
+
 (defun code-review-section-insert-outdated-comment (comments)
   "Insert outdated COMMENTS in the buffer."
 
@@ -110,26 +297,6 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
               (insert l)
               (insert "\n"))
             (insert ?\n)))))))
-
-(defun code-review-section-insert-general-comments (pull-request)
-  "Insert general comments for the PULL-REQUEST in the buffer."
-  (magit-insert-section (conversation)
-    (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
-    (magit-insert-heading)
-    (insert ?\n)
-    (dolist (c (a-get-in pull-request (list 'comments 'nodes)))
-      (magit-insert-section (general-comment c)
-        (insert (propertize
-                 (format "@%s" (a-get-in c (list 'author 'login)))
-                 'font-lock-face
-                 'magit-log-author))
-        (magit-insert-heading)
-        (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
-          (dolist (l body-lines)
-            (insert l)
-            (insert ?\n)))))
-    (insert ?\n)
-    (insert ?\n)))
 
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
@@ -203,32 +370,29 @@ Code Review inserts PR comments sections in the diff buffer."
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
-          (if (eq 'code-review-mode (with-current-buffer (current-buffer)
-                                      major-mode))
-              (let* ((head-pos
-                      (code-review-db-get-curr-head-pos code-review-pullreq-id))
-                     (comment-written-pos
-                      (code-review-db-get-comment-written-pos code-review-pullreq-id))
-                     (diff-pos (- (line-number-at-pos)
-                                  head-pos
-                                  comment-written-pos))
-                     (path-name (code-review-db--curr-path-name code-review-pullreq-id))
-                     (path-pos (code-review-utils--comment-key path-name diff-pos)))
-                (if-let (grouped-comments (and
-                                           (not (code-review-db--comment-already-written?
-                                                 code-review-pullreq-id
-                                                 path-pos))
-                                           (code-review-utils--comment-get
-                                            code-review-section-grouped-comments
-                                            path-pos)))
-                    (progn
-                      (code-review-db--curr-path-comment-written-update
-                       code-review-pullreq-id
-                       path-pos)
-                      (code-review-section-insert-comment grouped-comments))
-                  (forward-line)))
-          ;;; --- end -- code-review specific code.
-            (forward-line)))
+          (let* ((head-pos
+                  (code-review-db-get-curr-head-pos code-review-pullreq-id))
+                 (comment-written-pos
+                  (code-review-db-get-comment-written-pos code-review-pullreq-id))
+                 (diff-pos (- (line-number-at-pos)
+                              head-pos
+                              comment-written-pos))
+                 (path-name (code-review-db--curr-path-name code-review-pullreq-id))
+                 (path-pos (code-review-utils--comment-key path-name diff-pos)))
+            (if-let (grouped-comments (and
+                                       (not (code-review-db--comment-already-written?
+                                             code-review-pullreq-id
+                                             path-pos))
+                                       (code-review-utils--comment-get
+                                        code-review-section-grouped-comments
+                                        path-pos)))
+                (progn
+                  (code-review-db--curr-path-comment-written-update
+                   code-review-pullreq-id
+                   path-pos)
+                  (code-review-section-insert-comment grouped-comments))
+              (forward-line))))
+        ;;; --- end -- code-review specific code.
         (oset section end (point))
         (oset section washer 'magit-diff-paint-hunk)
         (oset section combined combined)
@@ -240,118 +404,110 @@ Code Review inserts PR comments sections in the diff buffer."
     t))
 
 
-(defun code-review-section-insert-header-title (pull-request)
-  "Insert the title header line for the PULL-REQUEST."
-  (let-alist pull-request
-    (setq header-line-format
-          (propertize
-           (format "#%s: %s" .number .title)
-           'font-lock-face
-           'magit-section-heading))))
+(defmacro code-review-section--with-buffer (buff-name &rest body)
+  "Include BODY in the buffer named BUFF-NAME."
+  (declare (indent 0))
+  `(let ((buffer (get-buffer-create ,buff-name)))
+     (with-current-buffer buffer
+       (let ((inhibit-read-only t))
+         (erase-buffer)
+         (code-review-mode)
+         (magit-insert-section (review-buffer)
+           ,@body)))
+     buffer))
 
-(defun code-review-section-insert-headers (pull-request)
-  "Insert header with PULL-REQUEST data."
-  (let-alist pull-request
-    (let* ((assignee-names (-map
-                            (lambda (a)
-                              (format "%s (@%s)"
-                                      (a-get a 'name)
-                                      (a-get a 'login)))
-                            .assignees.nodes))
-           (assignees (string-join assignee-names ", "))
-           (project-names (-map
-                           (lambda (p)
-                             (a-get-in p (list 'project 'name)))
-                           .projectCards.nodes))
-           (projects (string-join project-names ", "))
-           (reviewers (string-join .suggestedReviewers ", "))
-           (suggested-reviewers (if (string-empty-p reviewers)
-                                    (propertize "No reviews" 'font-lock-face 'magit-dimmed)
-                                  reviewers)))
-      (magit-insert-section (_)
-        (insert (format "%-17s" "Title: ") .title)
-        (magit-insert-heading)
-        (magit-insert-section (_)
-          (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Refs: "))
-          (insert .baseRefName)
-          (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
-          (insert .headRefName)
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Milestone: ") (format "%s (%s%%)"
-                                                         .milestone.title
-                                                         .milestone.progressPercentage))
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Labels: "))
-          (dolist (label .labels.nodes)
-            (insert (a-get label 'name))
-            (let* ((color (concat "#" (a-get label 'color)))
-                   (background (code-review-utils--sanitize-color color))
-                   (foreground (code-review-utils--contrast-color color))
-                   (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
-              (overlay-put o 'priority 2)
-              (overlay-put o 'evaporate t)
-              (overlay-put o 'font-lock-face
-                           `((:background ,background)
-                             (:foreground ,foreground)
-                             forge-topic-label)))
-            (insert " "))
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Assignees: ") assignees)
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Projects: ") projects)
-          (insert ?\n))
-        (magit-insert-section (_)
-          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers)
-          (insert ?\n)))))
-  (insert ?\n))
+(defun code-review-section--build-buffer (obj)
+  "Build code review buffer given an OBJ."
+  (advice-add 'magit-diff-insert-file-section
+              :override #'code-review-section--magit-diff-insert-file-section)
+  (advice-add 'magit-diff-wash-hunk
+              :override #'code-review-section--magit-diff-wash-hunk)
+  (deferred:$
+    (deferred:parallel
+      (lambda () (code-review-diff-deferred obj))
+      (lambda () (code-review-infos-deferred obj)))
+    (deferred:nextc it
+      (lambda (x)
+        (let-alist (-second-item x)
+          (let* ((pull-request .data.repository.pullRequest)
+                 (grouped-comments (code-review-comment-make-group pull-request))
+                 (sha .data.repository.pullRequest.headRef.target.oid))
+            (setq code-review-pullreq-info pull-request
+                  code-review-section-grouped-comments grouped-comments
+                  code-review-pullreq-id (oref obj pullreq-id))
 
-(defun code-review-section-insert-commits (pull-request)
-  "Insert commits from PULL-REQUEST."
-  (let-alist pull-request
-    (magit-insert-section (commits-header)
-      (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
-      (magit-insert-heading)
-      (magit-insert-section (commits)
-        (dolist (c .commits.nodes)
-          (let ((commit-value `((sha ,(a-get-in c (list 'commit 'abbreviatedOid))))))
-            (magit-insert-section (code-review:commit commit-value)
-              (insert (propertize
-                       (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
-                       'font-lock-face 'magit-hash)
-                      (a-get-in c (list 'commit 'message)))))
-          (insert ?\n)))))
-  (insert ?\n))
+            (code-review-db--pullreq-sha-update (oref obj pullreq-id) sha)
 
-(defun code-review-section-insert-pr-description (pull-request)
-  "Insert PULL-REQUEST description."
-  (magit-insert-section (_)
-    (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
-    (magit-insert-heading)
-    (magit-insert-section (_)
-      (let-alist pull-request
-        (if (string-empty-p .bodyText)
-            (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
-          (insert .bodyText))
-        (insert ?\n)
-        (insert ?\n)
-        (insert ?\n)))))
+            (switch-to-buffer-other-window
+             (code-review-section--with-buffer
+               code-review-buffer-name
+               (progn
+                 (save-excursion
+                   (insert (a-get (-first-item x) 'message))
+                   (insert ?\n))
+                 (magit-insert-section (code-review)
+                   (magit-run-section-hook 'code-review-sections-hook))
 
-(defun code-review-section-insert-feedback-heading ()
-  "Insert feedback heading."
-  (magit-insert-section (feedback)
-    (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
-    (magit-insert-heading)
-    (magit-insert-section (feedback-text)
-      (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))
-      (insert ?\n)
-      (insert ?\n))))
+                 (magit-wash-sequence
+                  (apply-partially #'magit-diff-wash-diff ())))))
+
+            (goto-char (point-min))
+
+            (advice-remove 'magit-diff-insert-file-section
+                           #'code-review-section--magit-diff-insert-file-section)
+            (advice-remove 'magit-diff-wash-hunk
+                           #'code-review-section--magit-diff-wash-hunk)))))
+    (deferred:error it
+      (lambda (err)
+        (message "Got an error from your VC provider %S!" err)))))
+
+(defun code-review-section--build-commit-buffer (obj)
+  "Build code review buffer given an OBJ."
+  (advice-add 'magit-diff-insert-file-section
+              :override #'code-review-section--magit-diff-insert-file-section)
+  (advice-add 'magit-diff-wash-hunk
+              :override #'code-review-section--magit-diff-wash-hunk)
+  (deferred:$
+    (deferred:parallel
+      (lambda () (code-review-commit-diff-deferred obj))
+      (lambda () "nothing")
+      (lambda () (code-review-infos-deferred obj)))
+    (deferred:nextc it
+      (lambda (x)
+        (let-alist (-third-item x)
+          (let* ((pull-request .data.repository.pullRequest))
+
+            (setq code-review-pullreq-info pull-request
+                  code-review-section-commit-comments nil
+                  code-review-section-grouped-comments nil
+                  code-review-pullreq-id (oref obj pullreq-id))
+
+            (switch-to-buffer
+             (code-review-section--with-buffer
+               "*Code Review Commit*"
+               (progn
+                 (save-excursion
+                   (insert (a-get (-first-item x) 'message))
+                   (insert ?\n))
+
+                 (magit-insert-section (code-review)
+                   (magit-run-section-hook 'code-review-sections-hook))
+
+                 (magit-wash-sequence
+                  (apply-partially #'magit-diff-wash-diff ())))))
+
+            (goto-char (point-min))
+
+            (advice-remove 'magit-diff-insert-file-section
+                           #'code-review-section--magit-diff-insert-file-section)
+            (advice-remove 'magit-diff-wash-hunk
+                           #'code-review-section--magit-diff-wash-hunk)))))
+    (deferred:error it
+      (lambda (err)
+        (message "Got an error from your VC provider %S!" err)))))
+
+;; TODO: commit description
+;; TODO: commit comments
 
 (defun code-review-section-insert-feedback (feedback)
   "Add review FEEDBACK."
@@ -403,107 +559,6 @@ Code Review inserts PR comments sections in the diff buffer."
                 (forward-line -1))
               (delete-region (point) end))
           (message "You can only delete local comments."))))))
-
-(defmacro code-review-section--with-buffer (buff-name &rest body)
-  "Include BODY in the buffer named BUFF-NAME."
-  (declare (indent 0))
-  `(let ((buffer (get-buffer-create ,buff-name)))
-     (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-         (erase-buffer)
-         (code-review-mode)
-         (magit-insert-section (review-buffer)
-           ,@body)))
-     buffer))
-
-(defun code-review-section--build-buffer (obj)
-  "Build code review buffer given an OBJ."
-  (advice-add 'magit-diff-insert-file-section
-              :override #'code-review-section--magit-diff-insert-file-section)
-  (advice-add 'magit-diff-wash-hunk
-              :override #'code-review-section--magit-diff-wash-hunk)
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-diff-deferred obj))
-      (lambda () (code-review-infos-deferred obj)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-second-item x)
-          (let* ((pull-request .data.repository.pullRequest)
-                 (grouped-comments (code-review-comment-make-group pull-request))
-                 (sha .data.repository.pullRequest.headRef.target.oid)
-                 (code-review-buff
-                  (code-review-section--with-buffer
-                    code-review-buffer-name
-                    (magit-insert-section (title)
-                      (save-excursion
-                        (insert (a-get (-first-item x) 'message))
-                        (insert "\n"))
-                      (setq code-review-section-grouped-comments grouped-comments
-                            code-review-pullreq-id (oref obj pullreq-id))
-                      (code-review-db--pullreq-sha-update (oref obj pullreq-id) sha)
-
-
-                      (code-review-section-insert-header-title pull-request)
-                      (code-review-section-insert-headers pull-request)
-                      (code-review-section-insert-commits pull-request)
-                      (code-review-section-insert-pr-description pull-request)
-                      (code-review-section-insert-feedback-heading)
-                      (code-review-section-insert-general-comments pull-request)
-                      (magit-wash-sequence (apply-partially #'magit-diff-wash-diff ()))
-                      (goto-char (point-min))))))
-
-            (switch-to-buffer-other-window code-review-buff)
-
-            (advice-remove 'magit-diff-insert-file-section
-                           #'code-review-section--magit-diff-insert-file-section)
-            (advice-remove 'magit-diff-wash-hunk
-                           #'code-review-section--magit-diff-wash-hunk)))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
-
-(defun code-review-section--build-commit-buffer (obj)
-  "Build code review buffer given an OBJ."
-  (advice-add 'magit-diff-insert-file-section
-              :override #'code-review-section--magit-diff-insert-file-section)
-  (advice-add 'magit-diff-wash-hunk
-              :override #'code-review-section--magit-diff-wash-hunk)
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-commit-diff-deferred obj))
-      (lambda () "nothing")
-      (lambda () (code-review-infos-deferred obj)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-third-item x)
-          (let* ((pull-request .data.repository.pullRequest)
-                 (code-review-buff
-                  (code-review-section--with-buffer
-                    "*Code Review Commit*"
-                    (magit-insert-section (title)
-                      (save-excursion
-                        (insert (a-get (-first-item x) 'message))
-                        (insert "\n"))
-                      (setq code-review-section-commit-comments nil)
-
-                      (code-review-section-insert-header-title pull-request)
-                      (code-review-section-insert-headers pull-request)
-                      ;; TODO: commit description
-                      (code-review-section-insert-feedback-heading)
-                      ;; TODO: commit comments
-                      (magit-wash-sequence (apply-partially #'magit-diff-wash-diff ()))))))
-
-            (switch-to-buffer code-review-buff)
-            (goto-char (point-min))
-
-            (advice-remove 'magit-diff-insert-file-section
-                           #'code-review-section--magit-diff-insert-file-section)
-            (advice-remove 'magit-diff-wash-hunk
-                           #'code-review-section--magit-diff-wash-hunk)))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here
