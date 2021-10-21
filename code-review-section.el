@@ -58,28 +58,28 @@ For internal usage only.")
             (add-face-text-property 0 (length heading)
                                     'code-review-outdated-comment-heading
                                     t heading)
-            (magit-insert-heading heading))
-          (magit-insert-section (hunk hunk)
-            (dolist (l diff-hunk-lines)
-              (insert l)
-              (insert "\n"))
+            (magit-insert-heading heading)
+            (magit-insert-section ()
+              (save-excursion
+                (insert hunk))
+              (magit-diff-wash-hunk)
+              (insert ?\n)
 
-            (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
-              (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
+              (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
+                (let ((body-lines (code-review-utils--split-comment (a-get c 'bodyText))))
+                  (code-review-db--curr-path-comment-count-update
+                   code-review-pullreq-id
+                   (+ 2 (length body-lines)))
 
-                (code-review-db--curr-path-comment-count-update
-                 code-review-pullreq-id
-                 (+ 2 (length body-lines)))
-
-                (magit-insert-section (comment-outdated-heading c)
-                  (magit-insert-heading (format "Reviewed by %s[%s]:"
-                                                (a-get c 'author)
-                                                (a-get c 'state)))
-                  (magit-insert-section (comment-outdated c)
-                    (dolist (l body-lines)
-                      (insert l)
-                      (insert "\n"))
-                    (insert ?\n)))))))))))
+                  (magit-insert-section (comment-outdated-headind c)
+                    (magit-insert-heading (format "Reviewed by %s[%s]:"
+                                                  (a-get c 'author)
+                                                  (a-get c 'state)))
+                    (magit-insert-section (comment-outdated c)
+                      (dolist (l body-lines)
+                        (insert l)
+                        (insert ?\n))))
+                  (insert ?\n))))))))))
 
 (defun code-review-section-insert-comment (comments)
   "Insert COMMENTS in the buffer.
