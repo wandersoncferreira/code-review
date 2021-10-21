@@ -91,6 +91,31 @@
       d))
     d))
 
+(cl-defmethod code-review-commit-diff ((github code-review-github-repo) callback)
+  "Get PR diff from GITHUB, run CALLBACK after answer."
+  (let ((owner (oref github owner))
+        (repo (oref github repo))
+        (sha (oref github sha)))
+    (ghub-get (format "/repos/%s/%s/commits/%s" owner repo sha)
+              nil
+              :unpaginate t
+              :headers code-review-github-diffheader
+              :auth 'code-review
+              :host code-review-github-host
+              :callback callback
+              :errorback #'code-review-github-errback)))
+
+(cl-defmethod code-review-commit-diff-deferred ((github code-review-github-repo))
+  "Get PR diff from GITHUB using deferred lib."
+  (let ((d (deferred:new #'identity)))
+    (code-review-commit-diff
+     github
+     (apply-partially
+      (lambda (d v &rest _)
+        (deferred:callback-post d v))
+      d))
+    d))
+
 (cl-defmethod code-review-pullreq-infos ((github code-review-github-repo) callback)
   "Get PR details from GITHUB and dispatch to CALLBACK."
   (let* ((repo (oref github repo))
