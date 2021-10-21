@@ -61,14 +61,28 @@
   "Face for outdated comments"
   :group 'code-review)
 
-
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."
   (interactive)
-  (code-review-section--build-commit-buffer
-   (code-review-github-repo :sha "f30fb1e28766c043ce1876d499b7ec6b908bb651"
-                            :owner "charignon"
-                            :repo "github-review")))
+  (let ((section (magit-current-section)))
+    (if section
+        (with-slots (type value) section
+          (if (eq type 'code-review:commit)
+              (let ((pullreq (code-review-db-get-pullreq code-review-pullreq-id)))
+                (code-review-section--build-commit-buffer
+                 (code-review-github-repo :sha (-first-item (a-get value 'sha))
+                                          :owner (oref pullreq owner)
+                                          :repo (oref pullreq repo)
+                                          :pullreq-id (oref pullreq id)
+                                          :number (oref pullreq number))))
+            (message "Can only be called from a commit section.")))
+      (message "Can only be called from a commit section."))))
+
+(defvar magit-code-review:commit-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-commit-at-point)
+    map)
+  "Keymap for the `commit' section.")
 
 ;;;###autoload
 (defun code-review-approve ()

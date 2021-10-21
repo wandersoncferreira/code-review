@@ -167,10 +167,10 @@ For internal usage only.")
                                 'body comment-cleaned
                                 'cursor-pos comment-cursor-pos
                                 'editing? comment-editing?)))
+        (code-review-section-insert-local-comment comment-cleaned metadata)
         (setq comment-metadata nil
-              comment-cursor-pos nil)
-        (code-review-section-insert-local-comment comment-cleaned metadata)))
-    (kill-buffer buffer)
+              comment-cursor-pos nil
+              comment-editing? nil)))
     (set-window-configuration comment-window-configuration)
     (setq comment-window-configuration nil)))
 
