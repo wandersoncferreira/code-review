@@ -315,12 +315,24 @@ Code Review inserts PR comments sections in the diff buffer."
       (magit-insert-heading)
       (magit-insert-section (commits)
         (dolist (c .commits.nodes)
-          (insert (propertize
-                   (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
-                   'font-lock-face 'magit-hash)
-                  (a-get-in c (list 'commit 'message)))
+          (let ((commit-value `((sha ,(a-get-in c (list 'commit 'abbreviatedOid))))))
+            (magit-insert-section (commit commit-value)
+              (insert (propertize
+                       (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
+                       'font-lock-face 'magit-hash)
+                      (a-get-in c (list 'commit 'message)))))
           (insert ?\n)))))
   (insert ?\n))
+
+(defun testando ()
+  (interactive)
+  (message "GEEETT THE COMMIT DIFF ...wow"))
+
+(defvar magit-commit-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'testando)
+    map)
+  "Keymap for the `commit' section.")
 
 (defun code-review-section-insert-pr-description (pull-request)
   "Insert PULL-REQUEST description."
@@ -449,6 +461,35 @@ Code Review inserts PR comments sections in the diff buffer."
                            #'code-review-section--magit-diff-insert-file-section)
             (advice-remove 'magit-diff-wash-hunk
                            #'code-review-section--magit-diff-wash-hunk)))))
+    (deferred:error it
+      (lambda (err)
+        (message "Got an error from your VC provider %S!" err)))))
+
+
+(defun code-review-section--build-commit-buffer (obj)
+  "Build code review buffer given an OBJ."
+  (advice-add 'magit-diff-insert-file-section
+              :override #'code-review-section--magit-diff-insert-file-section)
+  (advice-add 'magit-diff-wash-hunk
+              :override #'code-review-section--magit-diff-wash-hunk)
+  (deferred:$
+    (deferred:parallel
+      (lambda () (code-review-commit-diff-deferred obj)))
+    (deferred:nextc it
+      (lambda (x)
+        (code-review-section--with-buffer
+          (magit-insert-section (title)
+            (save-excursion
+              (insert (a-get (-first-item x) 'message))
+              (insert "\n"))
+
+            (magit-wash-sequence (apply-partially #'magit-diff-wash-diff ()))
+            (goto-char (point-min))))
+
+        (advice-remove 'magit-diff-insert-file-section
+                       #'code-review-section--magit-diff-insert-file-section)
+        (advice-remove 'magit-diff-wash-hunk
+                       #'code-review-section--magit-diff-wash-hunk)))
     (deferred:error it
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))

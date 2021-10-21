@@ -61,6 +61,15 @@
   "Face for outdated comments"
   :group 'code-review)
 
+
+(defun code-review-commit-at-point ()
+  "Review the current commit at point in Code Review buffer."
+  (interactive)
+  (code-review-section--build-commit-buffer
+   (code-review-github-repo :sha "f30fb1e28766c043ce1876d499b7ec6b908bb651"
+                            :owner "charignon"
+                            :repo "github-review")))
+
 ;;;###autoload
 (defun code-review-approve ()
   "Approve current PR."

@@ -25,6 +25,12 @@
 (cl-defgeneric code-review-diff-deferred (obj)
   "Run OBJ with deferred.")
 
+(cl-defgeneric code-review-commit-diff (obj callback)
+  "Return diff for OBJ running CALLBACK with results.")
+
+(cl-defgeneric code-review-commit-diff-deferred (obj)
+  "Run OBJ with deferred.")
+
 (cl-defgeneric code-review-send-review (obj)
   "Send review stored in OBJ to the forge.")
 
