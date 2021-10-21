@@ -550,8 +550,8 @@ Code Review inserts PR comments sections in the diff buffer."
   (with-current-buffer (get-buffer "*Code Review*")
     (let ((inhibit-read-only t))
       (with-slots (type start end) (magit-current-section)
-        (if (-contains-p '(local-comment
-                           local-comment-header)
+        (if (-contains-p '(code-review:local-comment
+                           code-review:local-comment-header)
                          type)
             (progn
               (goto-char start)

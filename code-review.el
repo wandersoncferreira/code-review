@@ -122,12 +122,6 @@
     map)
   "Keymap for the `local-comment-header' section.")
 
-(defvar magit-hunk-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add)
-    map)
-  "Keymap for the `hunk' section.")
-
 (defvar magit-code-review:feedback-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-feedback)
@@ -248,7 +242,8 @@
     map))
 
 (define-derived-mode code-review-mode magit-section-mode "Code Review"
-  "Code Review mode")
+  "Code Review mode"
+  (define-key magit-hunk-section-map (kbd "RET") 'code-review-comment-add))
 
 (provide 'code-review)
 ;;; code-review.el ends here
