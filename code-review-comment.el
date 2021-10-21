@@ -28,14 +28,7 @@
 
 (require 'code-review-section)
 (require 'code-review-utils)
-
-;;;###autoload
-(define-minor-mode code-review-comment-mode
-  "Few keybindings to help you handle comments in Code Review."
-  :lighter " code-review-comment"
-  :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
-            map))
+(require 'markdown-mode)
 
 (defcustom code-review-comment-buffer-name "*Code Review Comment*"
   "Name of comment buffer."
@@ -215,6 +208,14 @@ For internal usage only.")
   (interactive)
   (code-review-section-delete-local-comment))
 
+(setq code-review-comment-mode-map
+  (let ((map (copy-keymap markdown-mode-map)))
+    (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
+    (set-keymap-parent map markdown-mode-map)
+    map))
+
+(define-derived-mode code-review-comment-mode markdown-mode "Code Review Comment"
+  "Code Review Comment")
 
 (provide 'code-review-comment)
 ;;; code-review-comment.el ends here
