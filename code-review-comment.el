@@ -62,8 +62,16 @@ For internal usage only.")
   "Differentiate between a regular comment from the main feedback comment.
 For internal usage only.")
 
+(defvar comment-editing? nil
+  "Are you editing a comment box?
+For internal usage only.")
+
 (defvar comment-metadata nil
   "Metadata to be attached to the comment section.
+For internal usage only.")
+
+(defvar comment-window-configuration nil
+  "Hold window configuration when adding comments.
 For internal usage only.")
 
 ;;; general functons
@@ -93,7 +101,7 @@ For internal usage only.")
 
 (defun code-review-comment--hold-metadata ()
   "Save metadata to attach to local comment at commit phase."
-  (with-slots (type value) (magit-current-section)
+  (with-slots (type value start end) (magit-current-section)
     (let-alist value
       (let ((metadata
              (cond
@@ -107,7 +115,7 @@ For internal usage only.")
               ((-contains-p '(local-comment
                               local-comment-header)
                             type)
-               value)
+               (a-assoc value 'start start 'end end))
               (t
                (progn
                  (message "You can only comment on HUNK or COMMENTS.")
@@ -128,6 +136,7 @@ For internal usage only.")
         (insert code-review-comment-buffer-msg)
         (insert ?\n))
       (setq comment-cursor-pos (line-beginning-position))
+      (setq comment-window-configuration (current-window-configuration))
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
 
@@ -163,13 +172,14 @@ For internal usage only.")
                                code-review-comment-buffer-msg))
              (metadata (a-assoc comment-metadata
                                 'body comment-cleaned
-                                'cursor-pos comment-cursor-pos)))
+                                'cursor-pos comment-cursor-pos
+                                'editing? comment-editing?)))
         (setq comment-metadata nil
               comment-cursor-pos nil)
         (code-review-section-insert-local-comment comment-cleaned metadata)))
-    (other-window 1)
-    (kill-buffer buffer)))
-
+    (kill-buffer buffer)
+    (set-window-configuration comment-window-configuration)
+    (setq comment-window-configuration nil)))
 
 ;;;###autoload
 (defun code-review-comment-edit ()
@@ -177,7 +187,7 @@ For internal usage only.")
   (interactive)
   (let ((section (magit-current-section)))
     (if section
-        (with-slots (type value) section
+        (with-slots (type value start end) section
           (let-alist value
             (if (-contains-p '(local-comment
                                local-comment-header
@@ -192,6 +202,8 @@ For internal usage only.")
                       (insert ?\n)
                       (goto-char (point-min)))
                     (setq comment-cursor-pos (line-beginning-position))
+                    (setq comment-window-configuration (current-window-configuration))
+                    (setq comment-editing? t)
                     (switch-to-buffer-other-window buffer)
                     (code-review-comment-mode)))
               (message "Edit not supported in this section"))))
@@ -201,7 +213,7 @@ For internal usage only.")
 (defun code-review-comment-delete ()
   "Add comment."
   (interactive)
-  (message " DELETED "))
+  (code-review-section-delete-local-comment))
 
 
 (provide 'code-review-comment)

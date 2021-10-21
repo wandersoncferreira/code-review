@@ -235,6 +235,15 @@ Code Review inserts PR comments sections in the diff buffer."
     t))
 
 
+(defun code-review-section-insert-header-title (pull-request)
+  "Insert the title header line for the PULL-REQUEST."
+  (let-alist pull-request
+    (setq header-line-format
+          (propertize
+           (format "#%s: %s" .number .title)
+           'font-lock-face
+           'magit-section-heading))))
+
 (defun code-review-section-insert-headers (pull-request)
   "Insert header with PULL-REQUEST data."
   (let-alist pull-request
@@ -356,15 +365,37 @@ Code Review inserts PR comments sections in the diff buffer."
   "Insert a LOCAL-COMMENT and attach section METADATA."
   (with-current-buffer (get-buffer "*Code Review*")
     (let ((inhibit-read-only t))
-      (goto-char (a-get metadata 'cursor-pos))
-      (forward-line)
-      (magit-insert-section (local-comment-header metadata)
-        (insert (format "[local comment] - @%s:" (code-review-utils--git-get-user)))
-        (magit-insert-heading)
-        (magit-insert-section (local-comment metadata)
-          (dolist (l (split-string local-comment "\n"))
-            (insert l)
-            (insert "\n")))))))
+      (let-alist metadata
+        (if .editing?
+            (progn
+              (goto-char .start)
+              (when (not (looking-at "\\[local comment\\]"))
+                (forward-line -1))
+              (delete-region (point) .end))
+          (progn
+            (goto-char .cursor-pos)
+            (forward-line)))
+        (magit-insert-section (local-comment-header metadata)
+          (magit-insert-heading
+            (format "[local comment] - @%s:" (code-review-utils--git-get-user)))
+          (magit-insert-section (local-comment metadata)
+            (insert (string-trim local-comment))
+            (insert ?\n)))))))
+
+(defun code-review-section-delete-local-comment ()
+  "Delete a local comment."
+  (with-current-buffer (get-buffer "*Code Review*")
+    (let ((inhibit-read-only t))
+      (with-slots (type start end) (magit-current-section)
+        (if (-contains-p '(local-comment
+                           local-comment-header)
+                         type)
+            (progn
+              (goto-char start)
+              (when (not (looking-at "\\[local comment\\]"))
+                (forward-line -1))
+              (delete-region (point) end))
+          (message "You can only delete local comments."))))))
 
 (defmacro code-review-section--with-buffer (&rest body)
   "Include BODY in the buffer."
@@ -392,41 +423,32 @@ Code Review inserts PR comments sections in the diff buffer."
       (lambda (x)
         (let-alist (-second-item x)
           (let* ((pull-request .data.repository.pullRequest)
-                 (grouped-comments (code-review-comment-make-group pull-request)))
+                 (grouped-comments (code-review-comment-make-group pull-request))
+                 (sha .data.repository.pullRequest.headRef.target.oid))
+
             (code-review-section--with-buffer
-              (magit-insert-section (demo)
+              (magit-insert-section (title)
                 (save-excursion
                   (insert (a-get (-first-item x) 'message))
                   (insert "\n"))
-                (setq code-review-section-grouped-comments grouped-comments)
-                (setq header-line-format
-                      (propertize
-                       (format "#%s: %s"
-                               (a-get pull-request 'number)
-                               (a-get pull-request 'title))
-                       'font-lock-face
-                       'magit-section-heading))
+                (setq code-review-section-grouped-comments grouped-comments
+                      code-review-pullreq-id (oref obj pullreq-id))
+                (code-review-db--pullreq-sha-update (oref obj pullreq-id) sha)
 
-                (code-review-db--pullreq-sha-update
-                 (oref obj pullreq-id)
-                 .data.repository.pullRequest.headRef.target.oid)
 
+                (code-review-section-insert-header-title pull-request)
                 (code-review-section-insert-headers pull-request)
                 (code-review-section-insert-commits pull-request)
                 (code-review-section-insert-pr-description pull-request)
                 (code-review-section-insert-feedback-heading)
                 (code-review-section-insert-general-comments pull-request)
+                (magit-wash-sequence (apply-partially #'magit-diff-wash-diff ()))
+                (goto-char (point-min))))
 
-                (setq code-review-pullreq-id (oref obj pullreq-id))
-
-                (magit-wash-sequence
-                 (apply-partially #'magit-diff-wash-diff ())))
-              (goto-char (point-min))
-
-              (advice-remove 'magit-diff-insert-file-section
-                             #'code-review-section--magit-diff-insert-file-section)
-              (advice-remove 'magit-diff-wash-hunk
-                             #'code-review-section--magit-diff-wash-hunk))))))
+            (advice-remove 'magit-diff-insert-file-section
+                           #'code-review-section--magit-diff-insert-file-section)
+            (advice-remove 'magit-diff-wash-hunk
+                           #'code-review-section--magit-diff-wash-hunk)))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))
