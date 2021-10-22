@@ -28,6 +28,12 @@
 (cl-defgeneric code-review-commit-diff (obj callback)
   "Return diff for OBJ running CALLBACK with results.")
 
+(cl-defgeneric code-review-commit-comments (obj callback)
+  "Return commit comments for OBJ running CALLBACK with results.")
+
+(cl-defgeneric code-review-commit-comments-deferred (obj)
+  "Run OBJ with deferred.")
+
 (cl-defgeneric code-review-commit-diff-deferred (obj)
   "Run OBJ with deferred.")
 

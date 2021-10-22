@@ -91,12 +91,7 @@
         (with-slots (type value) section
           (if (eq type 'code-review:commit)
               (let ((pullreq (code-review-db-get-pullreq code-review-pullreq-id)))
-                (code-review-section--build-commit-buffer
-                 (code-review-github-repo :sha (-first-item (a-get value 'sha))
-                                          :owner (oref pullreq owner)
-                                          :repo (oref pullreq repo)
-                                          :pullreq-id (oref pullreq id)
-                                          :number (oref pullreq number))))
+                (code-review-section--build-commit-buffer pullreq))
             (message "Can only be called from a commit section.")))
       (message "Can only be called from a commit section."))))
 
@@ -189,6 +184,7 @@
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (let ((obj (code-review-utils-build-obj-from-url url)))
+    (setq code-review-full-refresh? t)
     (code-review-section--build-buffer obj)))
 
 ;;;###autoload

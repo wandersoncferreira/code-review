@@ -69,8 +69,8 @@ For internal usage only.")
 
 ;;; general functons
 
-(defun code-review-comment-make-group (pull-request)
-  "Group comments in PULL-REQUEST to ease the access when building the buffer."
+(defun code-review-comment-make-group (raw-comments)
+  "Group RAW-COMMENTS to ease the access when building the buffer."
   (-reduce-from
    (lambda (acc node)
      (let ((author (a-get-in node (list 'author 'login)))
@@ -90,7 +90,7 @@ For internal usage only.")
             comments)
          acc)))
    nil
-   (a-get-in pull-request (list 'reviews 'nodes))))
+   raw-comments))
 
 (defun code-review-comment--hold-metadata ()
   "Save metadata to attach to local comment at commit phase."

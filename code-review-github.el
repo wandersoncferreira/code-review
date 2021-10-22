@@ -31,21 +31,8 @@
 (require 'code-review-core)
 (require 'a)
 
-
-(defclass code-review-github-repo (closql-object)
-  ((closql-class-prefix :initform "forge-")
-   (closql-class-suffix :initform "-repository")
-   (host                :initarg :host)
-   (owner               :initarg :owner)
-   (repo                :initarg :repo)
-   (number              :initarg :number)
-   (pullreq-id          :initarg :pullreq-id)
-   (sha                 :initarg :sha)
-   (callback            :initform nil)
-   (feedback            :initform nil)
-   (event               :initform nil)
-   (replies             :initform nil)
-   (review              :initform nil)))
+(defclass code-review-github-repo (code-review-pullreq)
+  ((callback            :initform nil)))
 
 (defgroup code-review-github nil
   "Interact with GitHub REST and GraphQL APIs."

@@ -36,6 +36,7 @@
    (closql-class-prefix :initform "code-review-")
    (id                  :initarg :id)
    (pullreq             :initarg :pullreq)
+   (raw-text            :initform nil)
    (paths               :closql-class code-review-path)))
 
 (defclass code-review-path (closql-object)
@@ -66,6 +67,9 @@
    (closql-class-prefix :initform "code-review-")
    (closql-order-by     :initform [(desc number)])
    (id                  :initarg :id)
+   (raw-infos           :initform nil)
+   (raw-diff            :initform nil)
+   (raw-comments        :initform nil)
    (owner               :initarg :owner)
    (repo                :initarg :repo)
    (number              :initarg :number)
@@ -73,6 +77,8 @@
    (sha                 :initform nil)
    (feedback            :initform nil)
    (state               :initform nil)
+   (replies             :initform nil)
+   (review              :initform nil)
    (buffer              :closql-class code-review-buffer))
   :abstract t)
 
@@ -111,19 +117,26 @@
   '((pullreq
      [(class :not-null)
       (id :not-null :primary-key)
+      raw-infos
+      raw-diff
+      raw-comments
       host
       sha
       owner
       repo
       number
       feedback
+      replies
+      review
       state
+      callback
       (buffer :default eieio-unbound)])
 
     (buffer
      [(class :not-null)
       (id :not-null :primary-key)
       pullreq
+      raw-text
       (path :default eieio-unbound)]
      (:foreign-key
       [pullreq] :references pullreq [id]
@@ -204,16 +217,11 @@
 
 ;; ...
 
-(defun code-review-db--pullreq-create (pr-alist)
-  "Create a pullreq db object from PR-ALIST."
-  (let-alist pr-alist
-    (let* ((pr-id (uuidgen-4))
-           (pr (make-instance 'code-review-pullreq
-                              :id pr-id
-                              :owner .owner
-                              :repo .repo
-                              :number .num)))
-      (closql-insert (code-review-db) pr t))))
+(defun code-review-db--pullreq-create (obj)
+  "Create a pullreq db object from OBJ."
+  (let* ((pr-id (uuidgen-4)))
+    (oset obj id pr-id)
+    (closql-insert (code-review-db) obj t)))
 
 (defun code-review-db-get-pr-alist (id)
   "Get pr-alist from ID."
@@ -228,6 +236,39 @@
   (let ((pr (code-review-db-get-pullreq id)))
     (oset pr sha sha-value)
     (closql-insert (code-review-db) pr t)))
+
+(defun code-review-db--pullreq-raw-infos-update (pullreq infos)
+  "Save INFOS to the PULLREQ entity."
+  (oset pullreq raw-infos infos)
+  (oset pullreq sha (a-get infos (list 'headRef 'target 'oid)))
+  (oset pullreq raw-comments (a-get-in infos (list 'reviews 'nodes)))
+  (closql-insert (code-review-db) pullreq t))
+
+(defun code-review-db--pullreq-raw-diff-update (pullreq diff)
+  "Save DIFF to the PULLREQ entity."
+  (oset pullreq raw-diff diff)
+  (closql-insert (code-review-db) pullreq t))
+
+(defun code-review-db--pullreq-raw-infos (id)
+  "Get raw infos alist from ID."
+  (oref (code-review-db-get-pullreq id) raw-infos))
+
+(defun code-review-db--pullreq-raw-comments (id)
+  "Get raw comments alist from ID."
+  (oref (code-review-db-get-pullreq id) raw-comments))
+
+(defun code-review-db--pullreq-raw-diff (id)
+  "Get raw diff alist from ID."
+  (oref (code-review-db-get-pullreq id) raw-diff))
+
+(defun code-review-db--pullreq-raw-comments-update (id comment)
+  "Add COMMENT to the pullreq ID."
+  (let* ((pr (code-review-db-get-pullreq id))
+         (raw-comments (oref pr raw-comments)))
+    (oset pr raw-comments (cons comment raw-comments))
+    (closql-insert (code-review-db) pr t)))
+
+;;;
 
 (defun code-review-db--curr-path-update (id curr-path)
   "Update pullreq (ID) with CURR-PATH."
@@ -274,6 +315,20 @@
         (oset p head-pos hunk-head-pos)
         (closql-insert (code-review-db) p t)))))
 
+(defun code-review-db--head-pos (id path)
+  "Get the first hunk position given a ID and PATH."
+  (let* ((pr (code-review-db-get-pullreq id))
+         (buff (oref pr buffer))
+         (buf (if (eieio-object-p buff) buff (-first-item buff)))
+         (paths (oref buf paths))
+         (res
+          (->> paths
+               (-filter
+                (lambda (p)
+                  (string-equal (oref p name) path)))
+               (-first-item))))
+    (oref res head-pos)))
+
 (defun code-review-db--curr-path-comment-count-update (id count)
   "Update pullreq (ID) on CURR-PATH using COUNT."
   (let* ((path (code-review-db--curr-path id))
@@ -315,6 +370,7 @@
                                         (oref comment identifiers)))
         (closql-insert (code-review-db) comment t)))))
 
+;; comments
 
 (defun code-review-db--comment-already-written? (id identifier)
   "Verify if comment from pullreq ID with IDENTIFIER was already marked as written."

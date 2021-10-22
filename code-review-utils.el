@@ -111,16 +111,14 @@ using COMMENTS."
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."
   (let-alist  pr-alist
-    (let ((pullreq (code-review-db--pullreq-create (a-dissoc pr-alist 'url))))
-      (cond
-       ((string-match "github" .url)
-        (code-review-github-repo :host "api.github.com"
-                                 :owner .owner
-                                 :repo .repo
-                                 :number .num
-                                 :pullreq-id (oref pullreq id)))
-       (t
-        (message "Forge not supported"))))))
+    (cond
+     ((string-match "github" .url)
+      (code-review-db--pullreq-create
+       (code-review-github-repo :owner .owner
+                                :repo .repo
+                                :number .num)))
+     (t
+      (message "Forge not supported")))))
 
 (defun code-review-utils-build-obj-from-url (url)
   "Return obj from URL."
