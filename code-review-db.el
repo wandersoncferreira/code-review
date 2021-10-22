@@ -240,7 +240,7 @@
 (defun code-review-db--pullreq-raw-infos-update (pullreq infos)
   "Save INFOS to the PULLREQ entity."
   (oset pullreq raw-infos infos)
-  (oset pullreq sha (a-get infos (list 'headRef 'target 'oid)))
+  (oset pullreq sha (a-get-in infos (list 'headRef 'target 'oid)))
   (oset pullreq raw-comments (a-get-in infos (list 'reviews 'nodes)))
   (closql-insert (code-review-db) pullreq t))
 

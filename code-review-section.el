@@ -447,22 +447,23 @@ Code Review inserts PR comments sections in the diff buffer."
          (code-review-db--pullreq-raw-comments
           code-review-pullreq-id)))
 
-  (switch-to-buffer-other-window
-   (code-review-section--with-buffer
-     buff-name
-     (progn
-       (save-excursion
-         (insert (code-review-db--pullreq-raw-diff code-review-pullreq-id))
-         (insert ?\n))
-       (magit-insert-section (code-review)
-         (magit-run-section-hook 'code-review-sections-hook))
+  (let ((buff (code-review-section--with-buffer
+                buff-name
+                (progn
+                  (save-excursion
+                    (insert (code-review-db--pullreq-raw-diff code-review-pullreq-id))
+                    (insert ?\n))
+                  (magit-insert-section (code-review)
+                    (magit-run-section-hook 'code-review-sections-hook))
 
-       (magit-wash-sequence
-        (apply-partially #'magit-diff-wash-diff ())))))
+                  (magit-wash-sequence
+                   (apply-partially #'magit-diff-wash-diff ()))))))
 
-  ;; remove advices
-  (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
-  (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk))
+    ;; remove advices
+    (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
+    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)
+
+    buff))
 
 (defun code-review-section--build-buffer (obj)
   "Build code review buffer given an OBJ."
@@ -479,7 +480,8 @@ Code Review inserts PR comments sections in the diff buffer."
             (code-review-db--pullreq-raw-infos-update obj .data.repository.pullRequest)
             (code-review-db--pullreq-raw-diff-update obj (a-get (-first-item x) 'message)))
 
-          (code-review-section--trigger-hooks code-review-buffer-name)
+          (switch-to-buffer-other-window
+           (code-review-section--trigger-hooks code-review-buffer-name))
           (goto-char (point-min)))))
     (deferred:error it
       (lambda (err)
@@ -487,10 +489,6 @@ Code Review inserts PR comments sections in the diff buffer."
 
 (defun code-review-section--build-commit-buffer (obj)
   "Build code review buffer given an OBJ."
-  (advice-add 'magit-diff-insert-file-section
-              :override #'code-review-section--magit-diff-insert-file-section)
-  (advice-add 'magit-diff-wash-hunk
-              :override #'code-review-section--magit-diff-wash-hunk)
   (deferred:$
     (deferred:parallel
       (lambda () (code-review-commit-diff-deferred obj))
@@ -499,33 +497,14 @@ Code Review inserts PR comments sections in the diff buffer."
     (deferred:nextc it
       (lambda (x)
         (let-alist (-third-item x)
-          (let* ((pull-request .data.repository.pullRequest))
 
-            (setq code-review-pullreq-info pull-request
-                  code-review-section-commit-comments nil
-                  code-review-section-grouped-comments nil
-                  code-review-pullreq-id (oref obj id))
+          (when code-review-full-refresh?
+            (setq code-review-pullreq-id (oref obj id))
+            (code-review-db--pullreq-raw-infos-update obj .data.repository.pullRequest)
+            (code-review-db--pullreq-raw-diff-update obj (a-get (-first-item x) 'message)))
 
-            (switch-to-buffer
-             (code-review-section--with-buffer
-               "*Code Review Commit*"
-               (progn
-                 (save-excursion
-                   (insert (a-get (-first-item x) 'message))
-                   (insert ?\n))
-
-                 (magit-insert-section (code-review)
-                   (magit-run-section-hook 'code-review-sections-hook))
-
-                 (magit-wash-sequence
-                  (apply-partially #'magit-diff-wash-diff ())))))
-
-            (goto-char (point-min))
-
-            (advice-remove 'magit-diff-insert-file-section
-                           #'code-review-section--magit-diff-insert-file-section)
-            (advice-remove 'magit-diff-wash-hunk
-                           #'code-review-section--magit-diff-wash-hunk)))))
+          (switch-to-buffer
+           (code-review-section--trigger-hooks "*Code Review Commit*")))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from your VC provider %S!" err)))))
