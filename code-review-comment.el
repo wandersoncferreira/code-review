@@ -101,12 +101,15 @@ For internal usage only.")
               ((string-equal type "hunk")
                `((reply? . nil)
                  (database-id . nil)))
-              ((string-equal type "comment")
+              ((-contains-p '(code-review:comment
+                              code-review:comment-header)
+                            type)
                `((reply? . t)
-                 (database-id . ,.databaseId)
-                 (position ,(or .position .originalPosition))))
-              ((-contains-p '(local-comment
-                              local-comment-header)
+                 (database-id . ,.comment.databaseId)
+                 (comment-text . ,.comment.bodyText)
+                 (position . ,(or .comment.position .comment.originalPosition))))
+              ((-contains-p '(code-review:local-comment
+                              code-review:local-comment-header)
                             type)
                (a-assoc value 'start start 'end end))
               (t

@@ -89,7 +89,7 @@ For internal usage only.")
              (perc (if (string-empty-p .milestone.progressPercentage) nil .milestone.progressPercentage))
              (milestone (if title
                             (format "%s (%s%%)" .milestone.title .milestone.progressPercentage)
-                            "No milestone")))
+                          "No milestone")))
 
         (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
                                                        (progress . ,.milestone.progressPercentage)))
@@ -292,26 +292,38 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
       (code-review-section-insert-outdated-comment
        comments
        amount-loc)
-    (dolist (c comments)
-      (let* ((body-lines (code-review-utils--split-comment (a-get c 'bodyText)))
-             (amount-new-loc (+ 2 (length body-lines)))
-             (metadata `((comment . ,c)
-                         (amount-loc . ,(+ amount-loc amount-new-loc)))))
+    (let ((new-amount-loc amount-loc))
+      (dolist (c comments)
+        (let* ((body-lines (code-review-utils--split-comment (a-get c 'bodyText)))
+               (amount-loc-incr (+ 2 (length body-lines))))
 
-        (code-review-db--curr-path-comment-count-update amount-new-loc)
+          (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
 
-        (magit-insert-section (code-review:comment-header metadata)
-          (let ((heading (format "Reviewed by @%s [%s]: "
-                                 (a-get c 'author)
-                                 (a-get c 'state))))
-            (add-face-text-property 0 (length heading)
-                                    'code-review-recent-comment-heading t heading)
-            (magit-insert-heading heading))
-          (magit-insert-section (code-review:comment metadata)
-            (dolist (l body-lines)
-              (insert l)
-              (insert "\n"))
-            (insert ?\n)))))))
+          (let ((metadata
+                 `((comment . ,c)
+                   (amount-loc . ,new-amount-loc))))
+
+            (code-review-db--curr-path-comment-count-update amount-loc-incr)
+
+            (when (and (a-get c 'local?) (not (a-get c 'reply?)))
+;;; when we create a local comment there is a -1 shift in the diff position
+;;; to account for the last line of the buffer.. this will make it right at writing time.
+              (forward-line))
+
+;;; TODO: we can identify what is a local comment and what is a reply comment here
+;;; these two headers should have different faces and perhaps different text too
+            (magit-insert-section (code-review:comment-header metadata)
+              (let ((heading (format "Reviewed by @%s [%s]: "
+                                     (a-get c 'author)
+                                     (a-get c 'state))))
+                (add-face-text-property 0 (length heading)
+                                        'code-review-recent-comment-heading t heading)
+                (magit-insert-heading heading))
+              (magit-insert-section (code-review:comment metadata)
+                (dolist (l body-lines)
+                  (insert l)
+                  (insert "\n"))
+                (insert ?\n)))))))))
 
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
@@ -384,14 +396,15 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
+
             (let* ((comment-written-pos
                     (or (code-review-db-get-comment-written-pos) 0))
                    (diff-pos (- (line-number-at-pos)
                                 head-pos
-                                comment-written-pos 0))
+                                comment-written-pos))
                    (path-pos (code-review-utils--comment-key path-name diff-pos)))
               (if (not (code-review-db--comment-already-written? path-pos))
-                  (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments)))
+                  (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments))) ;; FIXME: this line is possible a huge bottleneck .. grouping at every diff line... lol
                          (grouped-comment (code-review-utils--comment-get
                                            grouped-comments
                                            path-pos)))
@@ -437,6 +450,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                       (progn
                         (save-excursion
                           (insert (code-review-db--pullreq-raw-diff))
+                          (insert ?\n)
                           (insert ?\n))
                         (magit-insert-section (code-review)
                           (magit-run-section-hook 'code-review-sections-hook))
@@ -543,17 +557,25 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                           path-name (substring-no-properties value))
                   (setq amount-loc (a-get value 'amount-loc)
                         path-name (a-get-in value (list 'comment 'path))))))
-            (let* ((diff-pos (+ 1 (- current-line-pos
-                                     amount-loc
-                                     (code-review-db--head-pos path-name))))
+            (let* ((diff-pos (- current-line-pos
+                                amount-loc
+                                (code-review-db--head-pos path-name)))
+                   (reply? (a-get metadata 'reply?))
+                   (reply-pos (when reply?
+                                (- (+ (a-get metadata 'position)
+                                      (length (split-string (a-get metadata 'comment-text) "\n")))
+                                   1)))
+                   (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
                    (local-comment-record
                     `((author (login . ,(code-review-utils--git-get-user)))
-                      (state . "LOCAL COMMENT")
+                      (state . ,state)
                       (comments (nodes ((bodyText . ,local-comment)
                                         (outdated . nil)
+                                        (reply? .,reply?)
+                                        (local? . t)
                                         (path . ,path-name)
-                                        (position . ,diff-pos)
-                                        (databaseId . "MISSING")))))))
+                                        (position . ,(if reply? reply-pos diff-pos))
+                                        (databaseId . ,(a-get metadata 'database-id))))))))
               (code-review-db--pullreq-raw-comments-update local-comment-record))))
         (erase-buffer)
         (code-review-section--trigger-hooks

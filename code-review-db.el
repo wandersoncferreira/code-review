@@ -258,7 +258,7 @@
   "Add COMMENT to the pullreq ID."
   (let* ((pr (code-review-db-get-pullreq))
          (raw-comments (oref pr raw-comments)))
-    (oset pr raw-comments (cons comment raw-comments))
+    (oset pr raw-comments (append raw-comments (list comment)))
     (closql-insert (code-review-db) pr t)))
 
 ;;;

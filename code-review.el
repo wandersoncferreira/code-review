@@ -108,6 +108,18 @@
     map)
   "Keymap for the `commit' section.")
 
+(defvar magit-code-review:comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add)
+    map)
+  "Keymap for the `comment' section.")
+
+(defvar magit-code-review:comment-header-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add)
+    map)
+  "Keymap for the `comment' section.")
+
 (defvar magit-code-review:local-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-edit)
