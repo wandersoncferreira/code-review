@@ -85,13 +85,17 @@ For internal usage only.")
   "Insert the milestone of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
-                                                     (progress . ,.milestone.progressPercentage)))
-        (insert (format "%-17s" "Milestone: ")
-                (format "%s (%s%%)"
-                        .milestone.title
-                        .milestone.progressPercentage))
-        (insert ?\n)))))
+      (let* ((title (if (string-empty-p .milestone.title) nil .milestone.title))
+             (perc (if (string-empty-p .milestone.progressPercentage) nil .milestone.progressPercentage))
+             (milestone (if title
+                            (format "%s (%s%%)" .milestone.title .milestone.progressPercentage)
+                            "No milestone")))
+
+        (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
+                                                       (progress . ,.milestone.progressPercentage)))
+          (insert (format "%-17s" "Milestone: "))
+          (insert (propertize milestone 'font-lock-face 'magit-dimmed))
+          (insert ?\n))))))
 
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."
@@ -99,19 +103,21 @@ For internal usage only.")
     (let-alist infos
       (magit-insert-section (code-review:labels .labels.nodes)
         (insert (format "%-17s" "Labels: "))
-        (dolist (label .labels.nodes)
-          (insert (a-get label 'name))
-          (let* ((color (concat "#" (a-get label 'color)))
-                 (background (code-review-utils--sanitize-color color))
-                 (foreground (code-review-utils--contrast-color color))
-                 (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
-            (overlay-put o 'priority 2)
-            (overlay-put o 'evaporate t)
-            (overlay-put o 'font-lock-face
-                         `((:background ,background)
-                           (:foreground ,foreground)
-                           forge-topic-label)))
-          (insert " "))
+        (if .labels.nodes
+            (dolist (label .labels.nodes)
+              (insert (a-get label 'name))
+              (let* ((color (concat "#" (a-get label 'color)))
+                     (background (code-review-utils--sanitize-color color))
+                     (foreground (code-review-utils--contrast-color color))
+                     (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
+                (overlay-put o 'priority 2)
+                (overlay-put o 'evaporate t)
+                (overlay-put o 'font-lock-face
+                             `((:background ,background)
+                               (:foreground ,foreground)
+                               forge-topic-label)))
+              (insert " "))
+          (insert (propertize "None yet" 'font-lock-face 'magit-dimmed)))
         (insert ?\n)))))
 
 (defun code-review-section-insert-assignee ()
@@ -124,7 +130,9 @@ For internal usage only.")
                                         (a-get a 'name)
                                         (a-get a 'login)))
                               .assignees.nodes))
-             (assignees (string-join assignee-names ", ")))
+             (assignees (if assignee-names
+                            (string-join assignee-names ", ")
+                          (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed))))
         (magit-insert-section (code-review:assignee assignees)
           (insert (format "%-17s" "Assignees: ") assignees)
           (insert ?\n))))))
@@ -137,7 +145,9 @@ For internal usage only.")
                              (lambda (p)
                                (a-get-in p (list 'project 'name)))
                              .projectCards.nodes))
-             (projects (string-join project-names ", ")))
+             (projects (if project-names
+                           (string-join project-names ", ")
+                         (propertize "None yet" 'font-lock-face 'magit-dimmed))))
         (magit-insert-section (code-review:project projects)
           (insert (format "%-17s" "Projects: ") projects)
           (insert ?\n))))))
@@ -156,7 +166,8 @@ For internal usage only.")
                                       (propertize "No reviews" 'font-lock-face 'magit-dimmed)
                                     reviewers)))
         (magit-insert-section (code-review:reviewers suggested-reviewers)
-          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers))))))
+          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers)
+          (insert ?\n))))))
 
 (defun code-review-section-insert-headers ()
   "Insert all the headers."
@@ -246,9 +257,7 @@ For internal usage only.")
         (code-review-db--curr-path-comment-count-update amount-new-loc)
 
         (magit-insert-section (code-review:outdated-hunk-header metadata1)
-          (let ((heading (format "Reviewed by %s [%s] - [OUTDATED]"
-                                 (a-get first-hunk-commit 'author)
-                                 (a-get first-hunk-commit 'state))))
+          (let ((heading (format "Reviewed - [OUTDATED]")))
             (add-face-text-property 0 (length heading)
                                     'code-review-outdated-comment-heading
                                     t heading)
