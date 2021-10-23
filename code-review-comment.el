@@ -125,13 +125,14 @@ For internal usage only.")
   (code-review-comment--hold-metadata)
   (when comment-metadata
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-      (with-current-buffer buffer
-        (insert code-review-comment-buffer-msg)
-        (insert ?\n))
       (setq comment-cursor-pos (line-beginning-position))
       (setq comment-window-configuration (current-window-configuration))
-      (switch-to-buffer-other-window buffer)
-      (code-review-comment-mode))))
+      (with-current-buffer buffer
+        (erase-buffer)
+        (insert code-review-comment-buffer-msg)
+        (insert ?\n)
+        (switch-to-buffer-other-window buffer)
+        (code-review-comment-mode)))))
 
 ;;;###autoload
 (defun code-review-comment-add-feedback ()
@@ -169,12 +170,23 @@ For internal usage only.")
                                 'editing? comment-editing?)))
         (code-review-section-insert-local-comment
          comment-cleaned
-         metadata)
+         metadata
+         comment-window-configuration)
         (setq comment-metadata nil
               comment-cursor-pos nil
               comment-editing? nil)))
     (set-window-configuration comment-window-configuration)
     (setq comment-window-configuration nil)))
+
+;;;###autoload
+(defun code-review-comment-quit ()
+  "Quit the comment window."
+  (interactive)
+  (setq comment-metadata nil
+        comment-cursor-pos nil
+        comment-window-configuration nil
+        comment-feedback? nil
+        comment-editing? nil))
 
 ;;;###autoload
 (defun code-review-comment-edit ()
@@ -213,6 +225,7 @@ For internal usage only.")
 (setq code-review-comment-mode-map
   (let ((map (copy-keymap markdown-mode-map)))
     (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
+    (define-key map (kbd "C-c C-k") 'code-review-comment-quit)
     (set-keymap-parent map markdown-mode-map)
     map))
 

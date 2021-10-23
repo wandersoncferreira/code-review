@@ -51,7 +51,13 @@
 
 (defun code-review-github-errback (&rest m)
   "Error callback, displays the error message M."
-  (message "Error talking to GitHub: %s" m))
+  (let-alist m
+    (let ((status (-second-item .error)))
+      (cond
+       ((= status 404)
+        (message "Provided URL Not Found"))
+       (t
+        (message "Unknown error talking to Github: %s" m))))))
 
 (cl-defmethod code-review-pullreq-diff ((github code-review-github-repo) callback)
   "Get PR diff from GITHUB, run CALLBACK after answer."

@@ -124,7 +124,7 @@
 
 (defvar magit-code-review:feedback-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-feedback)
+    (define-key map (kbd "RET") 'code-review-comment-add-feedback) ;;; "OR edit"
     map)
   "Keymap for the `feedback' section.")
 
@@ -203,18 +203,14 @@ OUTDATED."
         (message "We can only review PRs at the moment. You tried on something else.")
       (let* ((pr-alist (a-alist 'owner   (oref repo owner)
                                 'repo    (oref repo name)
-                                'apihost (oref repo apihost)
-                                'num     (oref pullreq number)))
-             (obj (code-review-utils-build-obj pr-alist)))
-        (code-review-section--build-buffer obj)))))
+                                'num     (oref pullreq number)
+                                'url (when (forge-github-repository-p repo)
+                                       "https://api.github.com"))))
+        (code-review-utils-build-obj pr-alist)
+        (setq code-review-full-refresh? t)
+        (code-review-section--build-buffer)))))
 
 ;;; Transient
-
-(transient-define-prefix code-review (review)
-  "Approve, Reject, or Request changes to a Review."
-  [("a" "Approve" code-review-approve)
-   ("r" "Reject" code-review-reject)
-   ("c" "Request Changes" code-review-request-changes)])
 
 (transient-define-prefix code-review-comments (comment)
   "Add, Edit, Delete comments."
@@ -224,12 +220,11 @@ OUTDATED."
 
 (define-transient-command code-review-transient-api ()
   "Code Review"
-  ["Comment"
-   ("c" "Comment" code-review-comments)]
   ["Review"
-   ("a" "Add main comment" code-review-comment-add-feedback)
-   ("e" "Edit main comment" code-review-comment-add)
-   ("s" "Submit" code-review)]
+   ("a" "Approve" code-review-approve)
+   ("c" "Request Changes" code-review-request-changes)
+   ("r" "Reject" code-review-reject)
+   ("s" "Submit" code-review-submit)]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-comment-add)]
   ["Quit"

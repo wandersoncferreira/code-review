@@ -39,7 +39,6 @@
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
-
 ;;; headers
 
 (defun code-review-section-insert-header-title ()
@@ -147,7 +146,12 @@ For internal usage only.")
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (let* ((reviewers (string-join .suggestedReviewers ", "))
+      (let* ((reviewers (string-join
+                         (-map
+                          (lambda (r)
+                            (a-get-in r (list 'reviewer 'name)))
+                          .suggestedReviewers)
+                         ", "))
              (suggested-reviewers (if (string-empty-p reviewers)
                                       (propertize "No reviews" 'font-lock-face 'magit-dimmed)
                                     reviewers)))
@@ -303,7 +307,6 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE."
-  (prin1 "RODANDO --- FILE SECTION\n")
 
   ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
@@ -340,7 +343,6 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 Code Review inserts PR comments sections in the diff buffer.
 Argument GROUPED-COMMENTS comments grouped by path and diff position."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
-    (prin1 "RODANDO --- DIFF WAS\n")
 
     ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
@@ -353,55 +355,52 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
         (let ((adjusted-pos (+ 1 (line-number-at-pos))))
           (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
           (setq head-pos adjusted-pos)
-          (setq path-name path-name))))
+          (setq path-name path-name)))
     ;;; --- end -- code-review specific code.
 
-    (let* ((heading  (match-string 0))
-           (ranges   (mapcar (lambda (str)
-                               (mapcar #'string-to-number
-                                       (split-string (substring str 1) ",")))
-                             (split-string (match-string 1))))
-           (about    (match-string 2))
-           (combined (= (length ranges) 3))
-           (value    (cons about ranges)))
-      (magit-delete-line)
-      (magit-insert-section section (hunk value)
-        (insert (propertize (concat heading "\n")
-                            'font-lock-face 'magit-diff-hunk-heading))
-        (magit-insert-heading)
-        (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
+      (let* ((heading  (match-string 0))
+             (ranges   (mapcar (lambda (str)
+                                 (mapcar #'string-to-number
+                                         (split-string (substring str 1) ",")))
+                               (split-string (match-string 1))))
+             (about    (match-string 2))
+             (combined (= (length ranges) 3))
+             (value    (cons about ranges)))
+        (magit-delete-line)
+        (magit-insert-section section (hunk value)
+          (insert (propertize (concat heading "\n")
+                              'font-lock-face 'magit-diff-hunk-heading))
+          (magit-insert-heading)
+          (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
-          (let* ((head-pos
-                  (code-review-db-get-curr-head-pos))
-                 (comment-written-pos
-                  (or (code-review-db-get-comment-written-pos) 0))
-                 (diff-pos (- (line-number-at-pos)
-                              head-pos
-                              comment-written-pos 0))
-                 (path-name (code-review-db--curr-path-name))
-                 (path-pos (code-review-utils--comment-key path-name diff-pos)))
-            (if (not (code-review-db--comment-already-written? path-pos))
-                (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments)))
-                       (grouped-comment (code-review-utils--comment-get
-                                         grouped-comments
-                                         path-pos)))
-                  (code-review-db--curr-path-comment-written-update path-pos)
-                  (code-review-section-insert-comment
-                   grouped-comment
-                   comment-written-pos))
-              (forward-line))))
+            (let* ((comment-written-pos
+                    (or (code-review-db-get-comment-written-pos) 0))
+                   (diff-pos (- (line-number-at-pos)
+                                head-pos
+                                comment-written-pos 0))
+                   (path-pos (code-review-utils--comment-key path-name diff-pos)))
+              (if (not (code-review-db--comment-already-written? path-pos))
+                  (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments)))
+                         (grouped-comment (code-review-utils--comment-get
+                                           grouped-comments
+                                           path-pos)))
+                    (code-review-db--curr-path-comment-written-update path-pos)
+                    (code-review-section-insert-comment
+                     grouped-comment
+                     comment-written-pos))
+                (forward-line))))
 
         ;;; --- end -- code-review specific code.
-        (oset section end (point))
-        (oset section washer 'magit-diff-paint-hunk)
-        (oset section combined combined)
-        (if combined
-            (oset section from-ranges (butlast ranges))
-          (oset section from-range (car ranges)))
-        (oset section to-range (car (last ranges)))
-        (oset section about about)))
+          (oset section end (point))
+          (oset section washer 'magit-diff-paint-hunk)
+          (oset section combined combined)
+          (if combined
+              (oset section from-ranges (butlast ranges))
+            (oset section from-range (car ranges)))
+          (oset section to-range (car (last ranges)))
+          (oset section about about))))
     t))
 
 (defmacro code-review-section--with-buffer (buff-name &rest body)
@@ -416,30 +415,33 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
            ,@body)))
      buffer))
 
-(defun code-review-section--trigger-hooks (buff-name)
-  "Function to trigger magit section hooks and draw BUFF-NAME for a given PULLREQ-ID."
+(defun code-review-section--trigger-hooks (buff-name &optional window-config)
+  "Trigger magit section hooks and draw BUFF-NAME for a given PULLREQ-ID and WINDOW-CONFIG."
+  (unwind-protect
+      (progn
+        ;; advices
+        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
+        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-  ;; advices
-  (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-  (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+        (let ((buff (code-review-section--with-buffer
+                      buff-name
+                      (progn
+                        (save-excursion
+                          (insert (code-review-db--pullreq-raw-diff))
+                          (insert ?\n))
+                        (magit-insert-section (code-review)
+                          (magit-run-section-hook 'code-review-sections-hook))
 
-  (let ((buff (code-review-section--with-buffer
-                buff-name
-                (progn
-                  (save-excursion
-                    (insert (code-review-db--pullreq-raw-diff))
-                    (insert ?\n))
-                  (magit-insert-section (code-review)
-                    (magit-run-section-hook 'code-review-sections-hook))
+                        (magit-wash-sequence
+                         (apply-partially #'magit-diff-wash-diff ()))))))
 
-                  (magit-wash-sequence
-                   (apply-partially #'magit-diff-wash-diff ()))))))
+          (when window-config
+            (set-window-configuration window-config))
 
+          buff))
     ;; remove advices
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
-    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)
-
-    buff))
+    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
 (defun code-review-section--build-buffer ()
   "Build code review buffer given an OBJ."
@@ -509,8 +511,8 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                  (insert feedback))
              (forward-line))))))))
 
-(defun code-review-section-insert-local-comment (local-comment metadata)
-  "Insert a LOCAL-COMMENT and attach section METADATA in PULLREQ-ID buffer."
+(defun code-review-section-insert-local-comment (local-comment metadata window-config)
+  "Insert a LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG."
   (with-current-buffer (get-buffer code-review-buffer-name)
     (let-alist metadata
       (let ((inhibit-read-only t)
@@ -531,7 +533,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                     (setq amount-loc 0
                           path-name (substring-no-properties value))
                   (setq amount-loc (a-get value 'amount-loc)
-                        path-name (a-get value (list 'comment 'path))))))
+                        path-name (a-get-in value (list 'comment 'path))))))
             (let* ((diff-pos (+ 1 (- current-line-pos
                                      amount-loc
                                      (code-review-db--head-pos path-name))))
@@ -546,8 +548,8 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
               (code-review-db--pullreq-raw-comments-update local-comment-record))))
         (erase-buffer)
         (code-review-section--trigger-hooks
-         code-review-buffer-name)
-        (goto-char .cursor-pos)))))
+         code-review-buffer-name
+         window-config)))))
 
 (defun code-review-section-delete-local-comment ()
   "Delete a local comment."
