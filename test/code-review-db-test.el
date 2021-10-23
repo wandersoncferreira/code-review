@@ -7,6 +7,7 @@
 (require 'uuidgen)
 (require 'buttercup)
 (require 'code-review-db)
+(require 'code-review-github)
 
 (defconst sample-pr-alist
   (a-alist 'owner "owner"
