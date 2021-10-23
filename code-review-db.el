@@ -392,5 +392,20 @@
         0
       (oref comment loc-written))))
 
+(defun code-review-db-delete-raw-comment (internal-id)
+  "Remove INTERNAL-ID comment from raw comments list."
+  (let* ((pr (code-review-db-get-pullreq))
+         (new-comments
+          (-filter
+           (lambda (c)
+             (let ((res (-filter
+                         (lambda (node)
+                           (not (string-equal (a-get node 'internal-id) internal-id)))
+                         (a-get-in c (list 'comments 'nodes)))))
+               res))
+           (oref pr raw-comments))))
+    (oset pr raw-comments new-comments)
+    (closql-insert (code-review-db) pr t)))
+
 (provide 'code-review-db)
 ;;; code-review-db.el ends here

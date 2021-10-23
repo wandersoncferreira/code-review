@@ -54,10 +54,11 @@ using COMMENTS."
 
 (defun code-review-utils--comment-clean-msg (msg text-to-remove)
   "Remove TEXT-TO-REMOVE from MSG."
-  (replace-regexp-in-string
-   (concat (concat text-to-remove "\n") "\\|" text-to-remove)
-   ""
-   msg))
+  (string-trim
+   (replace-regexp-in-string
+    (concat (concat text-to-remove "\n") "\\|" text-to-remove)
+    ""
+    msg)))
 
 (defun code-review-utils--clean-suggestion (suggestion)
   "Clean SUGGESTION comment."

@@ -306,24 +306,41 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
             (code-review-db--curr-path-comment-count-update amount-loc-incr)
 
             (when (and (a-get c 'local?) (not (a-get c 'reply?)))
-;;; when we create a local comment there is a -1 shift in the diff position
-;;; to account for the last line of the buffer.. this will make it right at writing time.
+              ;;; when we create a local comment there is a -1 shift in the diff position
+              ;;; to account for the last line of the buffer.. this will make it right at writing time.
               (forward-line))
 
-;;; TODO: we can identify what is a local comment and what is a reply comment here
-;;; these two headers should have different faces and perhaps different text too
-            (magit-insert-section (code-review:comment-header metadata)
-              (let ((heading (format "Reviewed by @%s [%s]: "
-                                     (a-get c 'author)
-                                     (a-get c 'state))))
-                (add-face-text-property 0 (length heading)
-                                        'code-review-recent-comment-heading t heading)
-                (magit-insert-heading heading))
-              (magit-insert-section (code-review:comment metadata)
-                (dolist (l body-lines)
-                  (insert l)
-                  (insert "\n"))
-                (insert ?\n)))))))))
+            (cond
+             ((a-get c 'reply?)
+              (magit-insert-section (code-review:reply-comment-header metadata)
+                (let ((heading "Reply by YOU: "))
+                  (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
+                  (magit-insert-heading heading))
+                (magit-insert-section (code-review:reply-comment metadata)
+                  (dolist (l body-lines)
+                    (insert l)
+                    (insert "\n"))
+                  (insert ?\n))))
+             ((a-get c 'local?)
+              (magit-insert-section (code-review:local-comment-header metadata)
+                (let ((heading "Comment by YOU: "))
+                  (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
+                  (magit-insert-heading heading))
+                (magit-insert-section (code-review:local-comment metadata)
+                  (dolist (l body-lines)
+                    (insert l)
+                    (insert "\n"))
+                  (insert ?\n))))
+             (t
+              (magit-insert-section (code-review:comment-header metadata)
+                (let ((heading (format "Reviewed by @%s [%s]: " (a-get c 'author) (a-get c 'state))))
+                  (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
+                  (magit-insert-heading heading))
+                (magit-insert-section (code-review:comment metadata)
+                  (dolist (l body-lines)
+                    (insert l)
+                    (insert "\n"))
+                  (insert ?\n)))))))))))
 
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
@@ -388,7 +405,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
              (combined (= (length ranges) 3))
              (value    (cons about ranges)))
         (magit-delete-line)
-        (magit-insert-section section (hunk value)
+        (magit-insert-section section (code-review:hunk value)
           (insert (propertize (concat heading "\n")
                               'font-lock-face 'magit-diff-hunk-heading))
           (magit-insert-heading)
@@ -544,53 +561,74 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                                 (goto-char .cursor-pos)
                                 (line-number-at-pos))))
         (magit-insert-section (code-review:local-comment-header metadata)
-          (or (search-backward-regexp "Reviewed by" nil t)
-              (search-backward-regexp "modified " nil t))
-          (let ((section (magit-current-section))
-                (amount-loc nil)
-                (path-name nil))
-            (if (not section)
-                (setq amount-loc 0)
-              (with-slots (type value) (magit-current-section)
-                (if (string-equal type "file")
-                    (setq amount-loc 0
-                          path-name (substring-no-properties value))
-                  (setq amount-loc (a-get value 'amount-loc)
-                        path-name (a-get-in value (list 'comment 'path))))))
-            (let* ((diff-pos (- current-line-pos
-                                amount-loc
-                                (code-review-db--head-pos path-name)))
-                   (reply? (a-get metadata 'reply?))
-                   (reply-pos (when reply?
-                                (- (+ (a-get metadata 'position)
-                                      (length (split-string (a-get metadata 'comment-text) "\n")))
-                                   1)))
-                   (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
-                   (local-comment-record
-                    `((author (login . ,(code-review-utils--git-get-user)))
-                      (state . ,state)
-                      (comments (nodes ((bodyText . ,local-comment)
-                                        (outdated . nil)
-                                        (reply? .,reply?)
-                                        (local? . t)
-                                        (path . ,path-name)
-                                        (position . ,(if reply? reply-pos diff-pos))
-                                        (databaseId . ,(a-get metadata 'database-id))))))))
-              (code-review-db--pullreq-raw-comments-update local-comment-record))))
-        (erase-buffer)
-        (code-review-section--trigger-hooks
-         code-review-buffer-name
-         window-config)))))
+          (if .editing?
+              (progn
+                (code-review-db-delete-raw-comment .comment.internal-id)
+                (code-review-db--pullreq-raw-comments-update
+                 `((author (login . ,(code-review-utils--git-get-user)))
+                   (state . ,.comment.state)
+                   (comments (nodes ((bodyText . ,.comment.bodyText)
+                                     (outdated . nil)
+                                     (reply? . ,.comment.reply?)
+                                     (local? . ,.comment.local?)
+                                     (path . ,.comment.path)
+                                     (position . ,.comment.position)
+                                     (databaseId . ,.comment.databaseId)
+                                     (internal-id . ,(uuidgen-4))))))))
+            (progn
+
+              (or (search-backward-regexp "Reviewed by" nil t)
+                  (search-backward-regexp "modified " nil t))
+              (let ((section (magit-current-section))
+                    (amount-loc nil)
+                    (path-name nil))
+                (if (not section)
+                    (setq amount-loc 0)
+                  (with-slots (type value) (magit-current-section)
+                    (if (string-equal type "file")
+                        (setq amount-loc 0
+                              path-name (substring-no-properties value))
+                      (setq amount-loc (a-get value 'amount-loc)
+                            path-name (a-get-in value (list 'comment 'path))))))
+                (let* ((diff-pos (- current-line-pos
+                                    amount-loc
+                                    (code-review-db--head-pos path-name)))
+                       (reply? (a-get metadata 'reply?))
+                       (reply-pos (when reply?
+                                    (- (+ (a-get metadata 'position)
+                                          (length (split-string (a-get metadata 'comment-text) "\n")))
+                                       1)))
+                       (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
+                       (local-comment-record
+                        `((author (login . ,(code-review-utils--git-get-user)))
+                          (state . ,state)
+                          (comments (nodes ((bodyText . ,local-comment)
+                                            (outdated . nil)
+                                            (reply? . ,reply?)
+                                            (internal-id . ,(uuidgen-4))
+                                            (local? . ,(if reply? nil t))
+                                            (path . ,path-name)
+                                            (position . ,(if reply? reply-pos diff-pos))
+                                            (databaseId . ,(a-get metadata 'database-id))))))))
+                  (code-review-db--pullreq-raw-comments-update local-comment-record)))))
+          (erase-buffer)
+          (code-review-section--trigger-hooks
+           code-review-buffer-name
+           window-config))))))
 
 (defun code-review-section-delete-local-comment ()
   "Delete a local comment."
   (with-current-buffer (get-buffer "*Code Review*")
     (let ((inhibit-read-only t))
-      (with-slots (type start end) (magit-current-section)
+      (with-slots (type value start end) (magit-current-section)
         (if (-contains-p '(code-review:local-comment
-                           code-review:local-comment-header)
+                           code-review:local-comment-header
+                           code-review:reply-comment
+                           code-review:reply-comment-header)
                          type)
             (progn
+              (code-review-db-delete-raw-comment
+               (a-get-in value (list 'comment 'internal-id)))
               (goto-char start)
               (when (not (looking-at "\\[local comment\\]"))
                 (forward-line -1))
