@@ -30,19 +30,10 @@
 (require 'magit-diff)
 (require 'code-review-db)
 
-(defvar code-review-section-grouped-comments nil
-  "Hold the grouped comments info.
-Used by the overwritten version of `magit-diff-wash-hunk'.
-For internal usage only.")
-
-(defvar code-review-section-commit-comments nil
-  "Hold the grouped comments info from a commit.
-Used by the overwritten version of `magit-diff-wash-hunk'.
-For internal usage only.")
-
-(defvar code-review-pullreq-info nil
-  "Hold the pull-request data.
-For internal usage only.")
+;; fix unbound symbols
+(defvar magit-root-section)
+(defvar code-review-buffer-name)
+(defvar code-review-commit-buffer-name)
 
 (defvar code-review-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -53,34 +44,36 @@ For internal usage only.")
 
 (defun code-review-section-insert-header-title ()
   "Insert the title header line."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (setq header-line-format
             (propertize
-             (format "#%s: %s" .number .title)
+             (format "#%s: %s".number .title)
              'font-lock-face
              'magit-section-heading)))))
 
+;; (code-review-db--pullreq-raw-infos)
+;; (code-review-db-get-pullreq)
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:title .title)
         (insert (format "%-17s" "Title: ") .title)
         (insert ?\n)))))
 
 (defun code-review-section-insert-state ()
   "Insert the state of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:state .state)
         (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
         (insert ?\n)))))
 
 (defun code-review-section-insert-ref ()
   "Insert the state of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:ref `((base . ,.baseRefName)
                                                (head . ,.headRefName)))
         (insert (format "%-17s" "Refs: "))
@@ -91,8 +84,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-milestone ()
   "Insert the milestone of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
                                                      (progress . ,.milestone.progressPercentage)))
         (insert (format "%-17s" "Milestone: ")
@@ -103,8 +96,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:labels .labels.nodes)
         (insert (format "%-17s" "Labels: "))
         (dolist (label .labels.nodes)
@@ -124,8 +117,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-assignee ()
   "Insert the assignee of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (let* ((assignee-names (-map
                               (lambda (a)
                                 (format "%s (@%s)"
@@ -139,8 +132,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-project ()
   "Insert the project of the header buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (let* ((project-names (-map
                              (lambda (p)
                                (a-get-in p (list 'project 'name)))
@@ -152,8 +145,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-suggested-reviewers ()
   "Insert the suggested reviewers."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (let* ((reviewers (string-join .suggestedReviewers ", "))
              (suggested-reviewers (if (string-empty-p reviewers)
                                       (propertize "No reviews" 'font-lock-face 'magit-dimmed)
@@ -169,8 +162,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-commits ()
   "Insert commits from PULL-REQUEST."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:commits-header)
         (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
@@ -188,8 +181,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-pr-description ()
   "Insert PULL-REQUEST description."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:pr-description-header)
         (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
@@ -212,8 +205,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
-  (when code-review-pullreq-info
-    (let-alist code-review-pullreq-info
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
       (magit-insert-section (code-review:conversation-header)
         (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
@@ -232,7 +225,7 @@ For internal usage only.")
 
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
-  "Insert outdated COMMENTS in the buffer."
+  "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
 
   ;;; hunk groups are necessary because we usually have multiple reviews about
   ;;; the same original position accross different commits snapshots.
@@ -246,9 +239,7 @@ For internal usage only.")
              (metadata1 `((comment . ,first-hunk-commit)
                           (amount-loc ., (+ amount-loc amount-new-loc)))))
 
-        (code-review-db--curr-path-comment-count-update
-         code-review-pullreq-id
-         amount-new-loc)
+        (code-review-db--curr-path-comment-count-update amount-new-loc)
 
         (magit-insert-section (code-review:outdated-hunk-header metadata1)
           (let ((heading (format "Reviewed by %s [%s] - [OUTDATED]"
@@ -269,9 +260,7 @@ For internal usage only.")
                        (amount-new-loc2 (+ 2 (length body-lines)))
                        (metadata2 `((comment . ,c)
                                     (amount-loc .,(+ amount-loc amount-new-loc amount-new-loc2)))))
-                  (code-review-db--curr-path-comment-count-update
-                   code-review-pullreq-id
-                   amount-new-loc2)
+                  (code-review-db--curr-path-comment-count-update amount-new-loc2)
 
                   (magit-insert-section (code-review:outdated-comment-header metadata2)
                     (magit-insert-heading (format "Reviewed by %s[%s]:"
@@ -284,19 +273,19 @@ For internal usage only.")
                   (insert ?\n))))))))))
 
 (defun code-review-section-insert-comment (comments amount-loc)
-  "Insert COMMENTS and keep the amount line of comments written (AMOUNT-LOC).
+  "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
 A quite good assumption: every comment in an outdated hunk will be outdated."
   (if (a-get (-first-item comments) 'outdated)
-      (code-review-section-insert-outdated-comment comments amount-loc)
+      (code-review-section-insert-outdated-comment
+       comments
+       amount-loc)
     (dolist (c comments)
       (let* ((body-lines (code-review-utils--split-comment (a-get c 'bodyText)))
              (amount-new-loc (+ 2 (length body-lines)))
              (metadata `((comment . ,c)
                          (amount-loc . ,(+ amount-loc amount-new-loc)))))
 
-        (code-review-db--curr-path-comment-count-update
-         code-review-pullreq-id
-         amount-new-loc)
+        (code-review-db--curr-path-comment-count-update amount-new-loc)
 
         (magit-insert-section (code-review:comment-header metadata)
           (let ((heading (format "Reviewed by @%s [%s]: "
@@ -313,14 +302,13 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
-  "Overwrite the original Magit function on `magit-diff.el' file."
+  "Overwrite the original Magit function on `magit-diff.el' FILE."
+  (prin1 "RODANDO --- FILE SECTION\n")
 
   ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
   ;;; so the positioning of comments is done correctly.
-  (code-review-db--curr-path-update
-   code-review-pullreq-id
-   (substring-no-properties file))
+  (code-review-db--curr-path-update (substring-no-properties file))
   ;;; --- end -- code-review specific code.
 
   (magit-insert-section section
@@ -349,19 +337,21 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 
 (defun code-review-section--magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
-Code Review inserts PR comments sections in the diff buffer."
+Code Review inserts PR comments sections in the diff buffer.
+Argument GROUPED-COMMENTS comments grouped by path and diff position."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
+    (prin1 "RODANDO --- DIFF WAS\n")
 
     ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
-    (let* ((path (code-review-db--curr-path code-review-pullreq-id))
+    (let* ((path (code-review-db--curr-path))
            (path-name (oref path name))
            (head-pos (oref path head-pos))
            (at-pos-p (oref path at-pos-p)))
       (when (not head-pos)
         (let ((adjusted-pos (+ 1 (line-number-at-pos))))
-          (code-review-db--curr-path-head-pos-update code-review-pullreq-id path-name adjusted-pos)
+          (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
           (setq head-pos adjusted-pos)
           (setq path-name path-name))))
     ;;; --- end -- code-review specific code.
@@ -384,28 +374,24 @@ Code Review inserts PR comments sections in the diff buffer."
           ;;; code-review specific code.
           ;;; add code comments
           (let* ((head-pos
-                  (code-review-db-get-curr-head-pos code-review-pullreq-id))
+                  (code-review-db-get-curr-head-pos))
                  (comment-written-pos
-                  (or (code-review-db-get-comment-written-pos code-review-pullreq-id) 0))
+                  (or (code-review-db-get-comment-written-pos) 0))
                  (diff-pos (- (line-number-at-pos)
                               head-pos
                               comment-written-pos 0))
-                 (path-name (code-review-db--curr-path-name code-review-pullreq-id))
+                 (path-name (code-review-db--curr-path-name))
                  (path-pos (code-review-utils--comment-key path-name diff-pos)))
-            (if (not
-                 (code-review-db--comment-already-written?
-                  code-review-pullreq-id
-                  path-pos))
-                (let ((grouped-comments (code-review-utils--comment-get
-                                         code-review-section-grouped-comments
+            (if (not (code-review-db--comment-already-written? path-pos))
+                (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments)))
+                       (grouped-comment (code-review-utils--comment-get
+                                         grouped-comments
                                          path-pos)))
-                  (code-review-db--curr-path-comment-written-update
-                   code-review-pullreq-id
-                   path-pos)
+                  (code-review-db--curr-path-comment-written-update path-pos)
                   (code-review-section-insert-comment
-                   grouped-comments
+                   grouped-comment
                    comment-written-pos))
-             (forward-line))))
+              (forward-line))))
 
         ;;; --- end -- code-review specific code.
         (oset section end (point))
@@ -417,7 +403,6 @@ Code Review inserts PR comments sections in the diff buffer."
         (oset section to-range (car (last ranges)))
         (oset section about about)))
     t))
-
 
 (defmacro code-review-section--with-buffer (buff-name &rest body)
   "Include BODY in the buffer named BUFF-NAME."
@@ -432,26 +417,17 @@ Code Review inserts PR comments sections in the diff buffer."
      buffer))
 
 (defun code-review-section--trigger-hooks (buff-name)
-  "Function to trigger magit section hooks and draw BUFF-NAME."
+  "Function to trigger magit section hooks and draw BUFF-NAME for a given PULLREQ-ID."
 
   ;; advices
   (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
   (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-  ;; global variables
-  (setq code-review-pullreq-info
-        (code-review-db--pullreq-raw-infos
-         code-review-pullreq-id))
-  (setq code-review-section-grouped-comments
-        (code-review-comment-make-group
-         (code-review-db--pullreq-raw-comments
-          code-review-pullreq-id)))
-
   (let ((buff (code-review-section--with-buffer
                 buff-name
                 (progn
                   (save-excursion
-                    (insert (code-review-db--pullreq-raw-diff code-review-pullreq-id))
+                    (insert (code-review-db--pullreq-raw-diff))
                     (insert ?\n))
                   (magit-insert-section (code-review)
                     (magit-run-section-hook 'code-review-sections-hook))
@@ -465,56 +441,62 @@ Code Review inserts PR comments sections in the diff buffer."
 
     buff))
 
-(defun code-review-section--build-buffer (obj)
+(defun code-review-section--build-buffer ()
   "Build code review buffer given an OBJ."
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-diff-deferred obj))
-      (lambda () (code-review-infos-deferred obj)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-second-item x)
+  (let ((obj (code-review-db-get-pullreq)))
+    (deferred:$
+      (deferred:parallel
+        (lambda () (code-review-diff-deferred obj))
+        (lambda () (code-review-infos-deferred obj)))
+      (deferred:nextc it
+        (lambda (x)
+          (let-alist (-second-item x)
 
-          (when code-review-full-refresh?
-            (setq code-review-pullreq-id (oref obj id))
-            (code-review-db--pullreq-raw-infos-update obj .data.repository.pullRequest)
-            (code-review-db--pullreq-raw-diff-update obj (a-get (-first-item x) 'message)))
+            (when code-review-full-refresh?
+              (code-review-db--pullreq-raw-infos-update
+               .data.repository.pullRequest)
+              (code-review-db--pullreq-raw-diff-update
+               (a-get (-first-item x) 'message)))
 
-          (switch-to-buffer-other-window
-           (code-review-section--trigger-hooks code-review-buffer-name))
-          (goto-char (point-min)))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
+            (switch-to-buffer-other-window
+             (code-review-section--trigger-hooks
+              code-review-buffer-name))
+            (goto-char (point-min)))))
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from your VC provider %S!" err))))))
 
-(defun code-review-section--build-commit-buffer (obj)
+(defun code-review-section--build-commit-buffer ()
   "Build code review buffer given an OBJ."
-  (deferred:$
-    (deferred:parallel
-      (lambda () (code-review-commit-diff-deferred obj))
-      (lambda () "nothing")
-      (lambda () (code-review-infos-deferred obj)))
-    (deferred:nextc it
-      (lambda (x)
-        (let-alist (-third-item x)
+  (let ((obj (code-review-db-get-pullreq)))
+    (deferred:$
+      (deferred:parallel
+        (lambda () (code-review-commit-diff-deferred obj))
+        (lambda () "nothing")
+        (lambda () (code-review-infos-deferred obj)))
+      (deferred:nextc it
+        (lambda (x)
+          (let-alist (-third-item x)
 
-          (when code-review-full-refresh?
-            (setq code-review-pullreq-id (oref obj id))
-            (code-review-db--pullreq-raw-infos-update obj .data.repository.pullRequest)
-            (code-review-db--pullreq-raw-diff-update obj (a-get (-first-item x) 'message)))
+            (when code-review-full-refresh?
+              (code-review-db--pullreq-raw-infos-update
+               .data.repository.pullRequest)
+              (code-review-db--pullreq-raw-diff-update
+               (a-get (-first-item x) 'message)))
 
-          (switch-to-buffer
-           (code-review-section--trigger-hooks "*Code Review Commit*")))))
-    (deferred:error it
-      (lambda (err)
-        (message "Got an error from your VC provider %S!" err)))))
+            (switch-to-buffer
+             (code-review-section--trigger-hooks
+              code-review-commit-buffer-name)))))
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from your VC provider %S!" err))))))
 
 ;; TODO: commit description
 ;; TODO: commit comments
 
 (defun code-review-section-insert-feedback (feedback)
   "Add review FEEDBACK."
-  (with-current-buffer (get-buffer "*Code Review*")
+  (with-current-buffer (get-buffer code-review-buffer-name)
     (save-excursion
       (goto-char (point-min))
       (magit-wash-sequence
@@ -528,10 +510,11 @@ Code Review inserts PR comments sections in the diff buffer."
              (forward-line))))))))
 
 (defun code-review-section-insert-local-comment (local-comment metadata)
-  "Insert a LOCAL-COMMENT and attach section METADATA."
-  (with-current-buffer (get-buffer "*Code Review*")
+  "Insert a LOCAL-COMMENT and attach section METADATA in PULLREQ-ID buffer."
+  (with-current-buffer (get-buffer code-review-buffer-name)
     (let-alist metadata
       (let ((inhibit-read-only t)
+            (pr (code-review-db-get-pullreq))
             (current-line-pos (save-excursion
                                 (goto-char .cursor-pos)
                                 (line-number-at-pos))))
@@ -551,9 +534,7 @@ Code Review inserts PR comments sections in the diff buffer."
                         path-name (a-get value (list 'comment 'path))))))
             (let* ((diff-pos (+ 1 (- current-line-pos
                                      amount-loc
-                                     (code-review-db--head-pos
-                                      code-review-pullreq-id
-                                      path-name))))
+                                     (code-review-db--head-pos path-name))))
                    (local-comment-record
                     `((author (login . ,(code-review-utils--git-get-user)))
                       (state . "LOCAL COMMENT")
@@ -562,11 +543,10 @@ Code Review inserts PR comments sections in the diff buffer."
                                         (path . ,path-name)
                                         (position . ,diff-pos)
                                         (databaseId . "MISSING")))))))
-              (code-review-db--pullreq-raw-comments-update
-               code-review-pullreq-id
-               local-comment-record))))
+              (code-review-db--pullreq-raw-comments-update local-comment-record))))
         (erase-buffer)
-        (code-review-section--trigger-hooks code-review-buffer-name)
+        (code-review-section--trigger-hooks
+         code-review-buffer-name)
         (goto-char .cursor-pos)))))
 
 (defun code-review-section-delete-local-comment ()

@@ -43,9 +43,15 @@
 (require 'code-review-db)
 (require 'code-review-core)
 
-(defconst code-review-buffer-name "*Code Review*")
+(defcustom code-review-buffer-name "*Code Review*"
+  "Name of the code review main buffer."
+  :group 'code-review
+  :type 'string)
 
-(defvar code-review-pullreq-id nil)
+(defcustom code-review-commit-buffer-name "*Code Review Commit*"
+  "Name of the code review commit buffer."
+  :group 'code-review
+  :type 'string)
 
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
@@ -90,8 +96,7 @@
     (if section
         (with-slots (type value) section
           (if (eq type 'code-review:commit)
-              (let ((pullreq (code-review-db-get-pullreq code-review-pullreq-id)))
-                (code-review-section--build-commit-buffer pullreq))
+              (code-review-section--build-commit-buffer)
             (message "Can only be called from a commit section.")))
       (message "Can only be called from a commit section."))))
 
@@ -153,8 +158,7 @@
 (defun code-review-submit (event)
   "Submit your review with a final veredict (EVENT)."
   (interactive)
-  (let ((obj (code-review-utils--gen-submit-structure
-              code-review-pullreq-id)))
+  (let ((obj (code-review-utils--gen-submit-structure)))
     (oset obj event event)
     (cond
      ((and (not (oref obj replies)) (a-get (oref obj review) 'body))
@@ -183,13 +187,14 @@
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (let ((obj (code-review-utils-build-obj-from-url url)))
-    (setq code-review-full-refresh? t)
-    (code-review-section--build-buffer obj)))
+  (code-review-utils-build-obj-from-url url)
+  (setq code-review-full-refresh? t)
+  (code-review-section--build-buffer))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
-  "Review the forge pull request at point."
+  "Review the forge pull request at point.
+OUTDATED."
   (interactive)
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo    (forge-get-repository pullreq)))

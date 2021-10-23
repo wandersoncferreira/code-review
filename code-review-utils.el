@@ -30,6 +30,9 @@
 (require 'dash)
 (require 'magit-git)
 
+;;;
+(defvar code-review-buffer-name)
+
 ;;; COMMENTS
 
 (defun code-review-utils--comment-key (path pos)
@@ -160,12 +163,12 @@ Return a value between 0 and 1."
 
 ;;; SECTION
 
-(defun code-review-utils--gen-submit-structure (pullreq-id)
+(defun code-review-utils--gen-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
   (let* ((replies nil)
          (review-comments nil)
          (body nil)
-         (pullreq (code-review-db-get-pullreq pullreq-id))
+         (pullreq (code-review-db-get-pullreq))
          (obj (code-review-github-repo :owner (oref pullreq owner)
                                        :repo (oref pullreq repo)
                                        :number (oref pullreq number))))
