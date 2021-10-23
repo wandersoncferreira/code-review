@@ -183,31 +183,22 @@
   "Get pullreq obj from ID."
   (closql-get (code-review-db) pullreq-id 'code-review-github-repo))
 
-(defun code-review-db-get-buffer (buffer-id)
+(defun code-review-db-get-buffer ()
   "Get buffer obj from BUFFER-ID."
-  (closql-get (code-review-db) buffer-id 'code-review-buffer))
+  (closql-get (code-review-db) pullreq-id 'code-review-buffer))
 
 (defun code-review-db-get-path ()
   "Get path obj from ID."
   (closql-get (code-review-db) pullreq-id 'code-review-path))
 
-(defun code-review-db-get-buffer-paths (buffer-id)
+(defun code-review-db-get-buffer-paths ()
   "Get paths from BUFFER-ID."
-  (let* ((buffers (code-review-db-get-buffer buffer-id))
-         (buffer
-          (if (eieio-object-p buffers)
-              buffers
-            (-first-item buffers))))
+  (let* ((buffer (code-review-db-get-buffer)))
     (oref buffer paths)))
 
 (defun code-review-db-get-comment (id)
   "Get comment obj from ID."
   (closql-get (code-review-db) id 'code-review-comment))
-
-(defun code-review-db-get-curr-path-comment ()
-  "Get the comment obj for the current path in the pullreq."
-  (let ((path (code-review-db--curr-path)))
-    (-first-item (oref path comments))))
 
 (defun code-review-db-get-curr-head-pos ()
   "Get the head-pos value for the current path in the pullreq."
@@ -274,42 +265,47 @@
 
 (defun code-review-db--curr-path-update (curr-path)
   "Update pullreq (ID) with CURR-PATH."
-  (let* ((pr (code-review-db-get-pullreq))
-         (buff (oref pr buffer))
-         (buf (if (eieio-object-p buff) buff (-first-item buff)))
-         (pr-id (oref pr id))
-         (path-id (uuidgen-4))
+  (let* ((buf (code-review-db-get-buffer))
+         (new-path-id (uuidgen-4))
          (db (code-review-db)))
     (if (not buf)
-        (let* ((buf (code-review-buffer :id pr-id :pullreq pr-id))
-               (path (code-review-path :id path-id
+        (let* ((pr (code-review-db-get-pullreq))
+               (pr-id (oref pr id))
+               (buf (code-review-buffer :id pr-id :pullreq pr-id))
+               (path (code-review-path :id new-path-id
                                        :buffer pr-id
                                        :name curr-path
                                        :at-pos-p t)))
           (emacsql-with-transaction db
             (closql-insert db buf t)
             (closql-insert db path t)))
-      (let* ((paths (oref buf paths)))
+      (let* ((paths (oref buf paths))
+             (curr-path-re-enabled? nil))
         (emacsql-with-transaction db
-          ;;; disable all previous ones
+          ;;; disable all previous ones and enable curr-path is already exists
           (-map
            (lambda (path)
-             (oset path at-pos-p nil)
-             (closql-insert db path t))
+             (if (string-equal (oref path name) curr-path)
+                 (progn
+                   (oset path at-pos-p t)
+                   (closql-insert db path t)
+                   (setq curr-path-re-enabled? t))
+               (progn
+                 (oset path at-pos-p nil)
+                 (closql-insert db path t))))
            paths)
-          ;; save new one
-          (closql-insert db (code-review-path
-                             :id path-id
-                             :buffer (oref buf id)
-                             :name curr-path
-                             :at-pos-p t)
-                         t))))))
+          (when (not curr-path-re-enabled?)
+            ;; save new one
+            (closql-insert db (code-review-path
+                               :id new-path-id
+                               :buffer (oref buf id)
+                               :name curr-path
+                               :at-pos-p t)
+                           t)))))))
 
 (defun code-review-db--curr-path-head-pos-update (curr-path hunk-head-pos)
   "Update pullreq (ID) on CURR-PATH using HUNK-HEAD-POS."
-  (let* ((pr (code-review-db-get-pullreq))
-         (buff (oref pr buffer))
-         (buf (if (eieio-object-p buff) buff (-first-item buff)))
+  (let* ((buf (code-review-db-get-buffer))
          (paths (oref buf paths)))
     (dolist (p paths)
       (when (string-equal (oref p name) curr-path)
@@ -332,9 +328,7 @@
 
 (defun code-review-db--curr-path-comment-count-update (count)
   "Update pullreq (ID) on CURR-PATH using COUNT."
-  (let* ((path (code-review-db--curr-path))
-         (comments (oref path comments))
-         (comment (if (eieio-object-p comments) comments (-first-item comments))))
+  (let* ((comment (code-review-db--curr-comment)))
     (oset comment loc-written (+ (or (oref comment loc-written) 0) count))
     (closql-insert (code-review-db) comment t)))
 
@@ -342,13 +336,16 @@
 ;;; Accessor Functions
 
 (defun code-review-db--curr-path ()
-  "Get the latest activated patch for the current pullreq obj."
-  (let* ((pr (code-review-db-get-pullreq))
-         (buff (oref pr buffer))
-         (buf (if (eieio-object-p buff) buff (-first-item buff))))
+  "Get the latest activated path for the current pullreq obj."
+  (let* ((buf (code-review-db-get-buffer)))
     (->> (oref buf paths)
          (-filter (lambda (p) (oref p at-pos-p)))
          (-first-item))))
+
+(defun code-review-db--curr-comment ()
+  "Get the latest activated path comment for the current pullreq obj."
+  (let* ((path (code-review-db--curr-path)))
+    (code-review-db-get-comment (oref path id))))
 
 (defun code-review-db--curr-path-name ()
   "Get the latest activated patch for the current pullreq obj ID."
@@ -359,39 +356,38 @@
 
 (defun code-review-db--curr-path-comment-written-update (identifier)
   "Update pullreq (ID) on curr path using IDENTIFIER."
-  (let* ((path (code-review-db--curr-path))
-         (comment (-first-item (oref path comments))))
-    (if (not comment)
-        (let ((c (code-review-comment :id (oref path id)
-                                      :path (oref path id)
-                                      :identifiers (list identifier))))
-          (closql-insert (code-review-db) c t))
+  (if-let (curr-comment (code-review-db--curr-comment))
       (progn
-        (oset comment identifiers (cons identifier
-                                        (oref comment identifiers)))
-        (closql-insert (code-review-db) comment t)))))
+        (oset curr-comment identifiers
+              (cons identifier
+                    (oref curr-comment identifiers)))
+        (closql-insert (code-review-db) curr-comment t))
+    (let* ((path (code-review-db--curr-path))
+           (c (code-review-comment :id (oref path id)
+                                   :path (oref path id)
+                                   :identifiers (list identifier))))
+      (closql-insert (code-review-db) c t))))
 
 ;; comments
 
 (defun code-review-db--comment-already-written? (identifier)
   "Verify if comment from pullreq BUFFER-ID with IDENTIFIER was already marked as written."
-  (let* ((buffers (code-review-db-get-buffer pullreq-id))
-         (buffer (if (eieio-object-p buffers) buffers (-first-item buffers)))
+  (let* ((buffer (code-review-db-get-buffer))
          (paths (oref buffer paths)))
     (-reduce-from
      (lambda (written? path)
        (let* ((comments (oref path comments))
               (comment (if (eieio-object-p comments) comments (-first-item comments))))
-         (when comment
-           (if written?
-               written?
+         (if written?
+             written?
+           (when comment
              (-contains-p (oref comment identifiers) identifier)))))
      nil
      paths)))
 
 (defun code-review-db-get-comment-written-pos ()
   "Get loc-written value for comment ID."
-  (let ((comment (code-review-db-get-curr-path-comment)))
+  (let ((comment (code-review-db--curr-comment)))
     (if (not comment)
         0
       (oref comment loc-written))))
