@@ -39,6 +39,14 @@
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
+(defvar-local code-review-grouped-comments nil
+  "Hold grouped comments to avoid computation on every hunk line.
+For internal usage only.")
+
+(defvar-local code-review-hold-written-comment-ids nil
+  "List to hold written comments ids.
+For internal usage only.")
+
 ;;; headers
 
 (defun code-review-section-insert-header-title ()
@@ -384,6 +392,11 @@ Code Review inserts PR comments sections in the diff buffer.
 Argument GROUPED-COMMENTS comments grouped by path and diff position."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
 
+
+    ;;; FIXME: Very problematic to have any function dependent on DATABASE here
+    ;;; because this function will be run for every single line of the DIFF
+    ;;; ... better to rely on defvar-local variables.
+
     ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
@@ -415,19 +428,19 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
-
             (let* ((comment-written-pos
                     (or (code-review-db-get-comment-written-pos) 0))
                    (diff-pos (- (line-number-at-pos)
                                 head-pos
                                 comment-written-pos))
-                   (path-pos (code-review-utils--comment-key path-name diff-pos)))
-              (if (not (code-review-db--comment-already-written? path-pos))
-                  (let* ((grouped-comments (code-review-comment-make-group (code-review-db--pullreq-raw-comments))) ;; FIXME: this line is possible a huge bottleneck .. grouping at every diff line... lol
+                   (path-pos (code-review-utils--comment-key path-name diff-pos))
+                   (written? (member path-pos code-review-hold-written-comment-ids)))
+              (if (not written?)
+                  (let* ((grouped-comments code-review-grouped-comments)
                          (grouped-comment (code-review-utils--comment-get
                                            grouped-comments
                                            path-pos)))
-                    (code-review-db--curr-path-comment-written-update path-pos)
+                    (push path-pos code-review-hold-written-comment-ids)
                     (code-review-section-insert-comment
                      grouped-comment
                      comment-written-pos))
@@ -463,6 +476,10 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
         ;; advices
         (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
         (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+
+        (setq code-review-grouped-comments
+              (code-review-comment-make-group
+               (code-review-db--pullreq-raw-comments)))
 
         (let ((buff (code-review-section--with-buffer
                       buff-name

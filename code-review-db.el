@@ -382,7 +382,8 @@
 ;; comments
 
 (defun code-review-db--comment-already-written? (identifier)
-  "Verify if comment from pullreq BUFFER-ID with IDENTIFIER was already marked as written."
+  "Verify if comment from pullreq BUFFER-ID with IDENTIFIER was already marked as written.
+Very Bad Performance!."
   (let* ((buffer (code-review-db-get-buffer))
          (paths (oref buffer paths)))
     (-reduce-from

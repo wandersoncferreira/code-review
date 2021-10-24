@@ -53,6 +53,11 @@
   :group 'code-review
   :type 'string)
 
+(defcustom code-review-lgtm-message "LGTM! :thumbsup:"
+  "Message to add to fast track LGTM code review."
+  :group 'code-review
+  :type 'string)
+
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title
@@ -198,7 +203,7 @@ If you already have a FEEDBACK string use it."
 (defun code-review-submit-lgtm ()
   "Submit LGTM review."
   (interactive)
-  (code-review-submit "APPROVE" "LGTM! :thumbsup:"))
+  (code-review-submit "APPROVE" code-review-lgtm-message))
 
 ;;; Entrypoint
 
