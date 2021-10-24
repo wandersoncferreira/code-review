@@ -43,14 +43,13 @@
   "Get comments from GROUPED-COMMENTS located by PATH-POS key."
   (alist-get path-pos grouped-comments nil nil 'equal))
 
-(defun code-review-utils--comment-update-written-count (count-comments path comments)
+(defun code-review-utils--comment-update-written-count (count-comments path amount-loc-incr)
   "Update how many comment lines was written for a given PATH.
 COUNT-COMMENTS keep track of this value and compute line numbers
 using COMMENTS."
-  (let ((len(+ 1 (length comments))))
-    (if-let (count (alist-get path count-comments nil nil 'equal))
-        (a-assoc count-comments path (+ count len))
-      (a-assoc count-comments path len))))
+  (if-let (count (alist-get path count-comments nil nil 'equal))
+      (a-assoc count-comments path (+ count amount-loc-incr))
+    (a-assoc count-comments path amount-loc-incr)))
 
 (defun code-review-utils--comment-clean-msg (msg text-to-remove)
   "Remove TEXT-TO-REMOVE from MSG."

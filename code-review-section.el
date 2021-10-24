@@ -39,12 +39,16 @@
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
-(defvar-local code-review-grouped-comments nil
+(defvar code-review-grouped-comments nil
   "Hold grouped comments to avoid computation on every hunk line.
 For internal usage only.")
 
-(defvar-local code-review-hold-written-comment-ids nil
+(defvar code-review-hold-written-comment-ids nil
   "List to hold written comments ids.
+For internal usage only.")
+
+(defvar code-review-hold-written-comment-count nil
+  "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
 ;;; headers
@@ -313,7 +317,11 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                  `((comment . ,c)
                    (amount-loc . ,new-amount-loc))))
 
-            (code-review-db--curr-path-comment-count-update amount-loc-incr)
+            (setq code-review-hold-written-comment-count
+                  (code-review-utils--comment-update-written-count
+                   code-review-hold-written-comment-count
+                   (a-get c 'path)
+                   amount-loc-incr))
 
             (when (and (a-get c 'local?) (not (a-get c 'reply?)))
               ;;; when we create a local comment there is a -1 shift in the diff position
@@ -429,17 +437,17 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
           ;;; code-review specific code.
           ;;; add code comments
             (let* ((comment-written-pos
-                    (or (code-review-db-get-comment-written-pos) 0))
+                    (or (alist-get path-name code-review-hold-written-comment-count nil nil 'equal) 0))
                    (diff-pos (- (line-number-at-pos)
                                 head-pos
                                 comment-written-pos))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
-                   (written? (member path-pos code-review-hold-written-comment-ids)))
-              (if (not written?)
-                  (let* ((grouped-comments code-review-grouped-comments)
-                         (grouped-comment (code-review-utils--comment-get
-                                           grouped-comments
-                                           path-pos)))
+                   (written? (member path-pos code-review-hold-written-comment-ids))
+                   (grouped-comment (code-review-utils--comment-get
+                                     code-review-grouped-comments
+                                     path-pos)))
+              (if (and (not written?) grouped-comment)
+                  (progn
                     (push path-pos code-review-hold-written-comment-ids)
                     (code-review-section-insert-comment
                      grouped-comment
@@ -479,7 +487,9 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
         (setq code-review-grouped-comments
               (code-review-comment-make-group
-               (code-review-db--pullreq-raw-comments)))
+               (code-review-db--pullreq-raw-comments))
+              code-review-hold-written-comment-count nil
+              code-review-hold-written-comment-ids nil)
 
         (let ((buff (code-review-section--with-buffer
                       buff-name
