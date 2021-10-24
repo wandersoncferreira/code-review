@@ -210,13 +210,16 @@ For internal usage only.")
 
 (defun code-review-section-insert-feedback-heading ()
   "Insert feedback heading."
-  (magit-insert-section (code-review:feedback-header)
-    (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
-    (magit-insert-heading)
-    (magit-insert-section (code-review:feedback)
-      (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))
-      (insert ?\n))
-    (insert ?\n)))
+  (let ((feedback (code-review-db--pullreq-feedback)))
+    (magit-insert-section (code-review:feedback-header)
+      (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
+      (magit-insert-heading)
+      (magit-insert-section (code-review:feedback `((feedback . ,feedback)))
+        (if feedback
+            (insert feedback)
+          (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))))
+      (insert ?\n)
+      (insert ?\n))))
 
 (defun code-review-section-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
@@ -225,7 +228,7 @@ For internal usage only.")
       (magit-insert-section (code-review:conversation-header)
         (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
-        (dolist (c .comments.nodes)
+        (dolist (c (append .comments.nodes .reviews.nodes))
           (magit-insert-section (code-review:general-comment c)
             (insert (propertize
                      (format "@%s" (a-get-in c (list 'author 'login)))
@@ -237,7 +240,6 @@ For internal usage only.")
                 (insert l)
                 (insert ?\n)))))
         (insert ?\n)))))
-
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
@@ -405,7 +407,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
              (combined (= (length ranges) 3))
              (value    (cons about ranges)))
         (magit-delete-line)
-        (magit-insert-section section (code-review:hunk value)
+        (magit-insert-section section (hunk value)
           (insert (propertize (concat heading "\n")
                               'font-lock-face 'magit-diff-hunk-heading))
           (magit-insert-heading)
@@ -483,7 +485,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
-(defun code-review-section--build-buffer ()
+(defun code-review-section--build-buffer (&optional not-switch-buffer?)
   "Build code review buffer given an OBJ."
   (let ((obj (code-review-db-get-pullreq)))
     (deferred:$
@@ -500,10 +502,15 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
               (code-review-db--pullreq-raw-diff-update
                (a-get (-first-item x) 'message)))
 
-            (switch-to-buffer-other-window
-             (code-review-section--trigger-hooks
-              code-review-buffer-name))
-            (goto-char (point-min)))))
+            (let ((resp-buffer
+                   (code-review-section--trigger-hooks
+                    code-review-buffer-name)))
+              (if not-switch-buffer?
+                  resp-buffer
+                (progn
+                  (switch-to-buffer-other-window
+                   resp-buffer)
+                  (goto-char (point-min))))))))
       (deferred:error it
         (lambda (err)
           (message "Got an error from your VC provider %S!" err))))))
@@ -535,21 +542,6 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
 ;; TODO: commit description
 ;; TODO: commit comments
-
-(defun code-review-section-insert-feedback (feedback)
-  "Add review FEEDBACK."
-  (with-current-buffer (get-buffer code-review-buffer-name)
-    (save-excursion
-      (goto-char (point-min))
-      (magit-wash-sequence
-       (lambda ()
-         (with-slots (type value) (magit-current-section)
-           (if (string-equal type 'feedback-text)
-               (let ((inhibit-read-only t))
-                 ;;; improve this to abort going over the whole buffer after we add the text
-                 (delete-region (line-beginning-position) (line-end-position))
-                 (insert feedback))
-             (forward-line))))))))
 
 (defun code-review-section-insert-local-comment (local-comment metadata window-config)
   "Insert a LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG."

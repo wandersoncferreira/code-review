@@ -156,12 +156,15 @@ For internal usage only.")
   "Add review FEEDBACK."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-    (with-current-buffer buffer
-      (insert code-review-comment-feedback-msg)
-      (insert ?\n))
-    (switch-to-buffer-other-window buffer)
+    (setq comment-window-configuration (current-window-configuration))
     (setq comment-feedback? t)
-    (code-review-comment-mode)))
+    (setq comment-cursor-pos (point))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert code-review-comment-feedback-msg)
+      (insert ?\n)
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
 
 ;;;###autoload
 (defun code-review-comment-commit ()
@@ -173,12 +176,15 @@ For internal usage only.")
                              (save-excursion
                                (buffer-substring-no-properties (point-min) (point-max))))))
         (if comment-feedback?
-            (let ((comment-cleaned
-                   (code-review-utils--comment-clean-msg
-                    comment-text
-                    code-review-comment-feedback-msg)))
-              (code-review-section-insert-feedback comment-cleaned)
-              (setq comment-feedback? nil))
+            (let* ((comment-cleaned
+                    (code-review-utils--comment-clean-msg
+                     comment-text
+                     code-review-comment-feedback-msg)))
+              (code-review-db--pullreq-feedback-update comment-cleaned)
+              (code-review-section--trigger-hooks
+               code-review-buffer-name
+               comment-window-configuration)
+              (goto-char comment-cursor-pos))
           (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                    comment-text
                                    code-review-comment-buffer-msg))
@@ -190,10 +196,12 @@ For internal usage only.")
              comment-cleaned
              metadata
              comment-window-configuration)))
+        (kill-buffer buffer)
         (set-window-configuration comment-window-configuration))
     (setq comment-metadata nil
           comment-cursor-pos nil
           comment-editing? nil
+          comment-feedback? nil
           comment-window-configuration nil)))
 
 ;;;###autoload
@@ -213,17 +221,30 @@ For internal usage only.")
   (let ((section (magit-current-section)))
     (if (not section)
         (message "You should call on a section.")
-      (progn
-        (with-slots (type) section
-          (if (-contains-p '(code-review:local-comment
-                             code-review:local-comment-header
-                             code-review:reply-comment
-                             code-review:reply-comment-header
-                             code-review:feedback
-                             code-review:feedback-header)
-                           type)
-              (code-review-comment-edit)
-            (code-review-comment-add)))))))
+      (with-slots (type value) section
+        (cond
+         ((-contains-p '(code-review:local-comment
+                         code-review:local-comment-header
+                         code-review:reply-comment
+                         code-review:reply-comment-header)
+                       type)
+          (code-review-comment-edit))
+         ((string-equal type "hunk")
+          (code-review-comment-add))
+         ((-contains-p '(code-review:comment
+                         code-review:comment-header)
+                       type)
+          (code-review-comment-add))
+         ((-contains-p '(code-review:feedback-header
+                         code-review:feedback)
+                       type)
+          (if (not (a-get value 'feedback))
+              (code-review-comment-add-feedback)
+            (progn
+              (setq comment-feedback? t)
+              (code-review-comment-edit))))
+         (t
+          (message "Invalid operation")))))))
 
 ;;;###autoload
 (defun code-review-comment-delete ()

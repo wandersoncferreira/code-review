@@ -136,21 +136,15 @@
 
 (defvar magit-code-review:feedback-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-feedback) ;;; "OR edit"
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
   "Keymap for the `feedback' section.")
 
 (defvar magit-code-review:feedback-header-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-feedback)
-    map)
-  "Keymap for the `feedback' section.")
-
-(defvar magit-code-review:hunk-section-map
-  (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
-  "Keymap for the `hunk' section.")
+  "Keymap for the `feedback' section.")
 
 ;;; public functions
 
@@ -161,28 +155,28 @@
   (code-review-submit "APPROVE"))
 
 ;;;###autoload
-(defun code-review-reject ()
-  "Approve current PR."
+(defun code-review-comments ()
+  "Comment current PR."
   (interactive)
-  (code-review-submit "REJECT"))
+  (code-review-submit "COMMENT"))
 
 ;;;###autoload
 (defun code-review-request-changes ()
   "Approve current PR."
   (interactive)
-  (code-review-submit "REQUEST_CHANGE"))
+  (code-review-submit "REQUEST_CHANGES"))
 
 ;;;###autoload
 (defun code-review-submit (event)
   "Submit your review with a final veredict (EVENT)."
   (interactive)
   (let ((obj (code-review-utils--gen-submit-structure)))
-    (oset obj event event)
+    (oset obj state event)
     (cond
-     ((and (not (oref obj replies)) (a-get (oref obj review) 'body))
+     ((and (not (oref obj replies)) (not (oref obj feedback)))
       (message "Your review is empty."))
 
-     ((not (a-get (oref obj review) 'body))
+     ((not (oref obj feedback))
       (message "You need to provide a feedback message."))
 
      (t
@@ -195,8 +189,9 @@
         (code-review-send-review
          obj
          (lambda (&rest _)
-           (message "Done submitting review"))))))
-    (code-review-section--build-buffer obj)))
+           (message "Done submitting review")))
+        (setq code-review-full-refresh? t)
+        (code-review-section--build-buffer t))))))
 
 ;;; Entrypoint
 
@@ -230,21 +225,16 @@ OUTDATED."
 
 ;;; Transient
 
-(transient-define-prefix code-review-comments (comment)
-  "Add, Edit, Delete comments."
-  [("a" "Add" code-review-comment-add)
-   ("e" "Edit" code-review-comment-edit)
-   ("d" "Delete" code-review-comment-delete)])
-
 (define-transient-command code-review-transient-api ()
   "Code Review"
   ["Review"
    ("a" "Approve" code-review-approve)
-   ("c" "Request Changes" code-review-request-changes)
-   ("r" "Reject" code-review-reject)
-   ("s" "Submit" code-review-submit)]
+   ("r" "Request Changes" code-review-request-changes)
+   ("c" "Comment" code-review-comments)
+   ("s" "Submit" code-review-submit)
+   ("f" "Add feedback!" code-review-comment-add-feedback)]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-comment-add)]
+   ("l" "LGTM - Approved" code-review-comment-add-or-edit)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
@@ -252,6 +242,7 @@ OUTDATED."
   (let ((map (copy-keymap magit-section-mode-map)))
     (suppress-keymap map t)
     (define-key map (kbd "r") 'code-review-transient-api)
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (set-keymap-parent map magit-section-mode-map)
     map))
 

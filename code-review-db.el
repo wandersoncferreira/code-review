@@ -237,7 +237,7 @@
     (closql-insert (code-review-db) pullreq t)))
 
 (defun code-review-db--pullreq-raw-diff-update (raw-diff)
-  "Save DIFF to the PULLREQ entity."
+  "Save RAW-DIFF to the PULLREQ entity."
   (let ((pullreq (code-review-db-get-pullreq)))
     (oset pullreq raw-diff raw-diff)
     (closql-insert (code-review-db) pullreq t)))
@@ -259,6 +259,17 @@
   (let* ((pr (code-review-db-get-pullreq))
          (raw-comments (oref pr raw-comments)))
     (oset pr raw-comments (append raw-comments (list comment)))
+    (closql-insert (code-review-db) pr t)))
+
+(defun code-review-db--pullreq-feedback ()
+  "Get feedback for the current pr."
+  (let ((pr (code-review-db-get-pullreq)))
+    (oref pr feedback)))
+
+(defun code-review-db--pullreq-feedback-update (feedback)
+  "Save most recent FEEDBACK."
+  (let ((pr (code-review-db-get-pullreq)))
+    (oset pr feedback feedback)
     (closql-insert (code-review-db) pr t)))
 
 ;;;

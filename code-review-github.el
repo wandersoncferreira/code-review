@@ -201,16 +201,22 @@
 
 (cl-defmethod code-review-send-review ((github code-review-github-repo) callback)
   "Submit review comments given GITHUB repo and a CALLBACK fn."
-  (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-                     (oref github owner)
-                     (oref github repo)
-                     (oref github number))
-             nil
-             :auth 'code-review
-             :payload (oref github review)
-             :host code-review-github-host
-             :errorback #'code-review-github-errback
-             :callback callback))
+  (let* ((payload (a-alist 'body (oref github feedback)
+                           'event (oref github state)
+                           'commit_id (oref github sha)))
+         (payload (if (oref github review)
+                      (a-assoc payload 'comments (oref github review))
+                    payload)))
+    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
+                       (oref github owner)
+                       (oref github repo)
+                       (oref github number))
+               nil
+               :auth 'code-review
+               :payload payload
+               :host code-review-github-host
+               :errorback #'code-review-github-errback
+               :callback callback)))
 
 (cl-defmethod code-review-send-replies ((github code-review-github-repo) callback)
   "Submit replies to review comments inline given GITHUB repo and a CALLBACK fn."
@@ -219,7 +225,7 @@
       (-map
        (lambda (reply)
          (lambda ()
-           (let* ((database-id (a-get reply 'database-id))
+           (let* ((database-id (a-get reply 'comment-id))
                   (body (a-get reply 'body)))
              (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
                                 (oref github owner)

@@ -166,35 +166,36 @@ Return a value between 0 and 1."
 
 (defun code-review-utils--gen-submit-structure ()
   "Return A-LIST with replies and reviews to submit."
+  (interactive)
   (let* ((replies nil)
          (review-comments nil)
-         (body nil)
-         (pullreq (code-review-db-get-pullreq))
-         (obj (code-review-github-repo :owner (oref pullreq owner)
-                                       :repo (oref pullreq repo)
-                                       :number (oref pullreq number))))
+         (feedback nil)
+         (pullreq (code-review-db-get-pullreq)))
     (with-current-buffer (get-buffer code-review-buffer-name)
       (save-excursion
         (goto-char (point-min))
         (magit-wash-sequence
          (lambda ()
-           (magit-insert-section (_)
-             (with-slots (type value) (magit-current-section)
-               (when (string-equal type "local-comment")
-                 (let-alist value
-                   (if .reply?
-                       (push value replies)
-                     (push value review-comments)))))
-             (forward-line))))))
-    (let* ((partial-review `((commit_id . ,(oref pullreq sha))
-                             (body . ,(oref pullreq feedback))))
-           (review (if (equal nil review-comments)
-                       partial-review
-                     (a-assoc partial-review
-                              'comments review-comments))))
-      (oset obj replies replies)
-      (oset obj review review)
-      obj)))
+           (with-slots (type value) (magit-current-section)
+             (cond
+              ((equal type 'code-review:reply-comment)
+               (let-alist value
+                 (push `((comment-id . ,.comment.bodyText)
+                         (body . ,.comment.bodyText))
+                       replies)))
+              ((equal type 'code-review:feedback)
+               (setq feedback (a-get value 'feedback)))
+              ((equal type 'code-review:local-comment)
+               (let-alist value
+                 (push `((path . ,.comment.path)
+                         (position . ,.comment.position)
+                         (body . ,.comment.bodyText))
+                       review-comments))))
+             (forward-line))))
+        (oset pullreq replies replies)
+        (oset pullreq review review-comments)
+        (oset pullreq feedback feedback)
+        pullreq))))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
