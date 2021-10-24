@@ -240,7 +240,11 @@ For internal usage only.")
       (magit-insert-section (code-review:conversation-header)
         (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
-        (dolist (c (append .comments.nodes .reviews.nodes))
+        (dolist (c (append .comments.nodes (-filter
+                                            (lambda (n)
+                                              (not
+                                               (string-empty-p (a-get n 'bodyText))))
+                                            .reviews.nodes)))
           (magit-insert-section (code-review:general-comment c)
             (insert (propertize
                      (format "@%s" (a-get-in c (list 'author 'login)))
