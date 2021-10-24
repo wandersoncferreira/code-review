@@ -167,10 +167,11 @@
   (code-review-submit "REQUEST_CHANGES"))
 
 ;;;###autoload
-(defun code-review-submit (event)
-  "Submit your review with a final veredict (EVENT)."
+(defun code-review-submit (event &optional feedback)
+  "Submit your review with a final veredict (EVENT).
+If you already have a FEEDBACK string use it."
   (interactive)
-  (let ((obj (code-review-utils--gen-submit-structure)))
+  (let ((obj (code-review-utils--gen-submit-structure feedback)))
     (oset obj state event)
     (cond
      ((and (not (oref obj replies)) (not (oref obj feedback)))
@@ -192,6 +193,12 @@
            (message "Done submitting review")))
         (setq code-review-full-refresh? t)
         (code-review-section--build-buffer t))))))
+
+;;;###autoload
+(defun code-review-submit-lgtm ()
+  "Submit LGTM review."
+  (interactive)
+  (code-review-submit "APPROVE" "LGTM! :thumbsup:"))
 
 ;;; Entrypoint
 
@@ -234,7 +241,7 @@ OUTDATED."
    ("s" "Submit" code-review-submit)
    ("f" "Add feedback!" code-review-comment-add-feedback)]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-comment-add-or-edit)]
+   ("l" "LGTM - Approved" code-review-submit-lgtm)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

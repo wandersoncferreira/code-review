@@ -164,12 +164,13 @@ Return a value between 0 and 1."
 
 ;;; SECTION
 
-(defun code-review-utils--gen-submit-structure ()
-  "Return A-LIST with replies and reviews to submit."
+(defun code-review-utils--gen-submit-structure (&optional feedback)
+  "Return A-LIST with replies and reviews to submit.
+If you already have a FEEDBACK string to submit use it."
   (interactive)
   (let* ((replies nil)
          (review-comments nil)
-         (feedback nil)
+         (feedback feedback)
          (pullreq (code-review-db-get-pullreq)))
     (with-current-buffer (get-buffer code-review-buffer-name)
       (save-excursion
@@ -184,7 +185,7 @@ Return a value between 0 and 1."
                          (body . ,.comment.bodyText))
                        replies)))
               ((equal type 'code-review:feedback)
-               (setq feedback (a-get value 'feedback)))
+               (setq feedback (or (a-get value 'feedback) feedback)))
               ((equal type 'code-review:local-comment)
                (let-alist value
                  (push `((path . ,.comment.path)
