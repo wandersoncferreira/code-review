@@ -80,6 +80,12 @@
   :group 'code-review
   :type 'hook)
 
+(defcustom code-review-sections-commit-hook
+  '(code-review-section-insert-headers)
+  "Hook run to insert sections into a code review commit buffer."
+  :group 'code-review
+  :type 'hook)
+
 ;;; Faces
 
 (defface code-review-recent-comment-heading

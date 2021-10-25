@@ -481,8 +481,9 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
            ,@body)))
      buffer))
 
-(defun code-review-section--trigger-hooks (buff-name &optional window-config)
-  "Trigger magit section hooks and draw BUFF-NAME for a given PULLREQ-ID and WINDOW-CONFIG."
+(defun code-review-section--trigger-hooks (buff-name &optional window-config commit-focus?)
+  "Trigger magit section hooks, draw BUFF-NAME respecting WINDOW-CONFIG.
+Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
   (unwind-protect
       (progn
         ;; advices
@@ -502,8 +503,11 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                           (insert (code-review-db--pullreq-raw-diff))
                           (insert ?\n)
                           (insert ?\n))
+
                         (magit-insert-section (code-review)
-                          (magit-run-section-hook 'code-review-sections-hook))
+                          (if commit-focus?
+                              (magit-run-section-hook 'code-review-sections-commit-hook)
+                            (magit-run-section-hook 'code-review-sections-hook)))
 
                         (magit-wash-sequence
                          (apply-partially #'magit-diff-wash-diff ()))))))
@@ -566,7 +570,9 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
             (switch-to-buffer
              (code-review-section--trigger-hooks
-              code-review-commit-buffer-name))
+              code-review-commit-buffer-name
+              nil
+              t))
             (code-review-commit-minor-mode))))
       (deferred:error it
         (lambda (err)
