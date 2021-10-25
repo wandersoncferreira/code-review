@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: git, tools, vc
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1") (magit "3.3.0") (magit-section "3.3.0") (s "1.12.0") (ghub "2.0") (dash "2.11.0") (deferred "0.5.1") (a "0.1.1"))
+;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs
 
