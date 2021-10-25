@@ -25,7 +25,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Integrated with `forge-topic-view` via `code-review-forge-pr-at-point`
 - Fast track commands like "LGTM! Approved"
 - Review using single commits to focus on diff
-
+- Set labels on RET. See details [docs](./docs/multi-value-selection.md)
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
