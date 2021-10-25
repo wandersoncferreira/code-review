@@ -6,7 +6,7 @@ on:
     branches:
       - master
 jobs:
-  check:
+  melpa:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,5 +27,6 @@ jobs:
         version: ${{ matrix.emacs_version }}
     - uses: leotaku/elisp-check@master
       with:
+        check: melpa
         file: code-review.el
         ignore_warnings: ${{ matrix.ignore_warnings }}
