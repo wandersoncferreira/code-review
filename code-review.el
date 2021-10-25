@@ -148,6 +148,12 @@
     map)
   "Keymap for the `feedback' section.")
 
+(defvar magit-code-review-labels-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review--set-label)
+    map)
+  "Keymap for the `label' section.")
+
 ;;; public functions
 
 ;;;###autoload
@@ -220,6 +226,12 @@ If you already have a FEEDBACK string use it."
          (code-review-section--trigger-hooks
           code-review-buffer-name)))
     (message "Command must be called from Code Review Commit buffer.")))
+
+(defun code-review--set-label ()
+  "Set label."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-utils--set-header-field pr)))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()

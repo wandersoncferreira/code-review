@@ -249,5 +249,30 @@
       (lambda (err)
         (message "Got an error from the Github Reply API %S!" err)))))
 
+(cl-defmethod code-review-get-labels ((github code-review-github-repo))
+  "Get labels from GITHUB."
+  (let ((resp
+         (ghub-get (format "/repos/%s/%s/labels"
+                           (oref github owner)
+                           (oref github repo))
+                   nil
+                   :auth 'code-review
+                   :noerror t)))
+    (-map
+     (lambda (l)
+       (a-get l 'name))
+     resp)))
+
+(cl-defmethod code-review-set-labels ((github code-review-github-repo))
+  "Set labels for your pr at GITHUB."
+  (ghub-put (format "/repos/%s/%s/issues/%s/labels"
+                    (oref github owner)
+                    (oref github repo)
+                    (oref github number))
+            nil
+            :payload (a-alist 'labels (oref github labels))
+            :auth 'code-review
+            :noerror t))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

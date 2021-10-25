@@ -37,6 +37,16 @@
 ;;;
 (defvar code-review-buffer-name)
 
+(defun code-review-utils-current-project-buffer-name ()
+  "Return the name of the buffer we are currently in."
+  (interactive)
+  (let ((name (buffer-name (current-buffer))))
+    (if (-contains-p (list code-review-buffer-name
+                           code-review-commit-buffer-name)
+                     name)
+        name
+      (throw :invalid-usage "You are trying to call this function from an unexpected place."))))
+
 ;;; COMMENTS
 
 (defun code-review-utils--comment-key (path pos)
@@ -217,6 +227,20 @@ If you already have a FEEDBACK string to submit use it."
                                        "https://api.github.com"))))
         (code-review-utils-build-obj pr-alist)
         (code-review-section--build-buffer)))))
+
+;;; Header setters
+
+(defun code-review-utils--set-label-field (obj)
+  "Helper function to set header multi value fields given by OP-NAME and OBJ.
+Milestones, labels, projects, and more."
+  (let* ((options (code-review-get-labels obj))
+         (choices (completing-read-multiple "Choose: " options)))
+    (oset obj labels choices)
+    (code-review-set-labels obj)
+    (closql-insert (code-review-db) obj t)
+    (code-review-section--build-buffer
+     (code-review-utils-current-project-buffer-name)
+     t)))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
