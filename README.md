@@ -6,7 +6,9 @@
 Package to help you perform code reviews from your VC provider. Currently
 supports only Github.
 
-[Demo](./docs/code_review_demo.png)
+![Demo of code review package](./docs/code_review_demo.png)
+
+Link to same PR on Github: https://github.com/wandersoncferreira/dotfiles/pull/5
 
 # Overview
 
