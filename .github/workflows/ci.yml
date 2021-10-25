@@ -1,17 +1,35 @@
 name: CI
-on : [push, pull_request]
+on:
+  pull_request:
+  push:
+
 jobs:
-  build:
+  suite:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v2
       - uses: purcell/setup-emacs@master
         with:
-          version: '27.1'
+          version: '25.1'
       - uses: conao3/setup-cask@master
         with:
           version: 'snapshot'
 
-      - name: Run tests
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Install Package and its Dependencies
+        run: make install
+
+      - name: Lint
+        run: make lint
+
+      - name: Check Docstrings
+        continue-on-error: true
+        run: make checkdoc
+
+      - name: Byte Compile
+        run: make build
+
+      - name: Run Tests
         run: make test

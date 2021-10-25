@@ -9,7 +9,6 @@
 (depends-on "magit")
 (depends-on "uuidgen")
 (depends-on "closql")
-(depends-on "compat")
 
 (package-file "code-review.el")
 

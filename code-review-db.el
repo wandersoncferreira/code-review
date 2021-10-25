@@ -13,6 +13,7 @@
 ;;
 ;;; Code:
 
+(require 'a)
 (require 'closql)
 (require 'eieio)
 (require 'uuidgen)
