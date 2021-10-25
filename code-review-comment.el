@@ -105,15 +105,15 @@ For internal usage only.")
               ((string-equal type "hunk")
                `((reply? . nil)
                  (database-id . nil)))
-              ((-contains-p '(code-review:comment
-                              code-review:comment-header)
+              ((-contains-p '(code-review-comment
+                              code-review-comment-header)
                             type)
                `((reply? . t)
                  (database-id . ,.comment.databaseId)
                  (comment-text . ,.comment.bodyText)
                  (position . ,(or .comment.position .comment.originalPosition))))
-              ((-contains-p '(code-review:local-comment
-                              code-review:local-comment-header)
+              ((-contains-p '(code-review-local-comment
+                              code-review-local-comment-header)
                             type)
                (a-assoc value 'start start 'end end))
               (t
@@ -232,20 +232,20 @@ For internal usage only.")
         (message "You should call on a section.")
       (with-slots (type value) section
         (cond
-         ((-contains-p '(code-review:local-comment
-                         code-review:local-comment-header
-                         code-review:reply-comment
-                         code-review:reply-comment-header)
+         ((-contains-p '(code-review-local-comment
+                         code-review-local-comment-header
+                         code-review-reply-comment
+                         code-review-reply-comment-header)
                        type)
           (code-review-comment-edit))
          ((string-equal type "hunk")
           (code-review-comment-add))
-         ((-contains-p '(code-review:comment
-                         code-review:comment-header)
+         ((-contains-p '(code-review-comment
+                         code-review-comment-header)
                        type)
           (code-review-comment-add))
-         ((-contains-p '(code-review:feedback-header
-                         code-review:feedback)
+         ((-contains-p '(code-review-feedback-header
+                         code-review-feedback)
                        type)
           (if (not (a-get value 'feedback))
               (code-review-comment-add-feedback)

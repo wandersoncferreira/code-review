@@ -182,14 +182,14 @@ If you already have a FEEDBACK string to submit use it."
          (lambda ()
            (with-slots (type value) (magit-current-section)
              (cond
-              ((equal type 'code-review:reply-comment)
+              ((equal type 'code-review-reply-comment)
                (let-alist value
                  (push `((comment-id . ,.comment.bodyText)
                          (body . ,.comment.bodyText))
                        replies)))
-              ((equal type 'code-review:feedback)
+              ((equal type 'code-review-feedback)
                (setq feedback (or (a-get value 'feedback) feedback)))
-              ((equal type 'code-review:local-comment)
+              ((equal type 'code-review-local-comment)
                (let-alist value
                  (push `((path . ,.comment.path)
                          (position . ,.comment.position)

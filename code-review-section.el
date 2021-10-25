@@ -67,7 +67,7 @@ For internal usage only.")
   "Insert the title of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:title .title)
+      (magit-insert-section (code-review-title .title)
         (insert (format "%-17s" "Title: ") .title)
         (insert ?\n)))))
 
@@ -75,7 +75,7 @@ For internal usage only.")
   "Insert the state of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:state .state)
+      (magit-insert-section (code-review-state .state)
         (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
         (insert ?\n)))))
 
@@ -83,7 +83,7 @@ For internal usage only.")
   "Insert the state of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:ref `((base . ,.baseRefName)
+      (magit-insert-section (code-review-ref `((base . ,.baseRefName)
                                                (head . ,.headRefName)))
         (insert (format "%-17s" "Refs: "))
         (insert .baseRefName)
@@ -100,7 +100,7 @@ For internal usage only.")
                             (format "%s (%s%%)" .milestone.title .milestone.progressPercentage)
                           "No milestone")))
 
-        (magit-insert-section (code-review:milestone `((title . ,.milestone.title)
+        (magit-insert-section (code-review-milestone `((title . ,.milestone.title)
                                                        (progress . ,.milestone.progressPercentage)))
           (insert (format "%-17s" "Milestone: "))
           (insert (propertize milestone 'font-lock-face 'magit-dimmed))
@@ -110,7 +110,7 @@ For internal usage only.")
   "Insert the labels of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:labels .labels.nodes)
+      (magit-insert-section (code-review-labels .labels.nodes)
         (insert (format "%-17s" "Labels: "))
         (if .labels.nodes
             (dolist (label .labels.nodes)
@@ -142,7 +142,7 @@ For internal usage only.")
              (assignees (if assignee-names
                             (string-join assignee-names ", ")
                           (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed))))
-        (magit-insert-section (code-review:assignee assignees)
+        (magit-insert-section (code-review-assignee assignees)
           (insert (format "%-17s" "Assignees: ") assignees)
           (insert ?\n))))))
 
@@ -157,7 +157,7 @@ For internal usage only.")
              (projects (if project-names
                            (string-join project-names ", ")
                          (propertize "None yet" 'font-lock-face 'magit-dimmed))))
-        (magit-insert-section (code-review:project projects)
+        (magit-insert-section (code-review-project projects)
           (insert (format "%-17s" "Projects: ") projects)
           (insert ?\n))))))
 
@@ -174,7 +174,7 @@ For internal usage only.")
              (suggested-reviewers (if (string-empty-p reviewers)
                                       (propertize "No reviews" 'font-lock-face 'magit-dimmed)
                                     reviewers)))
-        (magit-insert-section (code-review:reviewers suggested-reviewers)
+        (magit-insert-section (code-review-reviewers suggested-reviewers)
           (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers)
           (insert ?\n))))))
 
@@ -188,13 +188,13 @@ For internal usage only.")
   "Insert commits from PULL-REQUEST."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:commits-header)
+      (magit-insert-section (code-review-commits-header)
         (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
-        (magit-insert-section (code-review:commits-body)
+        (magit-insert-section (code-review-commits-body)
           (dolist (c .commits.nodes)
             (let ((commit-value `((sha ,(a-get-in c (list 'commit 'abbreviatedOid))))))
-              (magit-insert-section (code-review:commit commit-value)
+              (magit-insert-section (code-review-commit commit-value)
                 (insert (propertize
                          (format "%-6s " (a-get-in c (list 'commit 'abbreviatedOid)))
                          'font-lock-face 'magit-hash)
@@ -207,10 +207,10 @@ For internal usage only.")
   "Insert PULL-REQUEST description."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:pr-description-header)
+      (magit-insert-section (code-review-pr-description-header)
         (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
-        (magit-insert-section (code-review:pr-description)
+        (magit-insert-section (code-review-pr-description)
           (if (string-empty-p .bodyText)
               (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
             (insert .bodyText))
@@ -220,10 +220,10 @@ For internal usage only.")
 (defun code-review-section-insert-feedback-heading ()
   "Insert feedback heading."
   (let ((feedback (code-review-db--pullreq-feedback)))
-    (magit-insert-section (code-review:feedback-header)
+    (magit-insert-section (code-review-feedback-header)
       (insert (propertize "Your Review Feedback" 'font-lock-face 'magit-section-heading))
       (magit-insert-heading)
-      (magit-insert-section (code-review:feedback `((feedback . ,feedback)))
+      (magit-insert-section (code-review-feedback `((feedback . ,feedback)))
         (if feedback
             (insert feedback)
           (insert (propertize "Leave a comment here." 'font-lock-face 'magit-dimmed))))
@@ -234,7 +234,7 @@ For internal usage only.")
   "Insert general comments for the PULL-REQUEST in the buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (magit-insert-section (code-review:conversation-header)
+      (magit-insert-section (code-review-conversation-header)
         (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
         (dolist (c (append .comments.nodes (-filter
@@ -242,7 +242,7 @@ For internal usage only.")
                                               (not
                                                (string-empty-p (a-get n 'bodyText))))
                                             .reviews.nodes)))
-          (magit-insert-section (code-review:general-comment c)
+          (magit-insert-section (code-review-general-comment c)
             (insert (propertize
                      (format "@%s" (a-get-in c (list 'author 'login)))
                      'font-lock-face
@@ -271,7 +271,7 @@ For internal usage only.")
 
         (code-review-db--curr-path-comment-count-update amount-new-loc)
 
-        (magit-insert-section (code-review:outdated-hunk-header metadata1)
+        (magit-insert-section (code-review-outdated-hunk-header metadata1)
           (let ((heading (format "Reviewed - [OUTDATED]")))
             (add-face-text-property 0 (length heading)
                                     'code-review-outdated-comment-heading
@@ -290,11 +290,11 @@ For internal usage only.")
                                     (amount-loc .,(+ amount-loc amount-new-loc amount-new-loc2)))))
                   (code-review-db--curr-path-comment-count-update amount-new-loc2)
 
-                  (magit-insert-section (code-review:outdated-comment-header metadata2)
+                  (magit-insert-section (code-review-outdated-comment-header metadata2)
                     (magit-insert-heading (format "Reviewed by %s[%s]:"
                                                   (a-get c 'author)
                                                   (a-get c 'state)))
-                    (magit-insert-section (code-review:outdated-comment metadata2)
+                    (magit-insert-section (code-review-outdated-comment metadata2)
                       (dolist (l body-lines)
                         (insert l)
                         (insert ?\n))))
@@ -331,31 +331,31 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 
             (cond
              ((a-get c 'reply?)
-              (magit-insert-section (code-review:reply-comment-header metadata)
+              (magit-insert-section (code-review-reply-comment-header metadata)
                 (let ((heading "Reply by YOU: "))
                   (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
                   (magit-insert-heading heading))
-                (magit-insert-section (code-review:reply-comment metadata)
+                (magit-insert-section (code-review-reply-comment metadata)
                   (dolist (l body-lines)
                     (insert l)
                     (insert "\n"))
                   (insert ?\n))))
              ((a-get c 'local?)
-              (magit-insert-section (code-review:local-comment-header metadata)
+              (magit-insert-section (code-review-local-comment-header metadata)
                 (let ((heading "Comment by YOU: "))
                   (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
                   (magit-insert-heading heading))
-                (magit-insert-section (code-review:local-comment metadata)
+                (magit-insert-section (code-review-local-comment metadata)
                   (dolist (l body-lines)
                     (insert l)
                     (insert "\n"))
                   (insert ?\n))))
              (t
-              (magit-insert-section (code-review:comment-header metadata)
+              (magit-insert-section (code-review-comment-header metadata)
                 (let ((heading (format "Reviewed by @%s [%s]: " (a-get c 'author) (a-get c 'state))))
                   (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
                   (magit-insert-heading heading))
-                (magit-insert-section (code-review:comment metadata)
+                (magit-insert-section (code-review-comment metadata)
                   (dolist (l body-lines)
                     (insert l)
                     (insert "\n"))
@@ -589,7 +589,7 @@ Using COMMIT-FOCUS? to enable add comment into commit review buffer."
             (current-line-pos (save-excursion
                                 (goto-char .cursor-pos)
                                 (line-number-at-pos))))
-        (magit-insert-section (code-review:local-comment-header metadata)
+        (magit-insert-section (code-review-local-comment-header metadata)
           (if .editing?
               (progn
                 (code-review-db-delete-raw-comment .comment.internal-id)
@@ -654,10 +654,10 @@ Using COMMIT-FOCUS? to enable add comment into commit review buffer."
   (with-current-buffer (get-buffer "*Code Review*")
     (let ((inhibit-read-only t))
       (with-slots (type value start end) (magit-current-section)
-        (if (-contains-p '(code-review:local-comment
-                           code-review:local-comment-header
-                           code-review:reply-comment
-                           code-review:reply-comment-header)
+        (if (-contains-p '(code-review-local-comment
+                           code-review-local-comment-header
+                           code-review-reply-comment
+                           code-review-reply-comment-header)
                          type)
             (progn
               (code-review-db-delete-raw-comment

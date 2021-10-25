@@ -108,52 +108,52 @@
   (let ((section (magit-current-section)))
     (if section
         (with-slots (type value) section
-          (if (eq type 'code-review:commit)
+          (if (eq type 'code-review-commit)
               (code-review-section--build-commit-buffer)
             (message "Can only be called from a commit section.")))
       (message "Can only be called from a commit section."))))
 
 ;;; buffer keymaps
 
-(defvar magit-code-review:commit-section-map
+(defvar magit-code-review-commit-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-commit-at-point)
     map)
   "Keymap for the `commit' section.")
 
-(defvar magit-code-review:comment-section-map
+(defvar magit-code-review-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
   "Keymap for the `comment' section.")
 
-(defvar magit-code-review:comment-header-section-map
+(defvar magit-code-review-comment-header-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
   "Keymap for the `comment' section.")
 
-(defvar magit-code-review:local-comment-section-map
+(defvar magit-code-review-local-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
     map)
   "Keymap for the `local-comment' section.")
 
-(defvar magit-code-review:local-comment-header-section-map
+(defvar magit-code-review-local-comment-header-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
     map)
   "Keymap for the `local-comment-header' section.")
 
-(defvar magit-code-review:feedback-section-map
+(defvar magit-code-review-feedback-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
   "Keymap for the `feedback' section.")
 
-(defvar magit-code-review:feedback-header-section-map
+(defvar magit-code-review-feedback-header-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
