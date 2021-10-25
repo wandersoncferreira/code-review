@@ -1,6 +1,6 @@
 .PHONY: test
 
 test:
-	cask upgrade-cask
+	cask upgrade
 	cask install
 	cask exec buttercup -L test/
