@@ -40,7 +40,7 @@
               (path . "README.md")
               (databaseId . 735203148)))))))
 
-(defconst sample-grouped-comments
+(defconst sample-grouped-raw-comments
   `(("README.md:3"
      ((state . "COMMENTED")
       (author . "wandersoncferreira")
@@ -82,7 +82,7 @@
 
   (it "should flat the structure, add state and login to the comment level."
     (let ((group (code-review-comment-make-group sample-raw-comments)))
-      (expect group :to-equal sample-grouped-comments))))
+      (expect group :to-have-same-items-as sample-grouped-raw-comments))))
 
 (provide 'code-review-comment-test)
 ;;; code-review-comment-test.el ends here
