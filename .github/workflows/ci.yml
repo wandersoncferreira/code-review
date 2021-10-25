@@ -13,8 +13,6 @@ jobs:
         with:
           version: '27.1'
       - uses: conao3/setup-cask@master
-        with:
-          version: 'snapshot'
 
       # - name: Checkout
       #   uses: actions/checkout@master
