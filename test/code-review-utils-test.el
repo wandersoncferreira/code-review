@@ -46,11 +46,11 @@
       (expect (code-review-utils--comment-clean-msg full-msg placeholder-msg)
               :to-equal "This is my real comment")))
 
-  (it "we need to keep track of how many lines was written for each buffer + 1 new line."
-    (expect (code-review-utils--comment-update-written-count sample-comment-written-lines "github.el" sample-comment-lines)
-            :to-equal (a-alist "github.el" 3))
-    (expect (code-review-utils--comment-update-written-count (a-alist "github.el" 5) "github.el" sample-comment-lines)
-            :to-equal (a-alist "github.el" 8)))
+  (it "we need to keep track of how many lines was written for each buffer"
+    (expect (code-review-utils--comment-update-written-count sample-comment-written-lines "github.el" (length sample-comment-lines))
+            :to-equal (a-alist "github.el" 2))
+    (expect (code-review-utils--comment-update-written-count (a-alist "github.el" 5) "github.el" (length sample-comment-lines))
+            :to-equal (a-alist "github.el" 7)))
 
   (it "clean suggestion code blocks and add 'hunk-like' appearance."
     (expect (code-review-utils--clean-suggestion sample-suggestion-comment)
