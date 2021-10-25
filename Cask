@@ -9,6 +9,7 @@
 (depends-on "uuidgen" "1.2")
 (depends-on "deferred" "0.5.1")
 (depends-on "markdown-mode" "2.4")
+(depends-on "forge" "0.3.0")
 
 (package-file "code-review.el")
 
