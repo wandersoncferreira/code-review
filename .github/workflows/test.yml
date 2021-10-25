@@ -1,0 +1,18 @@
+name: test
+on:
+  pull_request:
+  push:
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v2
+      - uses: purcell/setup-emacs@master
+        with:
+          version: '27.1'
+      - uses: conao3/setup-cask@master
+
+      - name: Run Tests
+        run: make test

@@ -1,4 +1,4 @@
-name: check
+name: melpa
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches:
       - master
 jobs:
-  melpa:
+  validate:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
