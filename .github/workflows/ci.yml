@@ -1,4 +1,4 @@
-name: melpa
+name: ci
 
 on:
   pull_request:
@@ -6,7 +6,20 @@ on:
     branches:
       - master
 jobs:
-  validate:
+  test_suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v2
+      - uses: purcell/setup-emacs@master
+        with:
+          version: '27.1'
+      - uses: conao3/setup-cask@master
+
+      - name: Run Tests
+        run: make test
+
+  melpa:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,6 +40,9 @@ jobs:
         version: ${{ matrix.emacs_version }}
     - run: |
         # workaround for too strict package-lint check:
+        # Magit Section uses a var named as "magit-TYPE-section-map" to provide
+        # dynamic keybinding on top of each section TYPE thus not everything
+        # here will start with package name.
         sed -i~ -e s/magit-code-review/code-review/ code-review.el
     - uses: leotaku/elisp-check@master
       with:
