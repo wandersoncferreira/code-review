@@ -16,13 +16,13 @@ jobs:
           - 26.1
           - 27.1
         ignore_warnings:
-          - true
+          - false
         warnings_as_errors:
-          - true
+          - false
         include:
           - emacs_version: snapshot
-            ignore_warnings: true
-            warnings_as_errors: true
+            ignore_warnings: false
+            warnings_as_errors: false
     steps:
     - uses: actions/checkout@v2
     - uses: purcell/setup-emacs@master
