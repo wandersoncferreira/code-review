@@ -16,20 +16,20 @@ jobs:
         with:
           version: 'snapshot'
 
-      - name: Checkout
-        uses: actions/checkout@master
-      - name: Install Package and its Dependencies
-        run: make install
+      # - name: Checkout
+      #   uses: actions/checkout@master
+      # - name: Install Package and its Dependencies
+      #   run: make install
 
-      - name: Lint
-        run: make lint
+      # - name: Lint
+      #   run: make lint
 
-      - name: Check Docstrings
-        continue-on-error: true
-        run: make checkdoc
+      # - name: Check Docstrings
+      #   continue-on-error: true
+      #   run: make checkdoc
 
-      - name: Byte Compile
-        run: make build
+      # - name: Byte Compile
+      #   run: make build
 
       - name: Run Tests
         run: make test
