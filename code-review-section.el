@@ -446,7 +446,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                                 head-pos
                                 comment-written-pos))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
-                   (written? (member path-pos code-review-hold-written-comment-ids))
+                   (written? (-contains-p code-review-hold-written-comment-ids path-pos))
                    (grouped-comment (code-review-utils--comment-get
                                      code-review-grouped-comments
                                      path-pos)))
