@@ -6,6 +6,8 @@
 Package to help you perform code reviews from your VC provider. Currently
 supports only Github.
 
+[Demo](./docs/code_review_demo.png)
+
 # Overview
 
 The Emacs everywhere goal continues. These are the main features of
