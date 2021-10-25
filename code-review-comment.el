@@ -67,6 +67,10 @@ For internal usage only.")
   "Hold window configuration when adding comments.
 For internal usage only.")
 
+(defvar comment-commit? nil
+  "Toggle if we are at the commit review buffer.
+For internal usage only.")
+
 ;;; general functons
 
 (defun code-review-comment-make-group (raw-comments)
@@ -195,14 +199,16 @@ For internal usage only.")
             (code-review-section-insert-local-comment
              comment-cleaned
              metadata
-             comment-window-configuration)))
+             comment-window-configuration
+             comment-commit?)))
         (kill-buffer buffer)
         (set-window-configuration comment-window-configuration))
     (setq comment-metadata nil
           comment-cursor-pos nil
           comment-editing? nil
           comment-feedback? nil
-          comment-window-configuration nil)))
+          comment-window-configuration nil
+          comment-commit? nil)))
 
 ;;;###autoload
 (defun code-review-comment-quit ()
@@ -218,6 +224,9 @@ For internal usage only.")
 (defun code-review-comment-add-or-edit ()
   "Add or edit comment depending on context."
   (interactive)
+  (setq comment-commit? (string-equal
+                         (buffer-name (current-buffer))
+                         code-review-commit-buffer-name))
   (let ((section (magit-current-section)))
     (if (not section)
         (message "You should call on a section.")
@@ -252,7 +261,7 @@ For internal usage only.")
   (interactive)
   (code-review-section-delete-local-comment))
 
-(setq code-review-comment-mode-map
+(defvar code-review-comment-mode-map
   (let ((map (copy-keymap markdown-mode-map)))
     (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
     (define-key map (kbd "C-c C-k") 'code-review-comment-quit)

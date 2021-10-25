@@ -566,7 +566,8 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
             (switch-to-buffer
              (code-review-section--trigger-hooks
-              code-review-commit-buffer-name)))))
+              code-review-commit-buffer-name))
+            (code-review-commit-minor-mode))))
       (deferred:error it
         (lambda (err)
           (message "Got an error from your VC provider %S!" err))))))
@@ -574,9 +575,12 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 ;; TODO: commit description
 ;; TODO: commit comments
 
-(defun code-review-section-insert-local-comment (local-comment metadata window-config)
-  "Insert a LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG."
-  (with-current-buffer (get-buffer code-review-buffer-name)
+(defun code-review-section-insert-local-comment (local-comment metadata window-config &optional commit-focus?)
+  "Insert LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG.
+Using COMMIT-FOCUS? to enable add comment into commit review buffer."
+  (with-current-buffer (get-buffer (if commit-focus?
+                                       code-review-commit-buffer-name
+                                     code-review-buffer-name))
     (let-alist metadata
       (let ((inhibit-read-only t)
             (pr (code-review-db-get-pullreq))
@@ -599,44 +603,48 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                                      (databaseId . ,.comment.databaseId)
                                      (internal-id . ,(uuidgen-4))))))))
             (progn
-
-              (or (search-backward-regexp "Reviewed by" nil t)
-                  (search-backward-regexp "modified " nil t))
+              (goto-char .cursor-pos)
+              (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified"))
+                          (not (equal (point) (point-min))))
+                (forward-line -1))
               (let ((section (magit-current-section))
                     (amount-loc nil)
                     (path-name nil))
                 (if (not section)
                     (setq amount-loc 0)
-                  (with-slots (type value) (magit-current-section)
+                  (with-slots (type value) section
                     (if (string-equal type "file")
                         (setq amount-loc 0
                               path-name (substring-no-properties value))
                       (setq amount-loc (a-get value 'amount-loc)
-                            path-name (a-get-in value (list 'comment 'path))))))
-                (let* ((diff-pos (- current-line-pos
-                                    amount-loc
-                                    (code-review-db--head-pos path-name)))
-                       (reply? (a-get metadata 'reply?))
-                       (reply-pos (when reply?
-                                    (- (+ (a-get metadata 'position)
-                                          (length (split-string (a-get metadata 'comment-text) "\n")))
-                                       1)))
-                       (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
-                       (local-comment-record
-                        `((author (login . ,(code-review-utils--git-get-user)))
-                          (state . ,state)
-                          (comments (nodes ((bodyText . ,local-comment)
-                                            (outdated . nil)
-                                            (reply? . ,reply?)
-                                            (internal-id . ,(uuidgen-4))
-                                            (local? . ,(if reply? nil t))
-                                            (path . ,path-name)
-                                            (position . ,(if reply? reply-pos diff-pos))
-                                            (databaseId . ,(a-get metadata 'database-id))))))))
-                  (code-review-db--pullreq-raw-comments-update local-comment-record)))))
+                            path-name (a-get-in value (list 'comment 'path))))
+                    (let* ((diff-pos (+ (- current-line-pos
+                                           amount-loc
+                                           (code-review-db--head-pos path-name))
+                                        0))
+                           (reply? (a-get metadata 'reply?))
+                           (reply-pos (when reply?
+                                        (- (+ (a-get metadata 'position)
+                                              (length (split-string (a-get metadata 'comment-text) "\n")))
+                                           1)))
+                           (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
+                           (local-comment-record
+                            `((author (login . ,(code-review-utils--git-get-user)))
+                              (state . ,state)
+                              (comments (nodes ((bodyText . ,local-comment)
+                                                (outdated . nil)
+                                                (reply? . ,reply?)
+                                                (internal-id . ,(uuidgen-4))
+                                                (local? . ,(if reply? nil t))
+                                                (path . ,path-name)
+                                                (position . ,(if reply? reply-pos diff-pos))
+                                                (databaseId . ,(a-get metadata 'database-id))))))))
+                      (code-review-db--pullreq-raw-comments-update local-comment-record)))))))
           (erase-buffer)
           (code-review-section--trigger-hooks
-           code-review-buffer-name
+           (if commit-focus?
+               code-review-commit-buffer-name
+             code-review-buffer-name)
            window-config))))))
 
 (defun code-review-section-delete-local-comment ()

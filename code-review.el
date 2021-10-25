@@ -199,6 +199,20 @@ If you already have a FEEDBACK string use it."
         (setq code-review-full-refresh? t)
         (code-review-section--build-buffer t))))))
 
+(defun code-review-commit-buffer-back ()
+  "Move from commit buffer to review buffer."
+  (interactive)
+  (if (equal (current-buffer) (get-buffer code-review-commit-buffer-name))
+      (progn
+        (setq comment-commit? nil
+              code-review-full-refresh? nil)
+        (kill-this-buffer)
+        (switch-to-buffer
+         (code-review-section--trigger-hooks
+          code-review-buffer-name)))
+    (message "Command must be called from Code Review Commit buffer.")))
+
+
 ;;;###autoload
 (defun code-review-submit-lgtm ()
   "Submit LGTM review."
@@ -234,6 +248,14 @@ OUTDATED."
         (code-review-utils-build-obj pr-alist)
         (setq code-review-full-refresh? t)
         (code-review-section--build-buffer)))))
+
+;;; Commit buffer
+
+(define-minor-mode code-review-commit-minor-mode
+  "Code Review Commit"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "b") 'code-review-commit-buffer-back)
+            map))
 
 ;;; Transient
 
