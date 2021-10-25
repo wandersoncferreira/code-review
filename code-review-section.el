@@ -256,7 +256,6 @@ For internal usage only.")
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
-
   ;;; hunk groups are necessary because we usually have multiple reviews about
   ;;; the same original position accross different commits snapshots.
   ;;; as github UI we will add those hunks and its comments
@@ -269,7 +268,11 @@ For internal usage only.")
              (metadata1 `((comment . ,first-hunk-commit)
                           (amount-loc ., (+ amount-loc amount-new-loc)))))
 
-        (code-review-db--curr-path-comment-count-update amount-new-loc)
+        (setq code-review-hold-written-comment-count
+              (code-review-utils--comment-update-written-count
+               code-review-hold-written-comment-count
+               (a-get first-hunk-commit 'path)
+               amount-new-loc))
 
         (magit-insert-section (code-review-outdated-hunk-header metadata1)
           (let ((heading (format "Reviewed - [OUTDATED]")))
@@ -285,10 +288,15 @@ For internal usage only.")
 
               (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
                 (let* ((body-lines (code-review-utils--split-comment (a-get c 'bodyText)))
-                       (amount-new-loc2 (+ 2 (length body-lines)))
+                       (amount-new-loc-outdated (+ 2 (length body-lines)))
                        (metadata2 `((comment . ,c)
-                                    (amount-loc .,(+ amount-loc amount-new-loc amount-new-loc2)))))
-                  (code-review-db--curr-path-comment-count-update amount-new-loc2)
+                                    (amount-loc .,(+ amount-loc amount-new-loc amount-new-loc-outdated)))))
+
+                  (setq code-review-hold-written-comment-count
+                        (code-review-utils--comment-update-written-count
+                         code-review-hold-written-comment-count
+                         (a-get first-hunk-commit 'path)
+                         amount-new-loc-outdated))
 
                   (magit-insert-section (code-review-outdated-comment-header metadata2)
                     (magit-insert-heading (format "Reviewed by %s[%s]:"
@@ -355,7 +363,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                 (let ((heading (format "Reviewed by @%s [%s]: " (a-get c 'author) (a-get c 'state))))
                   (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
                   (magit-insert-heading heading))
-                (magit-insert-section (code-review-comment metadata)
+                (magit-insert-section (code-review-comment-body metadata)
                   (dolist (l body-lines)
                     (insert l)
                     (insert "\n"))
@@ -516,66 +524,39 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
-(defun code-review-section--build-buffer (&optional not-switch-buffer?)
-  "Build code review buffer and choose to NOT-SWITCH-BUFFER? by setting the var to non-nil."
-  (let ((obj (code-review-db-get-pullreq)))
-    (deferred:$
-      (deferred:parallel
-        (lambda () (code-review-diff-deferred obj))
-        (lambda () (code-review-infos-deferred obj)))
-      (deferred:nextc it
-        (lambda (x)
-          (let-alist (-second-item x)
+(defun code-review-section--build-buffer (buff-name &optional not-switch-buffer?)
+  "Build BUFF-NAME and choose to NOT-SWITCH-BUFFER? by setting the var to non-nil."
 
-            (when code-review-full-refresh?
-              (code-review-db--pullreq-raw-infos-update
-               .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update
-               (a-get (-first-item x) 'message)))
+  (when (not code-review-full-refresh?)
+    (let ((buf (code-review-section--trigger-hooks buff-name)))
+      (if not-switch-buffer?
+          buf
+        (progn
+          (switch-to-buffer-other-window buf)
+          (goto-char (point-min))))))
 
-            (let ((resp-buffer
-                   (code-review-section--trigger-hooks
-                    code-review-buffer-name)))
-              (if not-switch-buffer?
-                  resp-buffer
-                (progn
-                  (switch-to-buffer-other-window
-                   resp-buffer)
-                  (goto-char (point-min))))))))
-      (deferred:error it
-        (lambda (err)
-          (message "Got an error from your VC provider %S!" err))))))
+  (when code-review-full-refresh?
+    (let ((obj (code-review-db-get-pullreq)))
+      (deferred:$
+        (deferred:parallel
+          (lambda () (code-review-diff-deferred obj))
+          (lambda () (code-review-infos-deferred obj)))
+        (deferred:nextc it
+          (lambda (x)
+            (let-alist (-second-item x)
+              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+              (code-review-db--pullreq-raw-diff-update (a-get (-first-item x) 'message))
+              (let ((buf (code-review-section--trigger-hooks buff-name)))
+                (when (not not-switch-buffer?)
+                  (switch-to-buffer-other-window buf))))))
+        (deferred:error it
+          (lambda (err)
+            (message "Got an error from your VC provider %S!" err)))))))
 
-(defun code-review-section--build-commit-buffer ()
-  "Build code review buffer given an OBJ."
-  (let ((obj (code-review-db-get-pullreq)))
-    (deferred:$
-      (deferred:parallel
-        (lambda () (code-review-commit-diff-deferred obj))
-        (lambda () "nothing")
-        (lambda () (code-review-infos-deferred obj)))
-      (deferred:nextc it
-        (lambda (x)
-          (let-alist (-third-item x)
-
-            (when code-review-full-refresh?
-              (code-review-db--pullreq-raw-infos-update
-               .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update
-               (a-get (-first-item x) 'message)))
-
-            (switch-to-buffer
-             (code-review-section--trigger-hooks
-              code-review-commit-buffer-name
-              nil
-              t))
-            (code-review-commit-minor-mode))))
-      (deferred:error it
-        (lambda (err)
-          (message "Got an error from your VC provider %S!" err))))))
-
-;; TODO: commit description
-;; TODO: commit comments
+(defun code-review-section--build-commit-buffer (buff-name)
+  "Build commit buffer review given by BUFF-NAME."
+  (code-review-section--build-buffer buff-name t)
+  (code-review-commit-minor-mode))
 
 (defun code-review-section-insert-local-comment (local-comment metadata window-config &optional commit-focus?)
   "Insert LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG.

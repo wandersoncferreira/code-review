@@ -102,17 +102,6 @@
   "Face for outdated comments"
   :group 'code-review)
 
-(defun code-review-commit-at-point ()
-  "Review the current commit at point in Code Review buffer."
-  (interactive)
-  (let ((section (magit-current-section)))
-    (if section
-        (with-slots (type value) section
-          (if (eq type 'code-review-commit)
-              (code-review-section--build-commit-buffer)
-            (message "Can only be called from a commit section.")))
-      (message "Can only be called from a commit section."))))
-
 ;;; buffer keymaps
 
 (defvar magit-code-review-commit-section-map
@@ -207,19 +196,30 @@ If you already have a FEEDBACK string use it."
         (setq code-review-full-refresh? t)
         (code-review-section--build-buffer t))))))
 
+(defun code-review-commit-at-point ()
+  "Review the current commit at point in Code Review buffer."
+  (interactive)
+  (let ((section (magit-current-section)))
+    (if section
+        (with-slots (type value) section
+          (if (eq type 'code-review-commit)
+              (code-review-section--build-commit-buffer
+               code-review-commit-buffer-name)
+            (message "Can only be called from a commit section.")))
+      (message "Can only be called from a commit section."))))
+
 (defun code-review-commit-buffer-back ()
   "Move from commit buffer to review buffer."
   (interactive)
   (if (equal (current-buffer) (get-buffer code-review-commit-buffer-name))
       (progn
-        (setq comment-commit? nil
+        (setq code-review-comment-commit? nil
               code-review-full-refresh? nil)
         (kill-this-buffer)
         (switch-to-buffer
          (code-review-section--trigger-hooks
           code-review-buffer-name)))
     (message "Command must be called from Code Review Commit buffer.")))
-
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -229,14 +229,14 @@ If you already have a FEEDBACK string use it."
 
 ;;; Entrypoint
 
-
 ;;;###autoload
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (code-review-utils-build-obj-from-url url)
   (setq code-review-full-refresh? t)
-  (code-review-section--build-buffer))
+  (code-review-section--build-buffer
+   code-review-buffer-name))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
