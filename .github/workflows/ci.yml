@@ -1,33 +1,31 @@
-name: CI
+name: check
+
 on:
   pull_request:
   push:
-
+    branches:
+      - master
 jobs:
-  suite:
+  check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 25.1
+          - 26.1
+          - 27.1
+        ignore_warnings:
+          - true
+        include:
+          - emacs_version: snapshot
+            ignore_warnings: false
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v2
-      - uses: purcell/setup-emacs@master
-        with:
-          version: '27.1'
-      - uses: conao3/setup-cask@master
-
-      # - name: Checkout
-      #   uses: actions/checkout@master
-      # - name: Install Package and its Dependencies
-      #   run: make install
-
-      # - name: Lint
-      #   run: make lint
-
-      # - name: Check Docstrings
-      #   continue-on-error: true
-      #   run: make checkdoc
-
-      # - name: Byte Compile
-      #   run: make build
-
-      - name: Run Tests
-        run: make test
+    - uses: actions/checkout@v2
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+    - uses: leotaku/elisp-check@master
+      with:
+        file: *.el
+        ignore_warnings: ${{ matrix.ignore_warnings }}
