@@ -81,6 +81,12 @@
    (state               :initform nil)
    (replies             :initform nil)
    (review              :initform nil)
+   (labels              :initform nil)
+   (milestones          :initform nil)
+   (projects            :initform nil)
+   (reviewers           :initform nil)
+   (assignees           :initform nil)
+   (linked-issues       :initform nil)
    (buffer              :closql-class code-review-buffer))
   :abstract t)
 
@@ -124,6 +130,12 @@
       replies
       review
       state
+      labels
+      milestones
+      projects
+      reviewers
+      assignees
+      linked-issues
       callback
       (buffer :default eieio-unbound)])
 

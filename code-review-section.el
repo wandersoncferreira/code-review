@@ -503,6 +503,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
         (let ((buff (code-review-section--with-buffer
                       buff-name
                       (progn
+                        (goto-char (point-min))
                         (save-excursion
                           (insert (code-review-db--pullreq-raw-diff))
                           (insert ?\n)
@@ -514,7 +515,8 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
                             (magit-run-section-hook 'code-review-sections-hook)))
 
                         (magit-wash-sequence
-                         (apply-partially #'magit-diff-wash-diff ()))))))
+                         (apply-partially #'magit-diff-wash-diff ()))
+                        (goto-char (point-min))))))
 
           (when window-config
             (set-window-configuration window-config))

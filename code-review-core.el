@@ -43,6 +43,11 @@
 (cl-defgeneric code-review-send-replies (obj)
   "Send review comment replies stored in OBJ to the forge.")
 
+(cl-defgeneric code-review-get-labels (obj)
+  "Sync call to get a list of labels from OBJ.")
+
+(cl-defgeneric code-review-set-labels (obj)
+  "Sync call to set a list of labels for an OBJ.")
 
 (provide 'code-review-core)
 ;;; code-review-core.el ends here
