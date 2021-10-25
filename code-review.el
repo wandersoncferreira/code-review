@@ -68,7 +68,9 @@
     code-review-section-insert-assignee
     code-review-section-insert-project
     code-review-section-insert-suggested-reviewers)
-  "Hook run to insert headers into the code review buffer.")
+  "Hook run to insert headers into the code review buffer."
+  :group 'code-review
+  :type 'hook)
 
 (defcustom code-review-sections-hook
   '(code-review-section-insert-headers
@@ -241,19 +243,8 @@ If you already have a FEEDBACK string use it."
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq)))
-
-    (if (not (forge-pullreq-p pullreq))
-        (message "We can only review PRs at the moment. You tried on something else.")
-      (let* ((pr-alist (a-alist 'owner   (oref repo owner)
-                                'repo    (oref repo name)
-                                'num     (oref pullreq number)
-                                'url (when (forge-github-repository-p repo)
-                                       "https://api.github.com"))))
-        (code-review-utils-build-obj pr-alist)
-        (setq code-review-full-refresh? t)
-        (code-review-section--build-buffer)))))
+  (setq code-review-full-refresh? t)
+  (code-review-utils--start-from-forge-at-point))
 
 ;;; Commit buffer
 
@@ -265,7 +256,7 @@ OUTDATED."
 
 ;;; Transient
 
-(define-transient-command code-review-transient-api ()
+(transient-define-prefix code-review-transient-api ()
   "Code Review"
   ["Review"
    ("a" "Approve" code-review-approve)

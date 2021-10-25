@@ -63,8 +63,6 @@ For internal usage only.")
              'font-lock-face
              'magit-section-heading)))))
 
-;; (code-review-db--pullreq-raw-infos)
-;; (code-review-db-get-pullreq)
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
@@ -98,7 +96,6 @@ For internal usage only.")
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
       (let* ((title (if (string-empty-p .milestone.title) nil .milestone.title))
-             (perc (if (string-empty-p .milestone.progressPercentage) nil .milestone.progressPercentage))
              (milestone (if title
                             (format "%s (%s%%)" .milestone.title .milestone.progressPercentage)
                           "No milestone")))
@@ -414,8 +411,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
     ;;; so the positioning of comments is done correctly.
     (let* ((path (code-review-db--curr-path))
            (path-name (oref path name))
-           (head-pos (oref path head-pos))
-           (at-pos-p (oref path at-pos-p)))
+           (head-pos (oref path head-pos)))
       (when (not head-pos)
         (let ((adjusted-pos (+ 1 (line-number-at-pos))))
           (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
@@ -521,7 +517,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
 (defun code-review-section--build-buffer (&optional not-switch-buffer?)
-  "Build code review buffer given an OBJ."
+  "Build code review buffer and choose to NOT-SWITCH-BUFFER? by setting the var to non-nil."
   (let ((obj (code-review-db-get-pullreq)))
     (deferred:$
       (deferred:parallel

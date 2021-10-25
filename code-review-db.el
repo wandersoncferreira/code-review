@@ -20,7 +20,8 @@
 
 (defcustom code-review-database-connector 'sqlite
   "The database connector."
-  :group 'code-review)
+  :group 'code-review
+  :type 'keyword)
 
 (defcustom code-review-database-file
   (expand-file-name "code-review-database.sqlite" user-emacs-directory)
@@ -167,8 +168,7 @@
 
 ;;; Core
 
-(defvar pullreq-id nil)
-;; (put 'pullreq-id 'permanent-local t)
+(defvar code-review-db--pullreq-id nil)
 
 ;; Helper
 
@@ -182,15 +182,15 @@
 
 (defun code-review-db-get-pullreq ()
   "Get pullreq obj from ID."
-  (closql-get (code-review-db) pullreq-id 'code-review-github-repo))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-github-repo))
 
 (defun code-review-db-get-buffer ()
   "Get buffer obj from BUFFER-ID."
-  (closql-get (code-review-db) pullreq-id 'code-review-buffer))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-buffer))
 
 (defun code-review-db-get-path ()
   "Get path obj from ID."
-  (closql-get (code-review-db) pullreq-id 'code-review-path))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-path))
 
 (defun code-review-db-get-buffer-paths ()
   "Get paths from BUFFER-ID."
@@ -213,7 +213,7 @@
   (let* ((pr-id (uuidgen-4)))
     (oset obj id pr-id)
     (closql-insert (code-review-db) obj t)
-    (setq pullreq-id pr-id)))
+    (setq code-review-db--pullreq-id pr-id)))
 
 (defun code-review-db-get-pr-alist ()
   "Get pr-alist from ID."
