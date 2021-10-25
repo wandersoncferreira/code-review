@@ -24,10 +24,18 @@ The Emacs everywhere goal continues. These are the main features of
 - Approve, Reject or Request Changes for your PRs
 - Integrated with `forge-topic-view` via `code-review-forge-pr-at-point`
 - Fast track commands like "LGTM! Approved"
-- Review a single commit
+- Review using single commits to focus on diff
+
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
+
+
+# Extension to other forges
+
+The package allows you to write integration with other forges to leverage these
+functionalities. Take a look at `code-review-core.el` to see which functions
+need to be implemented.
 
 
 # Thanks
