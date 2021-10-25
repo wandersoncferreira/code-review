@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: git, tools, vc
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Requires: ((emacs "25.1") (closql "1.2.0") (magit "3.0.0"))
 
 ;; This file is not part of GNU Emacs
 
