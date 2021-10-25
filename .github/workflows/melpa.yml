@@ -17,12 +17,9 @@ jobs:
           - 27.1
         ignore_warnings:
           - false
-        warnings_as_errors:
-          - false
         include:
           - emacs_version: snapshot
             ignore_warnings: false
-            warnings_as_errors: false
     steps:
     - uses: actions/checkout@v2
     - uses: purcell/setup-emacs@master
@@ -36,4 +33,3 @@ jobs:
         check: melpa
         file: code-review.el
         ignore_warnings: ${{ matrix.ignore_warnings }}
-        warnings_as_errors: ${{ matrix.warnings_as_errors }}

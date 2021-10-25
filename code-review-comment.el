@@ -47,27 +47,27 @@
 
 ;;; internal vars
 
-(defvar comment-cursor-pos nil
+(defvar code-review-comment-cursor-pos nil
   "Variable to hold the cursor position where the comment will be added.
 For internal usage only.")
 
-(defvar comment-feedback? nil
+(defvar code-review-comment-feedback? nil
   "Differentiate between a regular comment from the main feedback comment.
 For internal usage only.")
 
-(defvar comment-editing? nil
+(defvar code-review-comment-editing? nil
   "Are you editing a comment box?
 For internal usage only.")
 
-(defvar comment-metadata nil
+(defvar code-review-comment-metadata nil
   "Metadata to be attached to the comment section.
 For internal usage only.")
 
-(defvar comment-window-configuration nil
+(defvar code-review-comment-window-configuration nil
   "Hold window configuration when adding comments.
 For internal usage only.")
 
-(defvar comment-commit? nil
+(defvar code-review-comment-commit? nil
   "Toggle if we are at the commit review buffer.
 For internal usage only.")
 
@@ -120,15 +120,15 @@ For internal usage only.")
                (progn
                  (message "You can only comment on HUNK or COMMENTS.")
                  nil)))))
-        (setq comment-metadata metadata)))))
+        (setq code-review-comment-metadata metadata)))))
 
 (defun code-review-comment-add ()
   "Add comment."
   (code-review-comment--hold-metadata)
-  (when comment-metadata
+  (when code-review-comment-metadata
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-      (setq comment-cursor-pos (line-beginning-position))
-      (setq comment-window-configuration (current-window-configuration))
+      (setq code-review-comment-cursor-pos (line-beginning-position))
+      (setq code-review-comment-window-configuration (current-window-configuration))
       (with-current-buffer buffer
         (erase-buffer)
         (insert code-review-comment-buffer-msg)
@@ -140,16 +140,16 @@ For internal usage only.")
   "Add comment."
   (with-slots (type value start end) (magit-current-section)
     (let-alist value
-      (setq comment-metadata value)
+      (setq code-review-comment-metadata value)
       (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
         (with-current-buffer buffer
           (erase-buffer)
           (insert .comment.bodyText)
           (insert ?\n)
           (goto-char (point-min)))
-        (setq comment-cursor-pos (line-beginning-position))
-        (setq comment-window-configuration (current-window-configuration))
-        (setq comment-editing? t)
+        (setq code-review-comment-cursor-pos (line-beginning-position))
+        (setq code-review-comment-window-configuration (current-window-configuration))
+        (setq code-review-comment-editing? t)
         (switch-to-buffer-other-window buffer)
         (code-review-comment-mode)))))
 
@@ -160,9 +160,9 @@ For internal usage only.")
   "Add review FEEDBACK."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-    (setq comment-window-configuration (current-window-configuration))
-    (setq comment-feedback? t)
-    (setq comment-cursor-pos (point))
+    (setq code-review-comment-window-configuration (current-window-configuration))
+    (setq code-review-comment-feedback? t)
+    (setq code-review-comment-cursor-pos (point))
     (with-current-buffer buffer
       (erase-buffer)
       (insert code-review-comment-feedback-msg)
@@ -179,7 +179,7 @@ For internal usage only.")
              (comment-text (with-current-buffer buffer
                              (save-excursion
                                (buffer-substring-no-properties (point-min) (point-max))))))
-        (if comment-feedback?
+        (if code-review-comment-feedback?
             (let* ((comment-cleaned
                     (code-review-utils--comment-clean-msg
                      comment-text
@@ -187,46 +187,46 @@ For internal usage only.")
               (code-review-db--pullreq-feedback-update comment-cleaned)
               (code-review-section--trigger-hooks
                code-review-buffer-name
-               comment-window-configuration)
-              (goto-char comment-cursor-pos))
+               code-review-comment-window-configuration)
+              (goto-char code-review-comment-cursor-pos))
           (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                    comment-text
                                    code-review-comment-buffer-msg))
-                 (metadata (a-assoc comment-metadata
-                                    'cursor-pos comment-cursor-pos
-                                    'editing? comment-editing?))
+                 (metadata (a-assoc code-review-comment-metadata
+                                    'cursor-pos code-review-comment-cursor-pos
+                                    'editing? code-review-comment-editing?))
                  (metadata (a-assoc-in metadata (list 'comment 'bodyText) comment-cleaned)))
             (code-review-section-insert-local-comment
              comment-cleaned
              metadata
-             comment-window-configuration
-             comment-commit?)))
+             code-review-comment-window-configuration
+             code-review-comment-commit?)))
         (kill-buffer buffer)
-        (set-window-configuration comment-window-configuration))
-    (setq comment-metadata nil
-          comment-cursor-pos nil
-          comment-editing? nil
-          comment-feedback? nil
-          comment-window-configuration nil
-          comment-commit? nil)))
+        (set-window-configuration code-review-comment-window-configuration))
+    (setq code-review-comment-metadata nil
+          code-review-comment-cursor-pos nil
+          code-review-comment-editing? nil
+          code-review-comment-feedback? nil
+          code-review-comment-window-configuration nil
+          code-review-comment-commit? nil)))
 
 ;;;###autoload
 (defun code-review-comment-quit ()
   "Quit the comment window."
   (interactive)
-  (setq comment-metadata nil
-        comment-cursor-pos nil
-        comment-window-configuration nil
-        comment-feedback? nil
-        comment-editing? nil))
+  (setq code-review-comment-metadata nil
+        code-review-comment-cursor-pos nil
+        code-review-comment-window-configuration nil
+        code-review-comment-feedback? nil
+        code-review-comment-editing? nil))
 
 ;;;###autoload
 (defun code-review-comment-add-or-edit ()
   "Add or edit comment depending on context."
   (interactive)
-  (setq comment-commit? (string-equal
-                         (buffer-name (current-buffer))
-                         code-review-commit-buffer-name))
+  (setq code-review-comment-commit? (string-equal
+                                     (buffer-name (current-buffer))
+                                     code-review-commit-buffer-name))
   (let ((section (magit-current-section)))
     (if (not section)
         (message "You should call on a section.")
@@ -250,7 +250,7 @@ For internal usage only.")
           (if (not (a-get value 'feedback))
               (code-review-comment-add-feedback)
             (progn
-              (setq comment-feedback? t)
+              (setq code-review-comment-feedback? t)
               (code-review-comment-edit))))
          (t
           (message "Invalid operation")))))))
