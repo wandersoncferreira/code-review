@@ -240,7 +240,7 @@ For internal usage only.")
           (code-review-comment-edit))
          ((string-equal type "hunk")
           (code-review-comment-add))
-         ((-contains-p '(code-review-comment
+         ((-contains-p '(code-review-comment-body
                          code-review-comment-header)
                        type)
           (code-review-comment-add))
