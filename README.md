@@ -25,10 +25,19 @@ The Emacs everywhere goal continues. These are the main features of
 - Integrated with `forge-topic-view` via `code-review-forge-pr-at-point`
 - Fast track commands like "LGTM! Approved"
 - Review using single commits to focus on diff
-- Set labels on RET. See details [docs](./docs/multi-value-selection.md)
+- Set labels on RET. See details [Multi value selection](./docs/multi-value-selection.md)
+- Set assignee. Use transient `a` option to `assign yourself` to the PR.
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
+
+
+# Transient keys
+
+You can access the transient panel by hitting `r` from any place of the `Code
+Review` buffer.
+
+![Transient keybindings](./docs/code_review_transient.png)
 
 
 # Extension to other forges

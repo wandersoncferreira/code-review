@@ -242,5 +242,22 @@ Milestones, labels, projects, and more."
      (code-review-utils-current-project-buffer-name)
      t)))
 
+(defun code-review-utils--set-assignee-field (obj &optional assignee)
+  "Helper function to set assignees header field given an OBJ.
+If a valid ASSIGNEE is provided, use that instead."
+  (let ((candidate nil))
+    (if assignee
+        (setq candidate assignee)
+      (let* ((options (code-review-get-assignees obj))
+             (choice (completing-read "Choose: " options)))
+        (setq candidate choice)))
+    (prin1 "AQUI?")
+    (oset obj assignees candidate)
+    (code-review-set-assignee obj)
+    (closql-insert (code-review-db) obj t)
+    (code-review-section--build-buffer
+     (code-review-utils-current-project-buffer-name)
+     t)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

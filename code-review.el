@@ -154,6 +154,12 @@
     map)
   "Keymap for the `label' section.")
 
+(defvar magit-code-review-assignee-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review--set-assignee)
+    map)
+  "Keymap for the `assignee' section.")
+
 ;;; public functions
 
 ;;;###autoload
@@ -231,7 +237,21 @@ If you already have a FEEDBACK string use it."
   "Set label."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-header-field pr)))
+    (code-review-utils--set-label-field pr)))
+
+(defun code-review--set-assignee ()
+  "Set assignee."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-utils--set-assignee-field pr)))
+
+(defun code-review--assign-yourself ()
+  "Assign yourself to PR."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-utils--set-assignee-field
+     pr
+     (code-review-utils--git-get-user))))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -271,13 +291,14 @@ OUTDATED."
 (transient-define-prefix code-review-transient-api ()
   "Code Review"
   ["Review"
-   ("a" "Approve" code-review-approve)
+   ("aa" "Approve" code-review-approve)
+   ("af" "Add Feedback" code-review-comment-add-feedback)
    ("r" "Request Changes" code-review-request-changes)
    ("c" "Comment" code-review-comments)
-   ("s" "Submit" code-review-submit)
-   ("f" "Add feedback!" code-review-comment-add-feedback)]
+   ("s" "Submit" code-review-submit)]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-submit-lgtm)]
+   ("l" "LGTM - Approved" code-review-submit-lgtm)
+   ("ay" "Assign Yourself" code-review--assign-yourself)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

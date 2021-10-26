@@ -265,14 +265,43 @@
 
 (cl-defmethod code-review-set-labels ((github code-review-github-repo))
   "Set labels for your pr at GITHUB."
-  (ghub-put (format "/repos/%s/%s/issues/%s/labels"
-                    (oref github owner)
-                    (oref github repo)
-                    (oref github number))
-            nil
-            :payload (a-alist 'labels (oref github labels))
-            :auth 'code-review
-            :noerror t))
+  (let ((url (format "/repos/%s/%s/issues/%s/labels"
+                     (oref github owner)
+                     (oref github repo)
+                     (oref github number)))
+        (req-fn (if (oref github labels)
+                    #'ghub-post
+                  #'ghub-put)))
+    (funcall req-fn url
+             nil
+             :payload (a-alist 'labels (or (oref github labels) []))
+             :auth 'code-review
+             :noerror nil)))
+
+(cl-defmethod code-review-get-assignees ((github code-review-github-repo))
+  "Get labels from GITHUB."
+  (let ((resp
+         (ghub-get (format "/repos/%s/%s/assignees"
+                           (oref github owner)
+                           (oref github repo))
+                   nil
+                   :auth 'code-review
+                   :noerror nil)))
+    (-map
+     (lambda (l)
+       (a-get l 'login))
+     resp)))
+
+(cl-defmethod code-review-set-assignee ((github code-review-github-repo))
+  "Set assignee to your PR in GITHUB."
+  (ghub-post (format "/repos/%s/%s/issues/%s/assignees"
+                     (oref github owner)
+                     (oref github repo)
+                     (oref github number))
+             nil
+             :auth 'code-review
+             :payload (a-alist 'assignees (oref github assignees))
+             :noerror nil))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
