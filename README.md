@@ -26,7 +26,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Fast track commands like "LGTM! Approved"
 - Review using single commits to focus on diff
 - Set labels on RET. See details [Multi value selection](./docs/multi-value-selection.md)
-- Set assignee. Use transient `a` option to `assign yourself` to the PR.
+- Set assignee. Use transient `ay` option to `assign yourself` to the PR.
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
