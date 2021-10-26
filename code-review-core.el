@@ -53,7 +53,13 @@
   "Sync call to get a list of assignees from OBJ.")
 
 (cl-defgeneric code-review-set-assignee (obj)
-  "Sync call to set a list of assignees for an OBJ.")
+  "Set an assignee for an OBJ.")
+
+(cl-defgeneric code-review-get-milestones (obj)
+  "Sync call to get a list of milestones from OBJ.")
+
+(cl-defgeneric code-review-set-milestone (obj)
+  "Set a milestone for an OBJ.")
 
 (provide 'code-review-core)
 ;;; code-review-core.el ends here

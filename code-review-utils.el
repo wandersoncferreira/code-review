@@ -259,5 +259,16 @@ If a valid ASSIGNEE is provided, use that instead."
      (code-review-utils-current-project-buffer-name)
      t)))
 
+(defun code-review-utils--set-milestone-field (obj)
+  "Helper function to set a milestone given an OBJ."
+  (let* ((options (code-review-get-milestones obj))
+         (choice (completing-read "Choose: " (a-keys options))))
+    (oset obj milestones (alist-get choice options nil nil 'equal))
+    (code-review-set-milestone obj)
+    (closql-insert (code-review-db) obj t)
+    (code-review-section--build-buffer
+     (code-review-utils-current-project-buffer-name)
+     t)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

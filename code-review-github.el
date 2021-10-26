@@ -303,5 +303,30 @@
              :payload (a-alist 'assignees (oref github assignees))
              :noerror nil))
 
+(cl-defmethod code-review-get-milestones ((github code-review-github-repo))
+  "Get milestones from GITHUB."
+  (let ((resp
+         (ghub-get (format "/repos/%s/%s/milestones"
+                           (oref github owner)
+                           (oref github repo))
+                   nil
+                   :auth 'code-review
+                   :noerror nil)))
+    (-map
+     (lambda (l)
+       `(,(a-get l 'title) . ,(a-get l 'number)))
+     resp)))
+
+(cl-defmethod code-review-set-milestone ((github code-review-github-repo))
+  "Set milestone for a pullreq in GITHUB."
+  (ghub-patch (format "/repos/%s/%s/issues/%s"
+                      (oref github owner)
+                      (oref github repo)
+                      (oref github number))
+              nil
+              :auth 'code-review
+              :payload (a-alist 'milestone (oref github milestones))
+              :noerror nil))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

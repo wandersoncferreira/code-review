@@ -160,6 +160,12 @@
     map)
   "Keymap for the `assignee' section.")
 
+(defvar magit-code-review-milestone-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review--set-milestone)
+    map)
+  "Keymap for the `milestone' section.")
+
 ;;; public functions
 
 ;;;###autoload
@@ -245,13 +251,19 @@ If you already have a FEEDBACK string use it."
   (let ((pr (code-review-db-get-pullreq)))
     (code-review-utils--set-assignee-field pr)))
 
-(defun code-review--assign-yourself ()
+(defun code-review--set-assignee-yourself ()
   "Assign yourself to PR."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (code-review-utils--set-assignee-field
      pr
      (code-review-utils--git-get-user))))
+
+(defun code-review--set-milestone ()
+  "Set milestone."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-utils--set-milestone-field pr)))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -291,14 +303,17 @@ OUTDATED."
 (transient-define-prefix code-review-transient-api ()
   "Code Review"
   ["Review"
-   ("aa" "Approve" code-review-approve)
-   ("af" "Add Feedback" code-review-comment-add-feedback)
+   ("a" "Approve" code-review-approve)
    ("r" "Request Changes" code-review-request-changes)
    ("c" "Comment" code-review-comments)
-   ("s" "Submit" code-review-submit)]
+   ("sf" "Add Feedback" code-review-comment-add-feedback)
+   ("C-c C-c" "Submit" code-review-submit)]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
-   ("ay" "Assign Yourself" code-review--assign-yourself)]
+   ("sy" "Set Yourself as Assignee" code-review--set-assignee-yourself)
+   ("sa" "Set Assignee" code-review--set-assignee)
+   ("st" "Set Milestone" code-review--set-milestone)
+   ("sl" "Set Labels" code-review--set-label)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
