@@ -308,6 +308,20 @@ For internal usage only.")
                         (insert ?\n))))
                   (insert ?\n))))))))))
 
+(defun code-review-section-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
+  "Write missing outdated comments in the end of the current path.
+We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
+  (dolist (path-pos missing-paths)
+    (let ((comment-written-pos
+           (or (alist-get path-name code-review-hold-written-comment-count nil nil 'equal)
+               0)))
+      (code-review-section-insert-outdated-comment
+       (code-review-utils--comment-get
+        grouped-comments
+        path-pos)
+       comment-written-pos)
+      (push path-pos code-review-hold-written-comment-ids))))
+
 (defun code-review-section-insert-comment (comments amount-loc)
   "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
 A quite good assumption: every comment in an outdated hunk will be outdated."
@@ -461,6 +475,19 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
                      grouped-comment
                      comment-written-pos))
                 (forward-line))))
+
+          ;;; we can have outdated comments missing that were written in a
+          ;;; version of the buffer that had more lines than now.
+          ;;; call function to write the remaining comments.
+          ;;; important to only consider comments for this path.
+          (when-let (missing-paths (code-review-utils--missing-outdated-commments?
+                                    path-name
+                                    code-review-hold-written-comment-ids
+                                    code-review-grouped-comments))
+            (code-review-section-insert-outdated-comment-missing
+             path-name
+             missing-paths
+             code-review-grouped-comments))
 
         ;;; --- end -- code-review specific code.
           (oset section end (point))

@@ -107,6 +107,20 @@ using COMMENTS."
       (code-review-utils--clean-suggestion comment)
     (split-string comment "\n")))
 
+
+(defun code-review-utils--missing-outdated-commments? (path-name path-pos-written grouped-comments)
+  "Use PATH-NAME, PATH-POS-WRITTEN, and GROUPED-COMMENTS to find if we still have more comments to write."
+  (let* ((written-in-path (-filter
+                           (lambda (ckey)
+                             (string-prefix-p path-name ckey))
+                           path-pos-written))
+         (expected-in-path (-filter
+                            (lambda (ckey)
+                              (string-prefix-p path-name ckey))
+                            (a-keys grouped-comments))))
+    (-difference expected-in-path written-in-path)))
+
+
 ;;; GIT
 
 (defun code-review-utils--git-get-user ()
@@ -226,7 +240,8 @@ If you already have a FEEDBACK string to submit use it."
                                 'url (when (forge-github-repository-p repo)
                                        "https://api.github.com"))))
         (code-review-utils-build-obj pr-alist)
-        (code-review-section--build-buffer)))))
+        (code-review-section--build-buffer
+         code-review-buffer-name)))))
 
 ;;; Header setters
 

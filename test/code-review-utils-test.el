@@ -56,7 +56,16 @@
     (expect (code-review-utils--clean-suggestion sample-suggestion-comment)
             :to-equal `("Suggested change"
                         "-   :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.12\"}"
-                        "+   :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.14\"}"))))
+                        "+   :extra-deps {thheller/shadow-cljs {:mvn/version \"2.15.14\"}")))
+
+  (it "compute if any outdated test was not written in the buffer."
+    (expect (code-review-utils--missing-outdated-commments?
+             "github.el"
+             (list "github.el:30" "github.el:20" "gitlab.el:12")
+             `(("github.el:30" . (list 1 2 3))
+               ("github.el:20" . (list 1 2 3))
+               ("github.el:50" . (list 1 2 3))))
+            :to-equal (list "github.el:50"))))
 
 (describe "GIT")
 
