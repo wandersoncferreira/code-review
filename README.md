@@ -32,6 +32,50 @@ The Emacs everywhere goal continues. These are the main features of
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
+# Installation
+
+### With melpa
+
+TBD
+
+### Directly from source
+
+Clone and add the package to your `load-path`:
+
+``` emacs-lisp
+(add-to-list 'load-path "~/<path-to-the-place-you-cloned>/code-review")
+(require 'code-review)
+
+```
+
+if you are using `use-package`:
+
+``` emacs-lisp
+
+(use-package code-review
+  :load-path "/path-to-the-place-you-cloned")
+```
+
+Then you can either `M-x code-review-start` and provide a PR URL or `M-x
+code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
+
+# Configuration
+
+### GitHub
+
+`code-review` needs a GitHub token to act on your behalf for fetching PRs and
+submitting reviews.
+
+1. [Create a personal access token using GitHub](https://github.com/settings/tokens)
+2. Set the `repo` scope as the subscope of repo
+3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
+
+### Auth
+Add a line to your auth source files with your login and token:
+
+```
+machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
+```
 
 # Transient keys
 
