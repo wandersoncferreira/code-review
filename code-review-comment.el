@@ -55,6 +55,14 @@ For internal usage only.")
   "Differentiate between a regular comment from the main feedback comment.
 For internal usage only.")
 
+(defvar code-review-comment-title? nil
+  "Are you writing a title?.
+For internal usage only.")
+
+(defvar code-review-comment-description? nil
+  "Are you writing a description?.
+For internal usage only.")
+
 (defvar code-review-comment-editing? nil
   "Are you editing a comment box?
 For internal usage only.")
@@ -171,24 +179,70 @@ For internal usage only.")
       (code-review-comment-mode))))
 
 ;;;###autoload
+(defun code-review-comment-add-title ()
+  "Add review title."
+  (interactive)
+  (let ((buffer (get-buffer-create code-review-comment-buffer-name))
+        (pr (code-review-db-get-pullreq)))
+    (setq code-review-comment-window-configuration (current-window-configuration))
+    (setq code-review-comment-title? t)
+    (setq code-review-comment-cursor-pos (point))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert (oref pr title))
+      (insert ?\n)
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
+
+;;;###autoload
+(defun code-review-comment-add-description ()
+  "Add review description."
+  (interactive)
+  (let ((buffer (get-buffer-create code-review-comment-buffer-name))
+        (pr (code-review-db-get-pullreq)))
+    (setq code-review-comment-window-configuration (current-window-configuration))
+    (setq code-review-comment-description? t)
+    (setq code-review-comment-cursor-pos (point))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert (oref pr description))
+      (insert ?\n)
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
+
+;;;###autoload
 (defun code-review-comment-commit ()
   "Commit comment."
   (interactive)
   (unwind-protect
       (let* ((buffer (get-buffer code-review-comment-buffer-name))
-             (comment-text (with-current-buffer buffer
-                             (save-excursion
-                               (buffer-substring-no-properties (point-min) (point-max))))))
-        (if code-review-comment-feedback?
-            (let* ((comment-cleaned
-                    (code-review-utils--comment-clean-msg
-                     comment-text
-                     code-review-comment-feedback-msg)))
-              (code-review-db--pullreq-feedback-update comment-cleaned)
-              (code-review-section--trigger-hooks
-               code-review-buffer-name
-               code-review-comment-window-configuration)
-              (goto-char code-review-comment-cursor-pos))
+             (comment-text (string-trim
+                            (with-current-buffer buffer
+                              (save-excursion
+                                (buffer-substring-no-properties (point-min) (point-max)))))))
+        (cond
+         (code-review-comment-description?
+          (kill-buffer buffer)
+          (set-window-configuration code-review-comment-window-configuration)
+          (code-review-utils--set-description-field comment-text))
+
+         (code-review-comment-title?
+          (kill-buffer buffer)
+          (set-window-configuration code-review-comment-window-configuration)
+          (code-review-utils--set-title-field comment-text))
+
+         (code-review-comment-feedback?
+          (let* ((comment-cleaned
+                  (code-review-utils--comment-clean-msg
+                   comment-text
+                   code-review-comment-feedback-msg)))
+            (code-review-db--pullreq-feedback-update comment-cleaned)
+            (code-review-section--trigger-hooks
+             code-review-buffer-name
+             code-review-comment-window-configuration)
+            (goto-char code-review-comment-cursor-pos)))
+
+         (t
           (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                    comment-text
                                    code-review-comment-buffer-msg))
@@ -200,13 +254,15 @@ For internal usage only.")
              comment-cleaned
              metadata
              code-review-comment-window-configuration
-             code-review-comment-commit?)))
-        (kill-buffer buffer)
-        (set-window-configuration code-review-comment-window-configuration))
+             code-review-comment-commit?)
+            (kill-buffer buffer)
+            (set-window-configuration code-review-comment-window-configuration)))))
     (setq code-review-comment-metadata nil
           code-review-comment-cursor-pos nil
           code-review-comment-editing? nil
           code-review-comment-feedback? nil
+          code-review-comment-description? nil
+          code-review-comment-title? nil
           code-review-comment-window-configuration nil
           code-review-comment-commit? nil)))
 

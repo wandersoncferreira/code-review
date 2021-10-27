@@ -59,17 +59,16 @@ For internal usage only.")
     (let-alist infos
       (setq header-line-format
             (propertize
-             (format "#%s: %s".number .title)
+             (format "#%s: %s".number (code-review-db--pullreq-title))
              'font-lock-face
              'magit-section-heading)))))
 
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (magit-insert-section (code-review-title .title)
-        (insert (format "%-17s" "Title: ") .title)
-        (insert ?\n)))))
+  (when-let (title (code-review-db--pullreq-title))
+    (magit-insert-section (code-review-title title)
+      (insert (format "%-17s" "Title: ") title)
+      (insert ?\n))))
 
 (defun code-review-section-insert-state ()
   "Insert the state of the header buffer."
@@ -205,17 +204,16 @@ For internal usage only.")
 
 (defun code-review-section-insert-pr-description ()
   "Insert PULL-REQUEST description."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (magit-insert-section (code-review-pr-description-header)
-        (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
-        (magit-insert-heading)
-        (magit-insert-section (code-review-pr-description)
-          (if (string-empty-p .bodyText)
-              (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
-            (insert .bodyText))
-          (insert ?\n)
-          (insert ?\n))))))
+  (when-let (description (code-review-db--pullreq-description))
+    (magit-insert-section (code-review-pr-description-header)
+      (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
+      (magit-insert-heading)
+      (magit-insert-section (code-review-pr-description)
+        (if (string-empty-p description)
+            (insert (propertize "No description provided." 'font-lock-face 'magit-dimmed))
+          (insert description))
+        (insert ?\n)
+        (insert ?\n)))))
 
 (defun code-review-section-insert-feedback-heading ()
   "Insert feedback heading."

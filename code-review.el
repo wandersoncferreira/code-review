@@ -309,11 +309,14 @@ OUTDATED."
    ("sf" "Add Feedback" code-review-comment-add-feedback)
    ("C-c C-c" "Submit" code-review-submit)]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-submit-lgtm)
+   ("l" "LGTM - Approved" code-review-submit-lgtm)]
+  ["Setters"
    ("sy" "Set Yourself as Assignee" code-review--set-assignee-yourself)
    ("sa" "Set Assignee" code-review--set-assignee)
-   ("st" "Set Milestone" code-review--set-milestone)
-   ("sl" "Set Labels" code-review--set-label)]
+   ("sm" "Set Milestone" code-review--set-milestone)
+   ("sl" "Set Labels" code-review--set-label)
+   ("st" "Set Title" code-review-comment-add-title)
+   ("sd" "Set Description" code-review-comment-add-description)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

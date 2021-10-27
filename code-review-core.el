@@ -61,5 +61,11 @@
 (cl-defgeneric code-review-set-milestone (obj)
   "Set a milestone for an OBJ.")
 
+(cl-defgeneric code-review-set-title (obj)
+  "Set a pullrequest title for an OBJ.")
+
+(cl-defgeneric code-review-set-description (obj)
+  "Set a pullrequest description for an OBJ.")
+
 (provide 'code-review-core)
 ;;; code-review-core.el ends here

@@ -75,6 +75,8 @@
    (owner               :initarg :owner)
    (repo                :initarg :repo)
    (number              :initarg :number)
+   (description         :initform nil)
+   (title               :initform nil)
    (host                :initform nil)
    (sha                 :initform nil)
    (feedback            :initform nil)
@@ -126,6 +128,8 @@
       owner
       repo
       number
+      description
+      title
       feedback
       replies
       review
@@ -245,6 +249,8 @@
   "Save INFOS to the PULLREQ entity."
   (let ((pullreq (code-review-db-get-pullreq)))
     (oset pullreq raw-infos infos)
+    (oset pullreq title (a-get infos 'title))
+    (oset pullreq description (a-get infos 'bodyText))
     (oset pullreq sha (a-get-in infos (list 'headRef 'target 'oid)))
     (oset pullreq raw-comments (a-get-in infos (list 'reviews 'nodes)))
     (closql-insert (code-review-db) pullreq t)))
@@ -266,6 +272,24 @@
 (defun code-review-db--pullreq-raw-diff ()
   "Get raw diff alist from ID."
   (oref (code-review-db-get-pullreq) raw-diff))
+
+(defun code-review-db--pullreq-title ()
+  "Get title of pullreq."
+  (oref (code-review-db-get-pullreq) title))
+
+(defun code-review-db--pullreq-title-update (pr title)
+  "Update the TITLE of a PR."
+  (oset pr title title)
+  (closql-insert (code-review-db) pr t))
+
+(defun code-review-db--pullreq-description ()
+  "Get description of pullreq."
+  (oref (code-review-db-get-pullreq) description))
+
+(defun code-review-db--pullreq-description-update (pr description)
+  "Update the DESCRIPTION of a PR."
+  (oset pr description description)
+  (closql-insert (code-review-db) pr t))
 
 (defun code-review-db--pullreq-raw-comments-update (comment)
   "Add COMMENT to the pullreq ID."

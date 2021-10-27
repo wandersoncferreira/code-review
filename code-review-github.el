@@ -328,5 +328,27 @@
               :payload (a-alist 'milestone (oref github milestones))
               :noerror nil))
 
+(cl-defmethod code-review-set-title ((github code-review-github-repo))
+  "Set title for a pullreq in GITHUB."
+  (ghub-patch (format "/repos/%s/%s/pulls/%s"
+                      (oref github owner)
+                      (oref github repo)
+                      (oref github number))
+              nil
+              :auth 'code-review
+              :payload (a-alist 'title (oref github title))
+              :noerror nil))
+
+(cl-defmethod code-review-set-description ((github code-review-github-repo))
+  "Set description for a pullreq in GITHUB."
+  (ghub-patch (format "/repos/%s/%s/pulls/%s"
+                      (oref github owner)
+                      (oref github repo)
+                      (oref github number))
+              nil
+              :auth 'code-review
+              :payload (a-alist 'body (oref github description))
+              :noerror nil))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

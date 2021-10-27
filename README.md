@@ -28,6 +28,8 @@ The Emacs everywhere goal continues. These are the main features of
 - Set labels on RET. See details [Multi value selection](./docs/multi-value-selection.md)
 - Set assignee. Use transient `ay` option to `assign yourself` to the PR.
 - Set milestone. See details [push access required](./docs/milestone.md)
+- Edit PR title
+- Edit PR description body
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).

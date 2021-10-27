@@ -285,5 +285,25 @@ If a valid ASSIGNEE is provided, use that instead."
      (code-review-utils-current-project-buffer-name)
      t)))
 
+(defun code-review-utils--set-title-field (title)
+  "Helper function to set a TITLE."
+  (let ((pr (code-review-db-get-pullreq)))
+    (oset pr title title)
+    (code-review-set-title pr)
+    (closql-insert (code-review-db) pr t)
+    (code-review-section--build-buffer
+     code-review-buffer-name
+     t)))
+
+(defun code-review-utils--set-description-field (description)
+  "Helper function to set a DESCRIPTION."
+  (let ((pr (code-review-db-get-pullreq)))
+    (oset pr description description)
+    (code-review-set-description pr)
+    (closql-insert (code-review-db) pr t)
+    (code-review-section--build-buffer
+     code-review-buffer-name
+     t)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
