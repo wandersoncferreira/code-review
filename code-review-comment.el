@@ -145,7 +145,7 @@ For internal usage only.")
         (code-review-comment-mode)))))
 
 (defun code-review-comment-edit ()
-  "Add comment."
+  "Edit comment."
   (with-slots (type value start end) (magit-current-section)
     (let-alist value
       (setq code-review-comment-metadata value)
@@ -313,7 +313,7 @@ For internal usage only.")
 
 ;;;###autoload
 (defun code-review-comment-delete ()
-  "Add comment."
+  "Delete comment."
   (interactive)
   (code-review-section-delete-local-comment))
 
