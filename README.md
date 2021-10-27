@@ -59,6 +59,10 @@ if you are using `use-package`:
   :load-path "/path-to-the-place-you-cloned")
 ```
 
+You also need to install the dependencies manually for now: `closql`, `uuidgen`,
+`magit`, `markdown-mode`, `forge`.
+
+
 Then you can either `M-x code-review-start` and provide a PR URL or `M-x
 code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
