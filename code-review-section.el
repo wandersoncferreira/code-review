@@ -613,7 +613,7 @@ Using COMMIT-FOCUS? to enable add comment into commit review buffer."
                                      (internal-id . ,(uuidgen-4))))))))
             (progn
               (goto-char .cursor-pos)
-              (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified"))
+              (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file"))
                           (not (equal (point) (point-min))))
                 (forward-line -1))
               (let ((section (magit-current-section))

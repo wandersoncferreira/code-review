@@ -137,6 +137,7 @@ For internal usage only.")
     (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
       (setq code-review-comment-cursor-pos (line-beginning-position))
       (setq code-review-comment-window-configuration (current-window-configuration))
+      (setq code-review-comment-editing? nil)
       (with-current-buffer buffer
         (erase-buffer)
         (insert code-review-comment-buffer-msg)
