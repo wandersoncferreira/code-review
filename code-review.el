@@ -212,7 +212,9 @@ If you already have a FEEDBACK string use it."
          (lambda (&rest _)
            (message "Done submitting review")))
         (setq code-review-full-refresh? t)
-        (code-review-section--build-buffer t))))))
+        (code-review-section--build-buffer
+         code-review-buffer-name
+         t))))))
 
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."
@@ -271,6 +273,46 @@ If you already have a FEEDBACK string use it."
   (interactive)
   (code-review-submit "APPROVE" code-review-lgtm-message))
 
+
+;;;###autoload
+(defun code-review-merge-merge ()
+  "Merge PR with MERGE strategy."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-merge pr "merge")
+    (oset pr state "MERGED")
+    (closql-insert (code-review-db) pr t)
+    (setq code-review-full-refresh? nil)
+    (code-review-section--build-buffer
+     code-review-buffer-name
+     t)))
+
+;;;###autoload
+(defun code-review-merge-rebase ()
+  "Merge PR with REBASE strategy."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-merge pr "rebase")
+    (oset pr state "MERGED")
+    (closql-insert (code-review-db) pr t)
+    (setq code-review-full-refresh? nil)
+    (code-review-section--build-buffer
+     code-review-buffer-name
+     t)))
+
+;;;###autoload
+(defun code-review-merge-squash ()
+  "Merge PR with SQUASH strategy."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-merge pr "squash")
+    (oset pr state "MERGED")
+    (closql-insert (code-review-db) pr t)
+    (setq code-review-full-refresh? nil)
+    (code-review-section--build-buffer
+     code-review-buffer-name
+     t)))
+
 ;;; Entrypoint
 
 ;;;###autoload
@@ -302,12 +344,16 @@ OUTDATED."
 
 (transient-define-prefix code-review-transient-api ()
   "Code Review"
-  ["Review"
-   ("a" "Approve" code-review-approve)
-   ("r" "Request Changes" code-review-request-changes)
-   ("c" "Comment" code-review-comments)
-   ("sf" "Add Feedback" code-review-comment-add-feedback)
-   ("C-c C-c" "Submit" code-review-submit)]
+  [["Review"
+    ("a" "Approve" code-review-approve)
+    ("r" "Request Changes" code-review-request-changes)
+    ("c" "Comment" code-review-comments)
+    ("sf" "Add Feedback" code-review-comment-add-feedback)
+    ("C-c C-c" "Submit" code-review-submit)]
+   ["Merge"
+    ("mm" "Merge" code-review-merge-merge)
+    ("mr" "Merge Rebase" code-review-merge-rebase)
+    ("ms" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)]
   ["Setters"

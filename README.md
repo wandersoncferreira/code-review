@@ -30,6 +30,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Set milestone. See details [push access required](./docs/milestone.md)
 - Edit PR title
 - Edit PR description body
+- Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
 
 
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).

@@ -72,11 +72,10 @@ For internal usage only.")
 
 (defun code-review-section-insert-state ()
   "Insert the state of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (magit-insert-section (code-review-state .state)
-        (insert (format "%-17s" "State: ") (or (format "%s" .state) "none"))
-        (insert ?\n)))))
+  (when-let (state (code-review-db--pullreq-state))
+    (magit-insert-section (code-review-state state)
+      (insert (format "%-17s" "State: ") (or (format "%s" state) "none"))
+      (insert ?\n))))
 
 (defun code-review-section-insert-ref ()
   "Insert the state of the header buffer."

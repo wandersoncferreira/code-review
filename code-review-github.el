@@ -350,5 +350,20 @@
               :payload (a-alist 'body (oref github description))
               :noerror nil))
 
+(cl-defmethod code-review-merge ((github code-review-github-repo) strategy)
+  "Merge a PR in GITHUB using a STRATEGY."
+  (ghub-put (format "/repos/%s/%s/pulls/%s/merge"
+                    (oref github owner)
+                    (oref github repo)
+                    (oref github number))
+            nil
+            :auth 'code-review
+            :payload (a-alist 'commit_title (oref github title)
+                              'commit_message (oref github description)
+                              'sha (oref github sha)
+                              'merge_method strategy)
+            :errorback (lambda (e &rest _)
+                         (message (format "ERROR!! %S" (a-get (-fourth-item e) 'message))))))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

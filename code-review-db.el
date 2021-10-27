@@ -84,6 +84,7 @@
    (replies             :initform nil)
    (review              :initform nil)
    (labels              :initform nil)
+   (merge               :initform nil)
    (milestones          :initform nil)
    (projects            :initform nil)
    (reviewers           :initform nil)
@@ -135,6 +136,7 @@
       review
       state
       labels
+      merge
       milestones
       projects
       reviewers
@@ -276,6 +278,10 @@
 (defun code-review-db--pullreq-title ()
   "Get title of pullreq."
   (oref (code-review-db-get-pullreq) title))
+
+(defun code-review-db--pullreq-state ()
+  "Get state of pullreq."
+  (oref (code-review-db-get-pullreq) state))
 
 (defun code-review-db--pullreq-title-update (pr title)
   "Update the TITLE of a PR."

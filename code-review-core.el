@@ -67,5 +67,8 @@
 (cl-defgeneric code-review-set-description (obj)
   "Set a pullrequest description for an OBJ.")
 
+(cl-defgeneric code-review-merge (obj strategy)
+  "Merge a PR for an OBJ using a given STRATEGY.")
+
 (provide 'code-review-core)
 ;;; code-review-core.el ends here
