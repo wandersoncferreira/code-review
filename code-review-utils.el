@@ -305,5 +305,24 @@ If a valid ASSIGNEE is provided, use that instead."
      code-review-buffer-name
      t)))
 
+(defun code-review-utils--set-feedback-field (feedback)
+  "Helper function to set a FEEDBACK."
+  (code-review-db--pullreq-feedback-update feedback)
+  (code-review-section--build-buffer
+   code-review-buffer-name
+   t))
+
+
+(defun code-review-utils--set-local-comment (comment metadata)
+  "Insert local COMMENT based on METADATA structure."
+  (let ((buff-name (if code-review-comment-commit?
+                       code-review-commit-buffer-name
+                     code-review-buffer-name)))
+    (code-review-section-insert-local-comment
+     comment
+     metadata
+     buff-name)
+    (code-review-section--build-buffer buff-name)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

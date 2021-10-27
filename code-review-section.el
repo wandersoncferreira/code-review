@@ -497,20 +497,8 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
           (oset section about about))))
     t))
 
-(defmacro code-review-section--with-buffer (buff-name &rest body)
-  "Include BODY in the buffer named BUFF-NAME."
-  (declare (indent 0))
-  `(let ((buffer (get-buffer-create ,buff-name)))
-     (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-         (erase-buffer)
-         (code-review-mode)
-         (magit-insert-section (review-buffer)
-           ,@body)))
-     buffer))
-
-(defun code-review-section--trigger-hooks (buff-name &optional window-config commit-focus?)
-  "Trigger magit section hooks, draw BUFF-NAME respecting WINDOW-CONFIG.
+(defun code-review-section--trigger-hooks (buff-name &optional commit-focus?)
+  "Trigger magit section hooks and draw BUFF-NAME.
 Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
   (unwind-protect
       (progn
@@ -518,48 +506,51 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
         (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
         (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-        (setq code-review-grouped-comments
-              (code-review-comment-make-group
-               (code-review-db--pullreq-raw-comments))
-              code-review-hold-written-comment-count nil
-              code-review-hold-written-comment-ids nil)
+        (with-current-buffer (get-buffer-create buff-name)
+          (let* ((window (get-buffer-window buff-name))
+                 (ws (window-start window))
+                 (inhibit-read-only t))
+            (save-excursion
+              (erase-buffer)
+              (insert (code-review-db--pullreq-raw-diff))
+              (insert ?\n)
+              (insert ?\n))
+            (magit-insert-section (review-buffer)
+              (magit-insert-section (code-review)
+                (if commit-focus?
+                    (magit-run-section-hook 'code-review-sections-commit-hook)
+                  (magit-run-section-hook 'code-review-sections-hook)))
+              (magit-wash-sequence
+               (apply-partially #'magit-diff-wash-diff ())))
+            (if-let (w (get-buffer-window buff-name))
+                (progn
+                  (select-window w)
+                  (set-window-start w ws)
+                  (when code-review-comment-cursor-pos
+                    (goto-char code-review-comment-cursor-pos)))
+              (progn
+                (switch-to-buffer-other-window buff-name)
+                (goto-char (point-min))))
+            (if commit-focus?
+                (code-review-commit-minor-mode)
+              (code-review-mode))
+            (code-review-section-insert-header-title))))
 
-        (let ((buff (code-review-section--with-buffer
-                      buff-name
-                      (progn
-                        (goto-char (point-min))
-                        (save-excursion
-                          (insert (code-review-db--pullreq-raw-diff))
-                          (insert ?\n)
-                          (insert ?\n))
-
-                        (magit-insert-section (code-review)
-                          (if commit-focus?
-                              (magit-run-section-hook 'code-review-sections-commit-hook)
-                            (magit-run-section-hook 'code-review-sections-hook)))
-
-                        (magit-wash-sequence
-                         (apply-partially #'magit-diff-wash-diff ()))))))
-
-          (when window-config
-            (set-window-configuration window-config))
-
-          buff))
     ;; remove advices
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
-(defun code-review-section--build-buffer (buff-name &optional not-switch-buffer?)
-  "Build BUFF-NAME and choose to NOT-SWITCH-BUFFER? by setting the var to non-nil."
+(defun code-review-section--build-buffer (buff-name &optional commit-focus?)
+  "Build BUFF-NAME and inform if we are in COMMIT-FOCUS? mode by setting the var to non-nil."
 
-  (when (not code-review-full-refresh?)
-    (let ((buf (code-review-section--trigger-hooks buff-name)))
-      (if not-switch-buffer?
-          buf
-        (progn
-          (switch-to-buffer-other-window buf)))))
+  (setq code-review-grouped-comments
+        (code-review-comment-make-group
+         (code-review-db--pullreq-raw-comments))
+        code-review-hold-written-comment-count nil
+        code-review-hold-written-comment-ids nil)
 
-  (when code-review-full-refresh?
+  (if (not code-review-full-refresh?)
+      (code-review-section--trigger-hooks buff-name commit-focus?)
     (let ((obj (code-review-db-get-pullreq)))
       (deferred:$
         (deferred:parallel
@@ -570,27 +561,20 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
             (let-alist (-second-item x)
               (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
               (code-review-db--pullreq-raw-diff-update (a-get (-first-item x) 'message))
-              (let ((buf (code-review-section--trigger-hooks buff-name)))
-                (when (not not-switch-buffer?)
-                  (switch-to-buffer-other-window buf))))))
+              (code-review-section--trigger-hooks buff-name))))
         (deferred:error it
           (lambda (err)
             (message "Got an error from your VC provider %S!" err)))))))
 
 (defun code-review-section--build-commit-buffer (buff-name)
   "Build commit buffer review given by BUFF-NAME."
-  (code-review-section--build-buffer buff-name t)
-  (code-review-commit-minor-mode))
+  (code-review-section--build-buffer buff-name t))
 
-(defun code-review-section-insert-local-comment (local-comment metadata window-config &optional commit-focus?)
-  "Insert LOCAL-COMMENT and attach section METADATA then preserve WINDOW-CONFIG.
-Using COMMIT-FOCUS? to enable add comment into commit review buffer."
-  (with-current-buffer (get-buffer (if commit-focus?
-                                       code-review-commit-buffer-name
-                                     code-review-buffer-name))
+(defun code-review-section-insert-local-comment (local-comment metadata buff-name)
+  "Insert LOCAL-COMMENT and attach section METADATA in BUFF-NAME."
+  (with-current-buffer (get-buffer buff-name)
     (let-alist metadata
-      (let ((inhibit-read-only t)
-            (pr (code-review-db-get-pullreq))
+      (let ((pr (code-review-db-get-pullreq))
             (current-line-pos (save-excursion
                                 (goto-char .cursor-pos)
                                 (line-number-at-pos))))
@@ -646,14 +630,7 @@ Using COMMIT-FOCUS? to enable add comment into commit review buffer."
                                                 (path . ,path-name)
                                                 (position . ,(if reply? reply-pos diff-pos))
                                                 (databaseId . ,(a-get metadata 'database-id))))))))
-                      (code-review-db--pullreq-raw-comments-update local-comment-record)))))))
-          (erase-buffer)
-          (code-review-section--trigger-hooks
-           (if commit-focus?
-               code-review-commit-buffer-name
-             code-review-buffer-name))
-          (set-window-configuration window-config)
-          (goto-char .cursor-pos))))))
+                      (code-review-db--pullreq-raw-comments-update local-comment-record))))))))))))
 
 (defun code-review-section-delete-local-comment ()
   "Delete a local comment."
