@@ -539,8 +539,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
                             (magit-run-section-hook 'code-review-sections-hook)))
 
                         (magit-wash-sequence
-                         (apply-partially #'magit-diff-wash-diff ()))
-                        (goto-char (point-min))))))
+                         (apply-partially #'magit-diff-wash-diff ()))))))
 
           (when window-config
             (set-window-configuration window-config))
@@ -558,8 +557,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
       (if not-switch-buffer?
           buf
         (progn
-          (switch-to-buffer-other-window buf)
-          (goto-char (point-min))))))
+          (switch-to-buffer-other-window buf)))))
 
   (when code-review-full-refresh?
     (let ((obj (code-review-db-get-pullreq)))
@@ -653,8 +651,9 @@ Using COMMIT-FOCUS? to enable add comment into commit review buffer."
           (code-review-section--trigger-hooks
            (if commit-focus?
                code-review-commit-buffer-name
-             code-review-buffer-name)
-           window-config))))))
+             code-review-buffer-name))
+          (set-window-configuration window-config)
+          (goto-char .cursor-pos))))))
 
 (defun code-review-section-delete-local-comment ()
   "Delete a local comment."
