@@ -60,7 +60,7 @@ if you are using `use-package`:
 ```
 
 You also need to install the dependencies manually for now: `closql`, `uuidgen`,
-`magit`, `markdown-mode`, `forge`.
+`magit`, `markdown-mode`, `forge`, `ghub`. `deferred`.
 
 
 Then you can either `M-x code-review-start` and provide a PR URL or `M-x
