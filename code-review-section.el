@@ -632,7 +632,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
                                      (internal-id . ,(uuidgen-4))))))))
             (progn
               (goto-char .cursor-pos)
-              (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file"))
+              (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file\\|deleted"))
                           (not (equal (point) (point-min))))
                 (forward-line -1))
               (let ((section (magit-current-section))
