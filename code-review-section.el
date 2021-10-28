@@ -501,44 +501,45 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
   "Trigger magit section hooks and draw BUFF-NAME.
 Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
   (unwind-protect
-      (progn
-        ;; advices
-        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+    (progn
+      ;; advices
+      (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
+      (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-        (with-current-buffer (get-buffer-create buff-name)
-          (let* ((window (get-buffer-window buff-name))
-                 (ws (window-start window))
-                 (inhibit-read-only t))
-            (save-excursion
-              (erase-buffer)
-              (insert (code-review-db--pullreq-raw-diff))
-              (insert ?\n)
-              (insert ?\n))
-            (magit-insert-section (review-buffer)
-              (magit-insert-section (code-review)
-                (if commit-focus?
-                    (magit-run-section-hook 'code-review-sections-commit-hook)
-                  (magit-run-section-hook 'code-review-sections-hook)))
-              (magit-wash-sequence
-               (apply-partially #'magit-diff-wash-diff ())))
-            (if-let (w (get-buffer-window buff-name))
-                (progn
-                  (select-window w)
-                  (set-window-start w ws)
-                  (when code-review-comment-cursor-pos
-                    (goto-char code-review-comment-cursor-pos)))
+      (with-current-buffer (get-buffer-create buff-name)
+        (let* ((window (get-buffer-window buff-name))
+               (ws (window-start window))
+               (inhibit-read-only t))
+          (save-excursion
+            (erase-buffer)
+            (insert (code-review-db--pullreq-raw-diff))
+            (insert ?\n)
+            (insert ?\n))
+          (magit-insert-section (review-buffer)
+            (magit-insert-section (code-review)
+              (if commit-focus?
+                  (magit-run-section-hook 'code-review-sections-commit-hook)
+                (magit-run-section-hook 'code-review-sections-hook)))
+            (magit-wash-sequence
+             (apply-partially #'magit-diff-wash-diff ())))
+          (if window
               (progn
-                (switch-to-buffer-other-window buff-name)
-                (goto-char (point-min))))
-            (if commit-focus?
-                (code-review-commit-minor-mode)
-              (code-review-mode))
-            (code-review-section-insert-header-title))))
+                (pop-to-buffer buff-name)
+                (set-window-start window ws)
+                (when code-review-comment-cursor-pos
+                  (goto-char code-review-comment-cursor-pos)))
+            (progn
+              (switch-to-buffer-other-window buff-name)
+              (goto-char (point-min))))
+          (if commit-focus?
+              (code-review-commit-minor-mode)
+            (code-review-mode))
+          (code-review-section-insert-header-title))))
 
     ;; remove advices
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
+
 
 (defun code-review-section--build-buffer (buff-name &optional commit-focus?)
   "Build BUFF-NAME and inform if we are in COMMIT-FOCUS? mode by setting the var to non-nil."
@@ -564,7 +565,10 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
               (code-review-section--trigger-hooks buff-name))))
         (deferred:error it
           (lambda (err)
-            (message "Got an error from your VC provider %S!" err)))))))
+            (code-review-utils--log
+             "code-review-section--build-buffer"
+             (prin1-to-string err))
+            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
 
 (defun code-review-section--build-commit-buffer (buff-name)
   "Build commit buffer review given by BUFF-NAME."

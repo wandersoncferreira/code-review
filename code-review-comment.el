@@ -94,6 +94,23 @@ For internal usage only.")
                 (let* ((comment-enriched (a-assoc comment 'author author 'state state))
                        (handled-pos (or .position .originalPosition))
                        (path-pos (code-review-utils--comment-key .path handled-pos)))
+
+                  ;;; extra checks
+                  (when (not handled-pos)
+                    (throw :code-review/comment-missing-position
+                           "Every comment requires a position in the diff."))
+
+                  (when (not .path)
+                    (throw :code-review/comment-missing-path
+                           "Every comment requires a path in the diff."))
+
+                  (when (not .bodyText)
+                    (throw :code-review/comment-missing-body
+                           "Every comment requires a body in the diff."))
+
+                  ;;; TODO: should I guarantee that every comment has an associated diffHunk?
+                  ;;; this is currently not true for local comments.
+
                   (if (or (not grouped-comments)
                           (not (code-review-utils--comment-get grouped-comments path-pos)))
                       (a-assoc grouped-comments path-pos (list comment-enriched))

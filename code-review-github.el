@@ -29,6 +29,7 @@
 (require 'ghub)
 (require 'deferred)
 (require 'code-review-core)
+(require 'code-review-utils)
 (require 'a)
 
 (defclass code-review-github-repo (code-review-pullreq)
@@ -52,7 +53,10 @@
 (defun code-review-github-errback (&rest m)
   "Error callback, displays the error message M."
   (let-alist m
-    (let ((status (-second-item .error)))
+    (let* ((status (-second-item .error)))
+      (code-review-utils--log
+       "github-error-callback"
+       (prin1-to-string msg))
       (cond
        ((= status 404)
         (message "Provided URL Not Found"))

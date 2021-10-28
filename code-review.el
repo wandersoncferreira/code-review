@@ -58,6 +58,13 @@
   :group 'code-review
   :type 'string)
 
+(defcustom code-review-log-file (expand-file-name
+                                 "code-review-error.log"
+                                 user-emacs-directory)
+  "Path to write append only log errors."
+  :group 'code-review
+  :type 'file)
+
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title
@@ -330,7 +337,9 @@ If you already have a FEEDBACK string use it."
 OUTDATED."
   (interactive)
   (setq code-review-full-refresh? t)
-  (code-review-utils--start-from-forge-at-point))
+  (ignore-errors
+    (code-review-utils--start-from-forge-at-point))
+  (setq code-review-full-refresh? nil))
 
 ;;; Commit buffer
 

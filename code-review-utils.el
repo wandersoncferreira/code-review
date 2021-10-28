@@ -324,5 +324,22 @@ If a valid ASSIGNEE is provided, use that instead."
      buff-name)
     (code-review-section--build-buffer buff-name)))
 
+;;; LOG
+
+(defun code-review-utils--log (origin msg)
+  "Log MSG from ORIGIN to error file."
+  (with-temp-buffer
+    (when (not (file-exists-p code-review-log-file))
+      (write-file code-review-log-file))
+    (insert-file code-review-log-file)
+    (goto-char (point-max))
+    (insert ?\n)
+    (insert (current-time-string))
+    (insert " - ")
+    (insert origin)
+    (insert " - ")
+    (insert msg)
+    (insert ?\n)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
