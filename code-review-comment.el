@@ -276,7 +276,8 @@ For internal usage only.")
         code-review-comment-cursor-pos nil
         code-review-comment-window-configuration nil
         code-review-comment-feedback? nil
-        code-review-comment-editing? nil))
+        code-review-comment-editing? nil)
+  (kill-buffer code-review-comment-buffer-name))
 
 ;;;###autoload
 (defun code-review-comment-add-or-edit ()
