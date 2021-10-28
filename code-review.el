@@ -74,7 +74,8 @@
     code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
-    code-review-section-insert-suggested-reviewers)
+    code-review-section-insert-suggested-reviewers
+    code-review-section-insert-is-draft)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)

@@ -127,6 +127,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       headRef { target{ oid } }
       baseRefName
       headRefName
+      isDraft
       number
       milestone {
         title

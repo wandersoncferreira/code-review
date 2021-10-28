@@ -69,6 +69,16 @@ For internal usage only.")
              'font-lock-face
              'magit-section-heading)))))
 
+;;; TODO: add some nice face to true and false
+(defun code-review-section-insert-is-draft ()
+  "Insert the isDraft value of the header buffer."
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
+      (let ((draft? (if .isDraft "true" "false")))
+        (magit-insert-section (code-review-is-draft draft?)
+          (insert (format "%-17s" "Draft: ") draft?)
+          (insert ?\n))))))
+
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
   (when-let (title (code-review-db--pullreq-title))
