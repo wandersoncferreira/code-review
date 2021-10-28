@@ -410,8 +410,12 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
   ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
   ;;; so the positioning of comments is done correctly.
-  (code-review-db--curr-path-update (substring-no-properties file))
-  ;;; --- end -- code-review specific code.
+  (let* ((raw-path-name (substring-no-properties file))
+         (clean-path (if (string-prefix-p "b/" raw-path-name)
+                         (replace-regexp-in-string "^b\\/" "" raw-path-name)
+                       raw-path-name)))
+    (code-review-db--curr-path-update clean-path))
+    ;;; --- end -- code-review specific code.
 
   (magit-insert-section section
     (file file (or (equal status "deleted")
@@ -576,12 +580,6 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
 (defun code-review-section--build-buffer (buff-name &optional commit-focus?)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks."
 
-  (setq code-review-grouped-comments
-        (code-review-comment-make-group
-         (code-review-db--pullreq-raw-comments))
-        code-review-hold-written-comment-count nil
-        code-review-hold-written-comment-ids nil)
-
   (if (not code-review-full-refresh?)
       (code-review-section--trigger-hooks buff-name commit-focus?)
     (let ((obj (code-review-db-get-pullreq)))
@@ -596,6 +594,13 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
               (code-review-db--pullreq-raw-diff-update
                (code-review-utils--clean-diff-prefixes
                 (a-get (-first-item x) 'message)))
+
+              (setq code-review-grouped-comments
+                    (code-review-comment-make-group
+                     (code-review-db--pullreq-raw-comments))
+                    code-review-hold-written-comment-count nil
+                    code-review-hold-written-comment-ids nil)
+
               (code-review-section--trigger-hooks buff-name))))
         (deferred:error it
           (lambda (err)
