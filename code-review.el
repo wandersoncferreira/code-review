@@ -288,11 +288,9 @@ If you already have a FEEDBACK string use it."
   (let ((pr (code-review-db-get-pullreq)))
     (code-review-merge pr "merge")
     (oset pr state "MERGED")
-    (closql-insert (code-review-db) pr t)
-    (setq code-review-full-refresh? nil)
+    (code-review-db-update pr)
     (code-review-section--build-buffer
-     code-review-buffer-name
-     t)))
+     code-review-buffer-name)))
 
 ;;;###autoload
 (defun code-review-merge-rebase ()
@@ -301,11 +299,9 @@ If you already have a FEEDBACK string use it."
   (let ((pr (code-review-db-get-pullreq)))
     (code-review-merge pr "rebase")
     (oset pr state "MERGED")
-    (closql-insert (code-review-db) pr t)
-    (setq code-review-full-refresh? nil)
+    (code-review-db-update pr)
     (code-review-section--build-buffer
-     code-review-buffer-name
-     t)))
+     code-review-buffer-name)))
 
 ;;;###autoload
 (defun code-review-merge-squash ()
@@ -314,11 +310,9 @@ If you already have a FEEDBACK string use it."
   (let ((pr (code-review-db-get-pullreq)))
     (code-review-merge pr "squash")
     (oset pr state "MERGED")
-    (closql-insert (code-review-db) pr t)
-    (setq code-review-full-refresh? nil)
+    (code-review-db-update pr)
     (code-review-section--build-buffer
-     code-review-buffer-name
-     t)))
+     code-review-buffer-name)))
 
 ;;; Entrypoint
 
@@ -326,10 +320,12 @@ If you already have a FEEDBACK string use it."
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (code-review-utils-build-obj-from-url url)
   (setq code-review-full-refresh? t)
-  (code-review-section--build-buffer
-   code-review-buffer-name))
+  (ignore-errors
+    (code-review-utils-build-obj-from-url url)
+    (code-review-section--build-buffer
+     code-review-buffer-name))
+  (setq code-review-full-refresh? nil))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
