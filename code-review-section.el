@@ -265,9 +265,16 @@ For internal usage only.")
   (let* ((hunk-groups (-group-by (lambda (el) (a-get el 'diffHunk)) comments))
          (hunks (a-keys hunk-groups)))
     (dolist (hunk hunks)
-      (let* ((diff-hunk-lines (split-string hunk "\n"))
+      (when (not hunk)
+        (code-review-utils--log
+         "code-review-section-insert-outdated-comment"
+         (format "Every outdated comment must have a hunk! Error found for %S"
+                 (prin1-to-string hunk)))
+        (message "Hunk empty found. A empty string will be used instead. Report this bug please."))
+      (let* ((safe-hunk (or hunk ""))
+             (diff-hunk-lines (split-string safe-hunk "\n"))
              (amount-new-loc (+ 1 (length diff-hunk-lines)))
-             (first-hunk-commit (-first-item (alist-get hunk hunk-groups nil nil 'equal)))
+             (first-hunk-commit (-first-item (alist-get safe-hunk hunk-groups nil nil 'equal)))
              (metadata1 `((comment . ,first-hunk-commit)
                           (amount-loc ., (+ amount-loc amount-new-loc)))))
 
@@ -285,11 +292,11 @@ For internal usage only.")
             (magit-insert-heading heading)
             (magit-insert-section ()
               (save-excursion
-                (insert hunk))
+                (insert safe-hunk))
               (magit-diff-wash-hunk)
               (insert ?\n)
 
-              (dolist (c (alist-get hunk hunk-groups nil nil 'equal))
+              (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
                 (let* ((body-lines (code-review-utils--split-comment (a-get c 'bodyText)))
                        (amount-new-loc-outdated (+ 2 (length body-lines)))
                        (metadata2 `((comment . ,c)
@@ -442,6 +449,15 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
           (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
           (setq head-pos adjusted-pos)
           (setq path-name path-name)))
+
+      (when (not head-pos)
+        (code-review-utils--log
+         "code-review-section--magit-diff-wash-hunk"
+         (format "Every diff is associated with a PATH (the file). Head pos nil for %S"
+                 (prin1-to-string path)))
+        (message (format "ERROR: Head position for path %s was not found.
+Please Report this Bug" path-name)))
+
     ;;; --- end -- code-review specific code.
 
       (let* ((heading  (match-string 0))
@@ -464,7 +480,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
             (let* ((comment-written-pos
                     (or (alist-get path-name code-review-hold-written-comment-count nil nil 'equal) 0))
                    (diff-pos (- (line-number-at-pos)
-                                head-pos
+                                (or head-pos 0)
                                 comment-written-pos))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
                    (written? (-contains-p code-review-hold-written-comment-ids path-pos))
@@ -616,16 +632,31 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
                     (if (string-equal type "file")
                         (setq amount-loc 0
                               path-name (substring-no-properties value))
-                      (setq amount-loc (a-get value 'amount-loc)
-                            path-name (a-get-in value (list 'comment 'path))))
+                      (let ((aml (a-get value 'amount-loc))
+                            (pn (a-get-in value (list 'comment 'path))))
+
+                        (when (not aml)
+                          (code-review-utils--log
+                           "code-review-section-insert-local-comment"
+                           (format "Amount of lines of comment written not found. Report this bug. %S"
+                                   (prin1-to-string section))))
+
+                        (when (not pn)
+                          (code-review-utils--log
+                           "code-review-section-insert-local-comment"
+                           (format "Path name not found in comment. Report this bug. %S"
+                                   (prin1-to-string section))))
+
+                        (setq amount-loc (or aml 0)
+                              path-name (or pn ""))))
                     (let* ((diff-pos (+ (- current-line-pos
                                            amount-loc
                                            (code-review-db--head-pos path-name))
                                         0))
                            (reply? (a-get metadata 'reply?))
                            (reply-pos (when reply?
-                                        (- (+ (a-get metadata 'position)
-                                              (length (split-string (a-get metadata 'comment-text) "\n")))
+                                        (- (+ (or (a-get metadata 'position) 0)
+                                              (length (split-string (or (a-get metadata 'comment-text) "") "\n")))
                                            1)))
                            (state (if reply? "REPLY COMMENT" "LOCAL COMMENT"))
                            (local-comment-record

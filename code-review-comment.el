@@ -105,8 +105,11 @@ For internal usage only.")
                            "Every comment requires a path in the diff."))
 
                   (when (not .bodyText)
-                    (throw :code-review/comment-missing-body
-                           "Every comment requires a body in the diff."))
+                    (code-review-utils--log
+                     "code-review-comment-make-group"
+                     (format "Every comment should have a body. Nil value found. %S"
+                             (prin1-to-string comment)))
+                    (message "Comment with nil body"))
 
                   ;;; TODO: should I guarantee that every comment has an associated diffHunk?
                   ;;; this is currently not true for local comments.

@@ -106,9 +106,10 @@ using COMMENTS."
 
 (defun code-review-utils--split-comment (comment)
   "Clean and split the COMMENT in lines."
-  (if (string-match-p "Suggested change" comment)
-      (code-review-utils--clean-suggestion comment)
-    (split-string comment "\n")))
+  (let ((safe-comment (or comment "")))
+    (if (string-match-p "Suggested change" safe-comment)
+        (code-review-utils--clean-suggestion safe-comment)
+      (split-string safe-comment "\n"))))
 
 
 (defun code-review-utils--missing-outdated-commments? (path-name path-pos-written grouped-comments)
