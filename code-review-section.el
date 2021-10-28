@@ -583,7 +583,9 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
           (lambda (x)
             (let-alist (-second-item x)
               (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update (a-get (-first-item x) 'message))
+              (code-review-db--pullreq-raw-diff-update
+               (code-review-utils--clean-diff-prefixes
+                (a-get (-first-item x) 'message)))
               (code-review-section--trigger-hooks buff-name))))
         (deferred:error it
           (lambda (err)

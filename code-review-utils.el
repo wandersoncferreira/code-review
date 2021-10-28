@@ -344,5 +344,37 @@ If a valid ASSIGNEE is provided, use that instead."
     (insert msg)
     (insert ?\n)))
 
+;;; DIFF
+
+(setq code-review-utils--regex-clean-prefix
+  (rx "diff --git"
+      space
+      "a/"
+      (group-n 1 (one-or-more not-newline))
+      space
+      "b/"
+      (group-n 2 (one-or-more not-newline))))
+
+(defun code-review-utils--clean-diff-prefixes (raw-diff)
+  "Remove all prefixes from RAW-DIFF.
+Expect the same output as `git diff --no-prefix`"
+  (let ((tmp-buff (generate-new-buffer " *temp*")))
+    (with-current-buffer tmp-buff
+      (insert raw-diff)
+      (goto-char (point-min))
+      (magit-wash-sequence
+       (lambda ()
+         (when (looking-at code-review-utils--regex-clean-prefix)
+           (let ((file1 (match-string 1))
+                 (file2 (match-string 2)))
+             (magit-delete-line)
+             (insert "diff --git ")
+             (insert file1)
+             (insert " ")
+             (insert file2)
+             (insert ?\n)))
+         (forward-line)))
+      (buffer-substring-no-properties (point-min) (point-max)))))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
