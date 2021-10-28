@@ -55,11 +55,14 @@
   (let-alist m
     (let* ((status (-second-item .error)))
       (code-review-utils--log
-       "github-error-callback"
-       (prin1-to-string msg))
+       "code-review-github-errback"
+       (prin1-to-string m))
       (cond
        ((= status 404)
         (message "Provided URL Not Found"))
+       ((= status 401)
+        (message "Bad credentials. Documentation to how to setup credentials
+https://github.com/wandersoncferreira/code-review#configuration"))
        (t
         (message "Unknown error talking to Github: %s" m))))))
 
