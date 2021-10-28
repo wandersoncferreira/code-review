@@ -218,10 +218,11 @@ If you already have a FEEDBACK string use it."
          obj
          (lambda (&rest _)
            (message "Done submitting review")))
-        (setq code-review-full-refresh? t)
-        (code-review-section--build-buffer
-         code-review-buffer-name
-         t))))))
+        (ignore-errors
+          (setq code-review-full-refresh? t)
+          (code-review-section--build-buffer
+           code-review-buffer-name))
+        (setq code-review-full-refresh? nil))))))
 
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."
@@ -238,7 +239,8 @@ If you already have a FEEDBACK string use it."
 (defun code-review-commit-buffer-back ()
   "Move from commit buffer to review buffer."
   (interactive)
-  (if (equal (current-buffer) (get-buffer code-review-commit-buffer-name))
+  (if (equal (current-buffer)
+             (get-buffer code-review-commit-buffer-name))
       (progn
         (setq code-review-comment-commit? nil
               code-review-full-refresh? nil)
