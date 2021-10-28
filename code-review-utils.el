@@ -36,6 +36,9 @@
 
 ;;;
 (defvar code-review-buffer-name)
+(defvar code-review-commit-buffer-name)
+(defvar code-review-log-file)
+(defvar code-review-comment-commit?)
 
 (defun code-review-utils-current-project-buffer-name ()
   "Return the name of the buffer we are currently in."
@@ -266,7 +269,6 @@ If a valid ASSIGNEE is provided, use that instead."
       (let* ((options (code-review-get-assignees obj))
              (choice (completing-read "Choose: " options)))
         (setq candidate choice)))
-    (prin1 "AQUI?")
     (oset obj assignees candidate)
     (code-review-set-assignee obj)
     (closql-insert (code-review-db) obj t)

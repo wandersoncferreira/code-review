@@ -121,8 +121,20 @@ For internal usage only.")
    nil
    raw-comments))
 
+(defun code-review-comment-reset-global-vars ()
+  "Reset all stateful vars."
+  (setq code-review-comment-metadata nil
+        code-review-comment-cursor-pos nil
+        code-review-comment-editing? nil
+        code-review-comment-feedback? nil
+        code-review-comment-description? nil
+        code-review-comment-title? nil
+        code-review-comment-window-configuration nil
+        code-review-comment-commit? nil))
+
 (defun code-review-comment--hold-metadata ()
   "Save metadata to attach to local comment at commit phase."
+  ;; TODO: include safety checks
   (with-slots (type value start end) (magit-current-section)
     (let-alist value
       (let ((metadata
@@ -259,24 +271,14 @@ For internal usage only.")
              (-> code-review-comment-metadata
                  (a-assoc 'cursor-pos code-review-comment-cursor-pos 'editing? code-review-comment-editing?)
                  (a-assoc-in (list 'comment 'bodyText) comment-cleaned)))))))
-    (setq code-review-comment-metadata nil
-          code-review-comment-cursor-pos nil
-          code-review-comment-editing? nil
-          code-review-comment-feedback? nil
-          code-review-comment-description? nil
-          code-review-comment-title? nil
-          code-review-comment-window-configuration nil
-          code-review-comment-commit? nil)))
+
+    (code-review-comment-reset-global-vars)))
 
 ;;;###autoload
 (defun code-review-comment-quit ()
   "Quit the comment window."
   (interactive)
-  (setq code-review-comment-metadata nil
-        code-review-comment-cursor-pos nil
-        code-review-comment-window-configuration nil
-        code-review-comment-feedback? nil
-        code-review-comment-editing? nil)
+  (code-review-comment-reset-global-vars)
   (kill-buffer code-review-comment-buffer-name))
 
 ;;;###autoload
