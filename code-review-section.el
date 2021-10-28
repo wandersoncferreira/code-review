@@ -26,14 +26,20 @@
 ;;
 ;;; Code:
 
+(require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
+(require 'code-review-core)
 (require 'code-review-db)
+(require 'code-review-utils)
 
 ;; fix unbound symbols
 (defvar magit-root-section)
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
+(defvar code-review-comment-cursor-pos)
+(defvar code-review-commit-minor-mode)
+(defvar code-review-mode)
 
 (defvar code-review-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -542,7 +548,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
 
 
 (defun code-review-section--build-buffer (buff-name &optional commit-focus?)
-  "Build BUFF-NAME and inform if we are in COMMIT-FOCUS? mode by setting the var to non-nil."
+  "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks."
 
   (setq code-review-grouped-comments
         (code-review-comment-make-group
@@ -578,8 +584,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
   "Insert LOCAL-COMMENT and attach section METADATA in BUFF-NAME."
   (with-current-buffer (get-buffer buff-name)
     (let-alist metadata
-      (let ((pr (code-review-db-get-pullreq))
-            (current-line-pos (save-excursion
+      (let ((current-line-pos (save-excursion
                                 (goto-char .cursor-pos)
                                 (line-number-at-pos))))
         (magit-insert-section (code-review-local-comment-header metadata)

@@ -109,7 +109,7 @@ using COMMENTS."
 
 
 (defun code-review-utils--missing-outdated-commments? (path-name path-pos-written grouped-comments)
-  "Use PATH-NAME, PATH-POS-WRITTEN, and GROUPED-COMMENTS to find if we still have more comments to write."
+  "PATH-NAME, PATH-POS-WRITTEN, and GROUPED-COMMENTS to find comments to write."
   (let* ((written-in-path (-filter
                            (lambda (ckey)
                              (string-prefix-p path-name ckey))

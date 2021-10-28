@@ -253,16 +253,12 @@ For internal usage only.")
          (t
           (let* ((comment-cleaned (code-review-utils--comment-clean-msg
                                    comment-text
-                                   code-review-comment-buffer-msg))
-                 (buff
-                  (code-review-utils--set-local-comment
-                   comment-cleaned
-                   (-> code-review-comment-metadata
-                       (a-assoc 'cursor-pos code-review-comment-cursor-pos 'editing? code-review-comment-editing?)
-                       (a-assoc-in (list 'comment 'bodyText) comment-cleaned)))))
-            ;; (set-window-configuration code-review-comment-window-configuration)
-            ;; (goto-char code-review-comment-cursor-pos)
-            ))))
+                                   code-review-comment-buffer-msg)))
+            (code-review-utils--set-local-comment
+             comment-cleaned
+             (-> code-review-comment-metadata
+                 (a-assoc 'cursor-pos code-review-comment-cursor-pos 'editing? code-review-comment-editing?)
+                 (a-assoc-in (list 'comment 'bodyText) comment-cleaned)))))))
     (setq code-review-comment-metadata nil
           code-review-comment-cursor-pos nil
           code-review-comment-editing? nil

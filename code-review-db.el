@@ -17,6 +17,7 @@
 (require 'closql)
 (require 'eieio)
 (require 'uuidgen)
+(require 'dash)
 
 (defcustom code-review-database-connector 'sqlite
   "The database connector."
@@ -425,7 +426,7 @@
 ;; comments
 
 (defun code-review-db--comment-already-written? (identifier)
-  "Verify if comment from pullreq BUFFER-ID with IDENTIFIER was already marked as written.
+  "Verify if comment with IDENTIFIER was marked as written.
 Very Bad Performance!."
   (let* ((buffer (code-review-db-get-buffer))
          (paths (oref buffer paths)))
