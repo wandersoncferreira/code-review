@@ -334,7 +334,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (with-temp-buffer
     (when (not (file-exists-p code-review-log-file))
       (write-file code-review-log-file))
-    (insert-file code-review-log-file)
+    (insert-file-contents code-review-log-file)
     (goto-char (point-max))
     (insert ?\n)
     (insert (current-time-string))

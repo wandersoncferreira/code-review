@@ -195,7 +195,7 @@
 
 ;;;###autoload
 (defun code-review-submit (event &optional feedback)
-  "Submit your review with a final veredict (EVENT).
+  "Submit your review with a final verdict (EVENT).
 If you already have a FEEDBACK string use it."
   (interactive)
   (let ((obj (code-review-utils--gen-submit-structure feedback)))
@@ -342,7 +342,7 @@ OUTDATED."
 ;;; Commit buffer
 
 (define-minor-mode code-review-commit-minor-mode
-  "Code Review Commit"
+  "Code Review Commit."
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "b") 'code-review-commit-buffer-back)
             map))
