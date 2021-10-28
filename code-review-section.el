@@ -537,40 +537,46 @@ Please Report this Bug" path-name)))
   "Trigger magit section hooks and draw BUFF-NAME.
 Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
   (unwind-protect
-    (progn
-      ;; advices
-      (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-      (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+      (progn
+        ;; advices
+        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
+        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-      (with-current-buffer (get-buffer-create buff-name)
-        (let* ((window (get-buffer-window buff-name))
-               (ws (window-start window))
-               (inhibit-read-only t))
-          (save-excursion
-            (erase-buffer)
-            (insert (code-review-db--pullreq-raw-diff))
-            (insert ?\n)
-            (insert ?\n))
-          (magit-insert-section (review-buffer)
-            (magit-insert-section (code-review)
-              (if commit-focus?
-                  (magit-run-section-hook 'code-review-sections-commit-hook)
-                (magit-run-section-hook 'code-review-sections-hook)))
-            (magit-wash-sequence
-             (apply-partially #'magit-diff-wash-diff ())))
-          (if window
+        (setq code-review-grouped-comments
+              (code-review-comment-make-group
+               (code-review-db--pullreq-raw-comments))
+              code-review-hold-written-comment-count nil
+              code-review-hold-written-comment-ids nil)
+
+        (with-current-buffer (get-buffer-create buff-name)
+          (let* ((window (get-buffer-window buff-name))
+                 (ws (window-start window))
+                 (inhibit-read-only t))
+            (save-excursion
+              (erase-buffer)
+              (insert (code-review-db--pullreq-raw-diff))
+              (insert ?\n)
+              (insert ?\n))
+            (magit-insert-section (review-buffer)
+              (magit-insert-section (code-review)
+                (if commit-focus?
+                    (magit-run-section-hook 'code-review-sections-commit-hook)
+                  (magit-run-section-hook 'code-review-sections-hook)))
+              (magit-wash-sequence
+               (apply-partially #'magit-diff-wash-diff ())))
+            (if window
+                (progn
+                  (pop-to-buffer buff-name)
+                  (set-window-start window ws)
+                  (when code-review-comment-cursor-pos
+                    (goto-char code-review-comment-cursor-pos)))
               (progn
-                (pop-to-buffer buff-name)
-                (set-window-start window ws)
-                (when code-review-comment-cursor-pos
-                  (goto-char code-review-comment-cursor-pos)))
-            (progn
-              (switch-to-buffer-other-window buff-name)
-              (goto-char (point-min))))
-          (if commit-focus?
-              (code-review-commit-minor-mode)
-            (code-review-mode))
-          (code-review-section-insert-header-title))))
+                (switch-to-buffer-other-window buff-name)
+                (goto-char (point-min))))
+            (if commit-focus?
+                (code-review-commit-minor-mode)
+              (code-review-mode))
+            (code-review-section-insert-header-title))))
 
     ;; remove advices
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
@@ -594,13 +600,6 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
               (code-review-db--pullreq-raw-diff-update
                (code-review-utils--clean-diff-prefixes
                 (a-get (-first-item x) 'message)))
-
-              (setq code-review-grouped-comments
-                    (code-review-comment-make-group
-                     (code-review-db--pullreq-raw-comments))
-                    code-review-hold-written-comment-count nil
-                    code-review-hold-written-comment-ids nil)
-
               (code-review-section--trigger-hooks buff-name))))
         (deferred:error it
           (lambda (err)
@@ -647,8 +646,12 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
                     (setq amount-loc 0)
                   (with-slots (type value) section
                     (if (string-equal type "file")
-                        (setq amount-loc 0
-                              path-name (substring-no-properties value))
+                        (let* ((raw-path-name (substring-no-properties value))
+                               (clean-path (if (string-prefix-p "b/" raw-path-name)
+                                               (replace-regexp-in-string "^b\\/" "" raw-path-name)
+                                             raw-path-name)))
+                          (setq amount-loc 0
+                                path-name clean-path))
                       (let ((aml (a-get value 'amount-loc))
                             (pn (a-get-in value (list 'comment 'path))))
 
