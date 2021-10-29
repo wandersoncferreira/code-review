@@ -23,22 +23,19 @@ Verify if the buffer has anything written using BUFFER-NIL?."
   (with-temp-buffer
     (funcall fun)
     (setq count 0)
-    (save-window-excursion
-      (set-window-buffer nil (current-buffer))
-      (goto-char (point-min))
-      (magit-wash-sequence
-       (lambda ()
-         (when-let (section (magit-current-section))
-           (with-slots (type value) section
-             (let ((rule (nth count expected)))
-               (prin1 (format "TYPE: %S  and COUNT: %S\n" type count))
-               (expect (a-get rule 'type) :to-equal type)
-               (expect (a-get rule 'value) :to-equal value))
-             (setq count (1+ count))))
-         (magit-section-forward-sibling)))
-      (if buffer-nil?
-          (expect (buffer-string) :to-match "")
-        (expect (buffer-string) :to-match (rx (any word)))))))
+    (goto-char (point-min))
+    (magit-wash-sequence
+     (lambda ()
+       (when-let (section (magit-current-section))
+         (with-slots (type value) section
+           (let ((rule (nth count expected)))
+             (expect (a-get rule 'type) :to-equal type)
+             (expect (a-get rule 'value) :to-equal value))
+           (setq count (1+ count))))
+       (magit-section-forward-sibling)))
+    (if buffer-nil?
+        (expect (buffer-string) :to-match "")
+      (expect (buffer-string) :to-match (rx (any word))))))
 
 (describe "HEADER"
   :var (code-review-database-file
@@ -49,14 +46,12 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (code-review-db--pullreq-create sample-pr-obj))
 
   (describe "TITLE"
-    (before-each
-      (code-review-db--pullreq-create sample-pr-obj))
-    ;; (it "available in raw-infos should be added."
-    ;;   (code-review-db--pullreq-raw-infos-update `((title . "My title")))
-    ;;   (with-written-section
-    ;;    (lambda () (code-review-section-insert-title))
-    ;;    `(((type . code-review-title)
-    ;;       (value . "My title")))))
+    (it "available in raw-infos should be added."
+      (code-review-db--pullreq-raw-infos-update `((title . "My title")))
+      (with-written-section
+       (lambda () (code-review-section-insert-title))
+       `(((type . code-review-title)
+          (value . "My title")))))
     (it "missing, should not break and not added to the buffer entirely."
       (with-written-section
        (lambda () (code-review-section-insert-title))
@@ -73,8 +68,6 @@ Verify if the buffer has anything written using BUFFER-NIL?."
           (value . "OPEN"))))))
 
   (describe "MILESTONE"
-    (before-each
-      (code-review-db--pullreq-create sample-pr-obj))
     (it "available raw-infos and should be added to the buffer."
       (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
                                                              (progressPercentage . "50"))))
