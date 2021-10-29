@@ -288,8 +288,7 @@ For internal usage only.")
 (defun code-review-comment-add-or-edit ()
   "Add or edit comment depending on context."
   (interactive)
-  (setq code-review-comment-commit? (string-equal (buffer-name (current-buffer)) code-review-commit-buffer-name)
-        code-review-comment-cursor-pos (line-beginning-position)
+  (setq code-review-comment-cursor-pos (line-beginning-position)
         code-review-comment-window-configuration (current-window-configuration))
 
   (let ((section (magit-current-section)))
@@ -302,6 +301,9 @@ For internal usage only.")
                          code-review-reply-comment
                          code-review-reply-comment-header)
                        type)
+          (setq code-review-comment-commit? (string-equal
+                                             (buffer-name (current-buffer))
+                                             code-review-commit-buffer-name))
           (code-review-comment-edit))
          ((string-equal type "hunk")
           (code-review-comment-add))
@@ -313,9 +315,12 @@ For internal usage only.")
                          code-review-feedback)
                        type)
           (if (not (a-get value 'feedback))
-              (code-review-comment-add-feedback)
+              (progn
+                (set code-review-comment-commit? nil)
+                (code-review-comment-add-feedback))
             (progn
-              (setq code-review-comment-feedback? t)
+              (setq code-review-comment-feedback? t
+                    code-review-comment-commit? nil)
               (code-review-comment-edit))))
          (t
           (message "Invalid operation")))))))
