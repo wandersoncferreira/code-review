@@ -110,12 +110,17 @@ For internal usage only.")
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
       (let* ((title (if (string-empty-p .milestone.title) nil .milestone.title))
-             (milestone (if title
-                            (format "%s (%s%%)" .milestone.title .milestone.progressPercentage)
-                          "No milestone")))
+             (milestone (cond
+                         ((and title .milestone.progressPercentage)
+                          (format "%s (%s%%)" .milestone.title .milestone.progressPercentage))
+                         (title
+                          (format "%s" .milestone.title))
+                         (t
+                          "No milestone"))))
 
         (magit-insert-section (code-review-milestone `((title . ,.milestone.title)
-                                                       (progress . ,.milestone.progressPercentage)))
+                                                       (progress . ,.milestone.progressPercentage)
+                                                       (visible-text . ,milestone)))
           (insert (format "%-17s" "Milestone: "))
           (insert (propertize milestone 'font-lock-face 'magit-dimmed))
           (insert ?\n))))))

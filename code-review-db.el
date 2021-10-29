@@ -253,6 +253,7 @@
   (let ((pullreq (code-review-db-get-pullreq)))
     (oset pullreq raw-infos infos)
     (oset pullreq title (a-get infos 'title))
+    (oset pullreq state (a-get infos 'state))
     (oset pullreq description (a-get infos 'bodyText))
     (oset pullreq sha (a-get-in infos (list 'headRef 'target 'oid)))
     (oset pullreq raw-comments (a-get-in infos (list 'reviews 'nodes)))
