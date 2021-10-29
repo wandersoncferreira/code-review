@@ -210,24 +210,24 @@ If you already have a FEEDBACK string to submit use it."
          (lambda ()
            (with-slots (type value) (magit-current-section)
              (cond
-              ((equal type 'code-review-reply-comment)
+              ((equal type 'code-review-reply-comment-header)
                (let-alist value
-                 (push `((comment-id . ,.comment.bodyText)
+                 (push `((comment-id . ,.comment.databaseId)
                          (body . ,.comment.bodyText))
                        replies)))
               ((equal type 'code-review-feedback)
                (setq feedback (or (a-get value 'feedback) feedback)))
-              ((equal type 'code-review-local-comment)
+              ((equal type 'code-review-local-comment-header)
                (let-alist value
                  (push `((path . ,.comment.path)
                          (position . ,.comment.position)
                          (body . ,.comment.bodyText))
                        review-comments))))
-             (forward-line))))
-        (oset pullreq replies replies)
-        (oset pullreq review review-comments)
-        (oset pullreq feedback feedback)
-        pullreq))))
+             (forward-line))))))
+    (oset pullreq replies replies)
+    (oset pullreq review review-comments)
+    (oset pullreq feedback feedback)
+    pullreq))
 
 ;;; Forge interface
 
