@@ -26,13 +26,16 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (save-window-excursion
       (set-window-buffer nil (current-buffer))
       (goto-char (point-min))
-      (while (and (not (eobp)) (magit-current-section))
-        (with-slots (type value) (magit-current-section)
-          (let ((rule (nth count expected)))
-            (expect (a-get rule 'type) :to-equal type)
-            (expect (a-get rule 'value) :to-equal value))
-          (setq count (1+ count)))
-        (forward-line))
+      (magit-wash-sequence
+       (lambda ()
+         (when-let (section (magit-current-section))
+           (with-slots (type value) section
+             (let ((rule (nth count expected)))
+               (prin1 (format "TYPE: %S  and COUNT: %S\n" type count))
+               (expect (a-get rule 'type) :to-equal type)
+               (expect (a-get rule 'value) :to-equal value))
+             (setq count (1+ count))))
+         (magit-section-forward-sibling)))
       (if buffer-nil?
           (expect (buffer-string) :to-match "")
         (expect (buffer-string) :to-match (rx (any word)))))))
@@ -95,7 +98,18 @@ Verify if the buffer has anything written using BUFFER-NIL?."
        `(((type . code-review-milestone)
           (value . ((title . "My title")
                     (progress)
-                    (visible-text . "My title")))))))))
+                    (visible-text . "My title"))))))))
+
+  (describe "COMMENTS"
+    (it "inserting general comments in the buffer."
+      (code-review-db--pullreq-raw-infos-update `((comments (nodes ((author (login . "Code Review"))
+                                                                    (bodyText . "Comment 1"))))))
+      (with-written-section
+       (lambda () (code-review-section-insert-general-comments))
+       `(((type . code-review-conversation-header))
+         ((type . code-review-general-comment)
+          (value . ((author (login . "Code Review"))
+                    (bodyText . "Comment 1")))))))))
 
 (provide 'code-review-section-test)
 ;;; code-review-section-test.el ends here
