@@ -124,7 +124,7 @@
     map)
   "Keymap for the `commit' section.")
 
-(defvar magit-code-review-comment-section-map
+(defvar magit-code-review-comment-body-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     map)
@@ -205,32 +205,43 @@
   "Submit your review with a final verdict (EVENT).
 If you already have a FEEDBACK string use it."
   (interactive)
-  (let ((obj (code-review-utils--gen-submit-structure feedback)))
+  (let* ((obj (code-review-utils--gen-submit-structure feedback))
+         (send-review? (when (oref obj feedback) t))
+         (send-reply? (when (oref obj replies) t)))
+    (setq code-review-full-refresh? t)
     (oset obj state event)
     (code-review-db-update obj)
     (cond
-     ((and (not (oref obj replies)) (not (oref obj feedback)))
+     ((and (not send-reply?) (not send-review?))
+      (setq reload? nil)
       (message "You should provide a feedback or comment replies before submit."))
 
-     ((not (oref obj feedback))
-      (message "You need to provide a feedback message."))
+     ((and send-review? (not send-reply?))
+      (code-review-send-review
+       obj
+       (lambda (&rest _)
+         (code-review-section--build-buffer code-review-buffer-name)
+         (message "Done submitting review"))))
 
-     (t
+     ((and send-reply? (not send-review?))
+      (code-review-send-replies
+       obj
+       (lambda (&rest _)
+         (code-review-section--build-buffer code-review-buffer-name)
+         (message "Done submitting review replies"))))
+
+     ((and send-reply? send-review?)
       (progn
-        (when (oref obj replies)
-          (code-review-send-replies
-           obj
-           (lambda (&rest _)
-             (message "Done submitting review replies"))))
+        (code-review-send-replies
+         obj
+         (lambda (&rest _)
+           (code-review-section--build-buffer code-review-buffer-name)
+           (message "Done submitting review replies")))
         (code-review-send-review
          obj
          (lambda (&rest _)
-           (message "Done submitting review")))
-        (ignore-errors
-          (setq code-review-full-refresh? t)
-          (code-review-section--build-buffer
-           code-review-buffer-name))
-        (setq code-review-full-refresh? nil))))))
+           (code-review-section--build-buffer code-review-buffer-name)
+           (message "Done submitting review"))))))))
 
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."

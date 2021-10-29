@@ -145,7 +145,7 @@ For internal usage only.")
               ((string-equal type "hunk")
                `((reply? . nil)
                  (database-id . nil)))
-              ((-contains-p '(code-review-comment
+              ((-contains-p '(code-review-comment-body
                               code-review-comment-header)
                             type)
                `((reply? . t)
