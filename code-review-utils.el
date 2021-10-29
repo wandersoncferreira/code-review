@@ -258,8 +258,7 @@ Milestones, labels, projects, and more."
     (code-review-set-labels obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
-     (code-review-utils-current-project-buffer-name)
-     t)))
+     (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
   "Helper function to set assignees header field given an OBJ.
@@ -274,8 +273,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-set-assignee obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
-     (code-review-utils-current-project-buffer-name)
-     t)))
+     (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
@@ -285,8 +283,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-set-milestone obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
-     (code-review-utils-current-project-buffer-name)
-     t)))
+     (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
@@ -295,8 +292,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-set-title pr)
     (closql-insert (code-review-db) pr t)
     (code-review-section--build-buffer
-     code-review-buffer-name
-     t)))
+     code-review-buffer-name)))
 
 (defun code-review-utils--set-description-field (description)
   "Helper function to set a DESCRIPTION."
@@ -305,15 +301,13 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-set-description pr)
     (closql-insert (code-review-db) pr t)
     (code-review-section--build-buffer
-     code-review-buffer-name
-     t)))
+     code-review-buffer-name)))
 
 (defun code-review-utils--set-feedback-field (feedback)
   "Helper function to set a FEEDBACK."
   (code-review-db--pullreq-feedback-update feedback)
   (code-review-section--build-buffer
-   code-review-buffer-name
-   t))
+   code-review-buffer-name))
 
 
 (defun code-review-utils--set-local-comment (comment metadata)
