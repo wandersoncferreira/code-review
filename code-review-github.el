@@ -58,6 +58,12 @@
        "code-review-github-errback"
        (prin1-to-string m))
       (cond
+       ((= status 422)
+        (let ((errors (string-join
+                       (a-get (-third-item .error) 'errors)
+                       " AND "))
+              (msg (string-trim (a-get (-third-item .error) 'message))))
+          (message (format "Errors: %S" (if (string-empty-p errors) msg errors)))))
        ((= status 404)
         (message "Provided URL Not Found"))
        ((= status 401)
