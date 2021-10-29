@@ -37,11 +37,11 @@
 (cl-defgeneric code-review-commit-diff-deferred (obj)
   "Run OBJ with deferred.")
 
-(cl-defgeneric code-review-send-review (obj)
-  "Send review stored in OBJ to the forge.")
+(cl-defgeneric code-review-send-review (obj callback)
+  "Send review stored in OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-send-replies (obj)
-  "Send review comment replies stored in OBJ to the forge.")
+(cl-defgeneric code-review-send-replies (obj callback)
+  "Send review comment replies stored in OBJ and call CALLBACK afterward.")
 
 (cl-defgeneric code-review-get-labels (obj)
   "Sync call to get a list of labels from OBJ.")
