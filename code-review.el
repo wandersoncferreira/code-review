@@ -58,6 +58,12 @@
   :group 'code-review
   :type 'string)
 
+(defcustom code-review-new-buffer-window-strategy
+  #'switch-to-buffer-other-window
+  "Function used after create a new Code Review buffer."
+  :group 'code-review
+  :type 'function)
+
 (defcustom code-review-log-file (expand-file-name
                                  "code-review-error.log"
                                  user-emacs-directory)
@@ -201,9 +207,10 @@ If you already have a FEEDBACK string use it."
   (interactive)
   (let ((obj (code-review-utils--gen-submit-structure feedback)))
     (oset obj state event)
+    (code-review-db-update obj)
     (cond
      ((and (not (oref obj replies)) (not (oref obj feedback)))
-      (message "Your review is empty."))
+      (message "You should provide a feedback or comment replies before submit."))
 
      ((not (oref obj feedback))
       (message "You need to provide a feedback message."))
@@ -246,9 +253,8 @@ If you already have a FEEDBACK string use it."
         (setq code-review-comment-commit? nil
               code-review-full-refresh? nil)
         (kill-this-buffer)
-        (switch-to-buffer
-         (code-review-section--trigger-hooks
-          code-review-buffer-name)))
+        (code-review-section--trigger-hooks
+         code-review-buffer-name))
     (message "Command must be called from Code Review Commit buffer.")))
 
 (defun code-review--set-label ()
