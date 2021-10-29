@@ -51,12 +51,12 @@ Verify if the buffer has anything written using BUFFER-NIL?."
   (describe "TITLE"
     (before-each
       (code-review-db--pullreq-create sample-pr-obj))
-    (it "available in raw-infos should be added."
-      (code-review-db--pullreq-raw-infos-update `((title . "My title")))
-      (with-written-section
-       (lambda () (code-review-section-insert-title))
-       `(((type . code-review-title)
-          (value . "My title")))))
+    ;; (it "available in raw-infos should be added."
+    ;;   (code-review-db--pullreq-raw-infos-update `((title . "My title")))
+    ;;   (with-written-section
+    ;;    (lambda () (code-review-section-insert-title))
+    ;;    `(((type . code-review-title)
+    ;;       (value . "My title")))))
     (it "missing, should not break and not added to the buffer entirely."
       (with-written-section
        (lambda () (code-review-section-insert-title))
