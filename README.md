@@ -92,6 +92,14 @@ Review` buffer.
 ![Transient keybindings](./docs/code_review_transient.png)
 
 
+## Binding suggestions
+
+You can place `code-review-forge-pr-at-point` to a key binding for your convenience:
+
+``` emacs-lisp
+(define-key forge-topic-mode-map (kbd "C-c r") 'github-review-forge-pr-at-point)
+```
+
 # Extension to other forges
 
 The package allows you to write integration with other forges to leverage these
