@@ -1,10 +1,12 @@
-;;; code-review-comment.el --- manage comments -*- lexical-binding: t; -*-
+;;; code-review-comment.el --- Manage comments -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-
+;; Version: 0.0.1
+;; Homepage: https://github.com/wandersoncferreira/code-review
+;; Package-Requires: ((emacs "25.1"))
 ;; This file is not part of GNU Emacs.
 
 ;; This file is free software; you can redistribute it and/or modify
