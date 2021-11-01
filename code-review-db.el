@@ -4,6 +4,9 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
+;; Version: 0.0.1
+;; Homepage: https://github.com/wandersoncferreira/code-review
+;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -19,20 +22,20 @@
 (require 'uuidgen)
 (require 'dash)
 
-(defcustom code-review-database-connector 'sqlite
+(defcustom code-review-db-database-connector 'sqlite
   "The database connector."
   :group 'code-review
   :type 'keyword)
 
-(defcustom code-review-database-file
-  (expand-file-name "code-review-database.sqlite" user-emacs-directory)
+(defcustom code-review-db-database-file
+  (expand-file-name "code-review-db-database.sqlite" user-emacs-directory)
   "The file used to store the `code-review' database."
   :group 'code-review
   :type 'file)
 
-(declare-function code-review-database--eieio-childp "code-review-db.el" (obj) t)
+(declare-function code-review-db-database--eieio-childp "code-review-db.el" (obj) t)
 
-(defclass code-review-buffer (closql-object)
+(defclass code-review-db-buffer (closql-object)
   ((closql-table        :initform 'buffer)
    (closql-primary-key  :initform 'id)
    (closql-foreign-key  :initform 'pullreq)
@@ -40,9 +43,9 @@
    (id                  :initarg :id)
    (pullreq             :initarg :pullreq)
    (raw-text            :initform nil)
-   (paths               :closql-class code-review-path)))
+   (paths               :closql-class code-review-db-path)))
 
-(defclass code-review-path (closql-object)
+(defclass code-review-db-path (closql-object)
   ((closql-table        :initform 'path)
    (closql-primary-key  :initform 'id)
    (closql-foreign-key  :initform 'buffer)
@@ -52,9 +55,9 @@
    (head-pos            :initform nil)
    (buffer              :initarg :buffer)
    (at-pos-p            :initarg :at-pos-p)
-   (comments            :closql-class code-review-comment)))
+   (comments            :closql-class code-review-db-comment)))
 
-(defclass code-review-comment (closql-object)
+(defclass code-review-db-comment (closql-object)
   ((closql-table        :initform 'comment)
    (closql-primary-key  :initform 'id)
    (closql-foreign-key  :initform 'path)
@@ -64,7 +67,7 @@
    (loc-written         :initform nil)
    (identifiers         :initarg :identifiers)))
 
-(defclass code-review-pullreq (closql-object)
+(defclass code-review-db-pullreq (closql-object)
   ((closql-table        :initform 'pullreq)
    (closql-primary-key  :initform 'id)
    (closql-class-prefix :initform "code-review-")
@@ -91,34 +94,34 @@
    (reviewers           :initform nil)
    (assignees           :initform nil)
    (linked-issues       :initform nil)
-   (buffer              :closql-class code-review-buffer))
+   (buffer              :closql-class code-review-db-buffer))
   :abstract t)
 
-(defclass code-review-database (emacsql-sqlite-connection closql-database)
-  ((object-class :initform 'code-review-pullreq)))
+(defclass code-review-db-database (emacsql-sqlite-connection closql-database)
+  ((object-class :initform 'code-review-db-pullreq)))
 
-(defconst code-review--db-version 7)
+(defconst code-review-db-version 7)
 
 (defconst code-review-db--sqlite-available-p
   (with-demoted-errors "Code Review initialization: %S"
     (emacsql-sqlite-ensure-binary)
     t))
 
-;; (setq code-review--db-connection nil)
-(defvar code-review--db-connection nil
+;; (setq code-review-db-connection nil)
+(defvar code-review-db-connection nil
   "The EmacSQL database connection.")
 
 (defun code-review-db ()
   "Start connection."
-  (unless (and code-review--db-connection (emacsql-live-p code-review--db-connection))
-    (make-directory (file-name-directory code-review-database-file) t)
-    (closql-db 'code-review-database 'code-review--db-connection
-               code-review-database-file t))
-  code-review--db-connection)
+  (unless (and code-review-db-connection (emacsql-live-p code-review-db-connection))
+    (make-directory (file-name-directory code-review-db-database-file) t)
+    (closql-db 'code-review-db-database 'code-review-db-connection
+               code-review-db-database-file t))
+  code-review-db-connection)
 
 ;;; Schema
 
-(defconst code-review--db-table-schema
+(defconst code-review-db-table-schema
   '((pullreq
      [(class :not-null)
       (id :not-null :primary-key)
@@ -178,12 +181,12 @@
       [path] :references path [id]
       :on-delete :cascade))))
 
-(cl-defmethod closql--db-init ((db code-review-database))
+(cl-defmethod closql--db-init ((db code-review-db-database))
   "Initialize the DB."
   (emacsql-with-transaction db
-    (pcase-dolist (`(,table . ,schema) code-review--db-table-schema)
+    (pcase-dolist (`(,table . ,schema) code-review-db-table-schema)
       (emacsql db [:create-table $i1 $S2] table schema))
-    (closql--db-set-version db code-review--db-version)))
+    (closql--db-set-version db code-review-db-version)))
 
 ;;; Core
 
@@ -205,11 +208,11 @@
 
 (defun code-review-db-get-buffer ()
   "Get buffer obj from BUFFER-ID."
-  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-buffer))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-db-buffer))
 
 (defun code-review-db-get-path ()
   "Get path obj from ID."
-  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-path))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-db-path))
 
 (defun code-review-db-get-buffer-paths ()
   "Get paths from BUFFER-ID."
@@ -218,7 +221,7 @@
 
 (defun code-review-db-get-comment (id)
   "Get comment obj from ID."
-  (closql-get (code-review-db) id 'code-review-comment))
+  (closql-get (code-review-db) id 'code-review-db-comment))
 
 (defun code-review-db-get-curr-head-pos ()
   "Get the head-pos value for the current path in the pullreq."
@@ -327,11 +330,11 @@
     (if (not buf)
         (let* ((pr (code-review-db-get-pullreq))
                (pr-id (oref pr id))
-               (buf (code-review-buffer :id pr-id :pullreq pr-id))
-               (path (code-review-path :id new-path-id
-                                       :buffer pr-id
-                                       :name curr-path
-                                       :at-pos-p t)))
+               (buf (code-review-db-buffer :id pr-id :pullreq pr-id))
+               (path (code-review-db-path :id new-path-id
+                                          :buffer pr-id
+                                          :name curr-path
+                                          :at-pos-p t)))
           (emacsql-with-transaction db
             (closql-insert db buf t)
             (closql-insert db path t)))
@@ -352,7 +355,7 @@
            paths)
           (when (not curr-path-re-enabled?)
             ;; save new one
-            (closql-insert db (code-review-path
+            (closql-insert db (code-review-db-path
                                :id new-path-id
                                :buffer (oref buf id)
                                :name curr-path
@@ -419,9 +422,9 @@
                     (oref curr-comment identifiers)))
         (closql-insert (code-review-db) curr-comment t))
     (let* ((path (code-review-db--curr-path))
-           (c (code-review-comment :id (oref path id)
-                                   :path (oref path id)
-                                   :identifiers (list identifier))))
+           (c (code-review-db-comment :id (oref path id)
+                                      :path (oref path id)
+                                      :identifiers (list identifier))))
       (closql-insert (code-review-db) c t))))
 
 ;; comments
