@@ -4,7 +4,10 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-
+;; Version: 0.0.1
+;; Homepage: https://github.com/wandersoncferreira/code-review
+;; Package-Requires: ((emacs "25.1"))
+;;
 ;; This file is not part of GNU Emacs.
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -41,19 +44,19 @@
 (defvar code-review-commit-minor-mode)
 (defvar code-review-mode)
 
-(defvar code-review-full-refresh? nil
+(defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
-(defvar code-review-grouped-comments nil
+(defvar code-review-section-grouped-comments nil
   "Hold grouped comments to avoid computation on every hunk line.
 For internal usage only.")
 
-(defvar code-review-hold-written-comment-ids nil
+(defvar code-review-section-hold-written-comment-ids nil
   "List to hold written comments ids.
 For internal usage only.")
 
-(defvar code-review-hold-written-comment-count nil
+(defvar code-review-section-hold-written-comment-count nil
   "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
@@ -296,9 +299,9 @@ For internal usage only.")
              (metadata1 `((comment . ,first-hunk-commit)
                           (amount-loc ., (+ amount-loc amount-new-loc)))))
 
-        (setq code-review-hold-written-comment-count
+        (setq code-review-section-hold-written-comment-count
               (code-review-utils--comment-update-written-count
-               code-review-hold-written-comment-count
+               code-review-section-hold-written-comment-count
                (a-get first-hunk-commit 'path)
                amount-new-loc))
 
@@ -320,9 +323,9 @@ For internal usage only.")
                        (metadata2 `((comment . ,c)
                                     (amount-loc .,(+ amount-loc amount-new-loc amount-new-loc-outdated)))))
 
-                  (setq code-review-hold-written-comment-count
+                  (setq code-review-section-hold-written-comment-count
                         (code-review-utils--comment-update-written-count
-                         code-review-hold-written-comment-count
+                         code-review-section-hold-written-comment-count
                          (a-get first-hunk-commit 'path)
                          amount-new-loc-outdated))
 
@@ -341,14 +344,14 @@ For internal usage only.")
 We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
   (dolist (path-pos missing-paths)
     (let ((comment-written-pos
-           (or (alist-get path-name code-review-hold-written-comment-count nil nil 'equal)
+           (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal)
                0)))
       (code-review-section-insert-outdated-comment
        (code-review-utils--comment-get
         grouped-comments
         path-pos)
        comment-written-pos)
-      (push path-pos code-review-hold-written-comment-ids))))
+      (push path-pos code-review-section-hold-written-comment-ids))))
 
 (defun code-review-section-insert-comment (comments amount-loc)
   "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
@@ -368,9 +371,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                  `((comment . ,c)
                    (amount-loc . ,new-amount-loc))))
 
-            (setq code-review-hold-written-comment-count
+            (setq code-review-section-hold-written-comment-count
                   (code-review-utils--comment-update-written-count
-                   code-review-hold-written-comment-count
+                   code-review-section-hold-written-comment-count
                    (a-get c 'path)
                    amount-loc-incr))
 
@@ -477,8 +480,8 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
          "code-review-section--magit-diff-wash-hunk"
          (format "Every diff is associated with a PATH (the file). Head pos nil for %S"
                  (prin1-to-string path)))
-        (message (format "ERROR: Head position for path %s was not found.
-Please Report this Bug" path-name)))
+        (message "ERROR: Head position for path %s was not found.
+Please Report this Bug" path-name))
 
     ;;; --- end -- code-review specific code.
 
@@ -500,18 +503,18 @@ Please Report this Bug" path-name)))
           ;;; code-review specific code.
           ;;; add code comments
             (let* ((comment-written-pos
-                    (or (alist-get path-name code-review-hold-written-comment-count nil nil 'equal) 0))
+                    (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal) 0))
                    (diff-pos (- (line-number-at-pos)
                                 (or head-pos 0)
                                 comment-written-pos))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
-                   (written? (-contains-p code-review-hold-written-comment-ids path-pos))
+                   (written? (-contains-p code-review-section-hold-written-comment-ids path-pos))
                    (grouped-comment (code-review-utils--comment-get
-                                     code-review-grouped-comments
+                                     code-review-section-grouped-comments
                                      path-pos)))
               (if (and (not written?) grouped-comment)
                   (progn
-                    (push path-pos code-review-hold-written-comment-ids)
+                    (push path-pos code-review-section-hold-written-comment-ids)
                     (code-review-section-insert-comment
                      grouped-comment
                      comment-written-pos))
@@ -523,12 +526,12 @@ Please Report this Bug" path-name)))
           ;;; important to only consider comments for this path.
           (when-let (missing-paths (code-review-utils--missing-outdated-commments?
                                     path-name
-                                    code-review-hold-written-comment-ids
-                                    code-review-grouped-comments))
+                                    code-review-section-hold-written-comment-ids
+                                    code-review-section-grouped-comments))
             (code-review-section-insert-outdated-comment-missing
              path-name
              missing-paths
-             code-review-grouped-comments))
+             code-review-section-grouped-comments))
 
         ;;; --- end -- code-review specific code.
           (oset section end (point))
@@ -550,11 +553,11 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
         (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
         (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
 
-        (setq code-review-grouped-comments
+        (setq code-review-section-grouped-comments
               (code-review-comment-make-group
                (code-review-db--pullreq-raw-comments))
-              code-review-hold-written-comment-count nil
-              code-review-hold-written-comment-ids nil)
+              code-review-section-hold-written-comment-count nil
+              code-review-section-hold-written-comment-ids nil)
 
         (with-current-buffer (get-buffer-create buff-name)
           (let* ((window (get-buffer-window buff-name))
@@ -594,7 +597,7 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
 (defun code-review-section--build-buffer (buff-name &optional commit-focus?)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks."
 
-  (if (not code-review-full-refresh?)
+  (if (not code-review-section-full-refresh?)
       (code-review-section--trigger-hooks buff-name commit-focus?)
     (let ((obj (code-review-db-get-pullreq)))
       (deferred:$
