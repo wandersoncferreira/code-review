@@ -92,7 +92,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 (cl-defmethod code-review-core-diff-deferred ((github code-review-github-repo))
   "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-pullreq-diff
+    (code-review-core-pullreq-diff
      github
      (apply-partially
       (lambda (d v &rest _)
@@ -117,7 +117,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 (cl-defmethod code-review-core-commit-diff-deferred ((github code-review-github-repo))
   "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-commit-diff
+    (code-review-core-commit-diff
      github
      (apply-partially
       (lambda (d v &rest _)
@@ -209,7 +209,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 (cl-defmethod code-review-core-infos-deferred ((github code-review-github-repo))
   "Get PR infos from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-pullreq-infos
+    (code-review-core-pullreq-infos
      github
      (apply-partially (lambda (d v &rest _)
                         (deferred:callback-post d v))

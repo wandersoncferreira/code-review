@@ -251,7 +251,7 @@ For internal usage only.")
                             (with-current-buffer buffer
                               (save-excursion
                                 (buffer-substring-no-properties (point-min) (point-max)))))))
-        (setq code-review-full-refresh? nil)
+        (setq code-review-section-full-refresh? nil)
         (kill-buffer buffer)
         (cond
          (code-review-comment-description?

@@ -255,10 +255,10 @@ If you already have a FEEDBACK string to submit use it."
 (defun code-review-utils--set-label-field (obj)
   "Helper function to set header multi value fields given by OP-NAME and OBJ.
 Milestones, labels, projects, and more."
-  (let* ((options (code-review-get-labels obj))
+  (let* ((options (code-review-core-get-labels obj))
          (choices (completing-read-multiple "Choose: " options)))
     (oset obj labels choices)
-    (code-review-set-labels obj)
+    (code-review-core-set-labels obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
      (code-review-utils-current-project-buffer-name))))
@@ -269,21 +269,21 @@ If a valid ASSIGNEE is provided, use that instead."
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)
-      (let* ((options (code-review-get-assignees obj))
+      (let* ((options (code-review-core-get-assignees obj))
              (choice (completing-read "Choose: " options)))
         (setq candidate choice)))
     (oset obj assignees candidate)
-    (code-review-set-assignee obj)
+    (code-review-core-set-assignee obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
      (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
-  (let* ((options (code-review-get-milestones obj))
+  (let* ((options (code-review-core-get-milestones obj))
          (choice (completing-read "Choose: " (a-keys options))))
     (oset obj milestones (alist-get choice options nil nil 'equal))
-    (code-review-set-milestone obj)
+    (code-review-core-set-milestone obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
      (code-review-utils-current-project-buffer-name))))
@@ -292,7 +292,7 @@ If a valid ASSIGNEE is provided, use that instead."
   "Helper function to set a TITLE."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr title title)
-    (code-review-set-title pr)
+    (code-review-core-set-title pr)
     (closql-insert (code-review-db) pr t)
     (code-review-section--build-buffer
      code-review-buffer-name)))
@@ -301,7 +301,7 @@ If a valid ASSIGNEE is provided, use that instead."
   "Helper function to set a DESCRIPTION."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr description description)
-    (code-review-set-description pr)
+    (code-review-core-set-description pr)
     (closql-insert (code-review-db) pr t)
     (code-review-section--build-buffer
      code-review-buffer-name)))
@@ -343,14 +343,15 @@ If a valid ASSIGNEE is provided, use that instead."
 
 ;;; DIFF
 
-(setq code-review-utils--regex-clean-prefix
+(defvar code-review-utils--regex-clean-prefix
   (rx "diff --git"
       space
       "a/"
       (group-n 1 (one-or-more not-newline))
       space
       "b/"
-      (group-n 2 (one-or-more not-newline))))
+      (group-n 2 (one-or-more not-newline)))
+  "String to fix prefixes in git diff.")
 
 (defun code-review-utils--clean-diff-prefixes (raw-diff)
   "Remove all prefixes from RAW-DIFF.

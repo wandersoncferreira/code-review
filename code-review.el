@@ -208,7 +208,7 @@ If you already have a FEEDBACK string use it."
   (let* ((obj (code-review-utils--gen-submit-structure feedback))
          (send-review? (when (oref obj feedback) t))
          (send-reply? (when (oref obj replies) t)))
-    (setq code-review-full-refresh? t)
+    (setq code-review-section-full-refresh? t)
     (oset obj state event)
     (code-review-db-update obj)
     (cond
@@ -217,14 +217,14 @@ If you already have a FEEDBACK string use it."
       (message "You should provide a feedback or comment replies before submit."))
 
      ((and send-review? (not send-reply?))
-      (code-review-send-review
+      (code-review-core-send-review
        obj
        (lambda (&rest _)
          (code-review-section--build-buffer code-review-buffer-name)
          (message "Done submitting review"))))
 
      ((and send-reply? (not send-review?))
-      (code-review-send-replies
+      (code-review-core-send-replies
        obj
        (lambda (&rest _)
          (code-review-section--build-buffer code-review-buffer-name)
@@ -232,12 +232,12 @@ If you already have a FEEDBACK string use it."
 
      ((and send-reply? send-review?)
       (progn
-        (code-review-send-replies
+        (code-review-core-send-replies
          obj
          (lambda (&rest _)
            (code-review-section--build-buffer code-review-buffer-name)
            (message "Done submitting review replies")))
-        (code-review-send-review
+        (code-review-core-send-review
          obj
          (lambda (&rest _)
            (code-review-section--build-buffer code-review-buffer-name)
@@ -262,7 +262,7 @@ If you already have a FEEDBACK string use it."
              (get-buffer code-review-commit-buffer-name))
       (progn
         (setq code-review-comment-commit? nil
-              code-review-full-refresh? nil)
+              code-review-section-full-refresh? nil)
         (kill-this-buffer)
         (code-review-section--trigger-hooks
          code-review-buffer-name))
@@ -306,7 +306,7 @@ If you already have a FEEDBACK string use it."
   "Merge PR with MERGE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-merge pr "merge")
+    (code-review-core-merge pr "merge")
     (oset pr state "MERGED")
     (code-review-db-update pr)
     (code-review-section--build-buffer
@@ -317,7 +317,7 @@ If you already have a FEEDBACK string use it."
   "Merge PR with REBASE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-merge pr "rebase")
+    (code-review-core-merge pr "rebase")
     (oset pr state "MERGED")
     (code-review-db-update pr)
     (code-review-section--build-buffer
@@ -328,7 +328,7 @@ If you already have a FEEDBACK string use it."
   "Merge PR with SQUASH strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-merge pr "squash")
+    (code-review-core-merge pr "squash")
     (oset pr state "MERGED")
     (code-review-db-update pr)
     (code-review-section--build-buffer
@@ -340,22 +340,22 @@ If you already have a FEEDBACK string use it."
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (setq code-review-full-refresh? t)
+  (setq code-review-section-full-refresh? t)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
     (code-review-section--build-buffer
      code-review-buffer-name))
-  (setq code-review-full-refresh? nil))
+  (setq code-review-section-full-refresh? nil))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (setq code-review-full-refresh? t)
+  (setq code-review-section-full-refresh? t)
   (ignore-errors
     (code-review-utils--start-from-forge-at-point))
-  (setq code-review-full-refresh? nil))
+  (setq code-review-section-full-refresh? nil))
 
 ;;; Commit buffer
 

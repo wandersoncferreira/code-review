@@ -602,8 +602,8 @@ Run code review commit buffer hook when COMMIT-FOCUS? is non-nil."
     (let ((obj (code-review-db-get-pullreq)))
       (deferred:$
         (deferred:parallel
-          (lambda () (code-review-diff-deferred obj))
-          (lambda () (code-review-infos-deferred obj)))
+          (lambda () (code-review-core-diff-deferred obj))
+          (lambda () (code-review-core-infos-deferred obj)))
         (deferred:nextc it
           (lambda (x)
             (let-alist (-second-item x)
