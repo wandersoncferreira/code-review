@@ -297,6 +297,10 @@
   "Get description of pullreq."
   (oref (code-review-db-get-pullreq) description))
 
+(defun code-review-db--pullreq-labels ()
+  "Get labels of pullreq."
+  (oref (code-review-db-get-pullreq) labels))
+
 (defun code-review-db--pullreq-description-update (pr description)
   "Update the DESCRIPTION of a PR."
   (oset pr description description)

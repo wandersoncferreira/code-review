@@ -256,8 +256,14 @@ If you already have a FEEDBACK string to submit use it."
   "Helper function to set header multi value fields given by OP-NAME and OBJ.
 Milestones, labels, projects, and more."
   (let* ((options (code-review-core-get-labels obj))
-         (choices (completing-read-multiple "Choose: " options)))
-    (oset obj labels choices)
+         (choices (completing-read-multiple "Choose: " options))
+         (labels (append
+                  (-map (lambda (x)
+                          `((name . ,x)
+                            (color . "0075ca")))
+                        choices)
+                  (oref obj labels))))
+    (oset obj labels labels)
     (code-review-core-set-labels obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer

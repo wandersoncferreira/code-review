@@ -142,7 +142,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
         title
         progressPercentage
       }
-      labels(first: 3) {
+      labels(first: 10) {
         nodes {
           name
           color
@@ -154,7 +154,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           login
         }
       }
-      projectCards(first: 3) {
+      projectCards(first: 10) {
         nodes {
           project {
             name
@@ -290,7 +290,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                   #'ghub-put)))
     (funcall req-fn url
              nil
-             :payload (a-alist 'labels (or (oref github labels) []))
+             :payload (a-alist 'labels (or (-map (lambda (x)
+                                                   (a-get x 'name))
+                                                 (oref github labels))
+                                           []))
              :auth 'code-review)))
 
 (cl-defmethod code-review-core-get-assignees ((github code-review-github-repo))

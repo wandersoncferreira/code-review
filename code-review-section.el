@@ -131,11 +131,13 @@ For internal usage only.")
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (magit-insert-section (code-review-labels .labels.nodes)
+    (let ((labels (-distinct
+                   (append (code-review-db--pullreq-labels)
+                           (a-get-in infos (list 'labels 'nodes))))))
+      (magit-insert-section (code-review-labels labels)
         (insert (format "%-17s" "Labels: "))
-        (if .labels.nodes
-            (dolist (label .labels.nodes)
+        (if labels
+            (dolist (label labels)
               (insert (a-get label 'name))
               (let* ((color (concat "#" (a-get label 'color)))
                      (background (code-review-utils--sanitize-color color))
