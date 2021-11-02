@@ -112,17 +112,23 @@ For internal usage only.")
   "Insert the milestone of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (let* ((title (if (string-empty-p .milestone.title) nil .milestone.title))
+      (let* ((milestone-raw (or
+                             (code-review-db--pullreq-milestones)
+                             `((title . ,.milestone.title)
+                               (perc . ,.milestone.progressPercentage))))
+             (title (when (not (string-empty-p (a-get milestone-raw 'title)))
+                      (a-get milestone-raw 'title)))
+             (progress (a-get milestone-raw 'perc))
              (milestone (cond
-                         ((and title .milestone.progressPercentage)
-                          (format "%s (%s%%)" .milestone.title .milestone.progressPercentage))
+                         ((and title progress)
+                          (format "%s (%s%%)" title progress))
                          (title
-                          (format "%s" .milestone.title))
+                          (format "%s" title))
                          (t
                           "No milestone"))))
 
-        (magit-insert-section (code-review-milestone `((title . ,.milestone.title)
-                                                       (progress . ,.milestone.progressPercentage)
+        (magit-insert-section (code-review-milestone `((title . ,title)
+                                                       (progress . ,progress)
                                                        (visible-text . ,milestone)))
           (insert (format "%-17s" "Milestone: "))
           (insert (propertize milestone 'font-lock-face 'magit-dimmed))

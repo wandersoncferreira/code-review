@@ -340,7 +340,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                       (oref github number))
               nil
               :auth 'code-review
-              :payload (a-alist 'milestone (oref github milestones))))
+              :payload (a-alist 'milestone (a-get (oref github milestones) 'number))))
 
 (cl-defmethod code-review-core-set-title ((github code-review-github-repo))
   "Set title for a pullreq in GITHUB."
