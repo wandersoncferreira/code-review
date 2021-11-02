@@ -254,13 +254,17 @@
 (defun code-review-db--pullreq-raw-infos-update (infos)
   "Save INFOS to the PULLREQ entity."
   (let ((pullreq (code-review-db-get-pullreq)))
-    (oset pullreq raw-infos infos)
-    (oset pullreq title (a-get infos 'title))
-    (oset pullreq state (a-get infos 'state))
-    (oset pullreq description (a-get infos 'bodyText))
-    (oset pullreq sha (a-get-in infos (list 'headRef 'target 'oid)))
-    (oset pullreq raw-comments (a-get-in infos (list 'reviews 'nodes)))
-    (closql-insert (code-review-db) pullreq t)))
+    (let-alist infos
+      (oset pullreq raw-infos infos)
+      (oset pullreq title .title)
+      (oset pullreq state .state)
+      (oset pullreq description .bodyText)
+      (oset pullreq sha .headRef.target.oid)
+      (oset pullreq raw-comments .reviews.nodes)
+      (oset pullreq milestones `((title . ,.milestone.title)
+                                 (perc . ,.milestone.progressPercentage)
+                                 (number . nil)))
+      (closql-insert (code-review-db) pullreq t))))
 
 (defun code-review-db--pullreq-raw-diff-update (raw-diff)
   "Save RAW-DIFF to the PULLREQ entity."
