@@ -110,8 +110,8 @@ For internal usage only.")
 
 (defun code-review-section-insert-milestone ()
   "Insert the milestone of the header buffer."
-  (when-let (infos (code-review-db--pullreq-milestones))
-    (let-alist infos
+  (when-let (milestones (code-review-db--pullreq-milestones))
+    (let-alist milestones
       (let* ((title (when (not (string-empty-p .title))
                       .title))
              (milestone (cond
