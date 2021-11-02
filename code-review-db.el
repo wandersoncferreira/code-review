@@ -28,7 +28,7 @@
   :type 'keyword)
 
 (defcustom code-review-db-database-file
-  (expand-file-name "code-review-db-database.sqlite" user-emacs-directory)
+  (expand-file-name "code-review-db-file.sqlite" user-emacs-directory)
   "The file used to store the `code-review' database."
   :group 'code-review
   :type 'file)
@@ -204,7 +204,7 @@
 
 (defun code-review-db-get-pullreq ()
   "Get pullreq obj from ID."
-  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-github-repo))
+  (closql-get (code-review-db) code-review-db--pullreq-id 'code-review-db-pullreq))
 
 (defun code-review-db-get-buffer ()
   "Get buffer obj from BUFFER-ID."
