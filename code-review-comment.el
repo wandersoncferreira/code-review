@@ -65,159 +65,76 @@ For internal usage only.")
   "Are you writing a description?.
 For internal usage only.")
 
-(defvar code-review-comment-editing? nil
-  "Are you editing a comment box?
+(defvar code-review-comment-uncommitted nil
+  "Hold uncommitted comment.
 For internal usage only.")
 
-(defvar code-review-comment-metadata nil
-  "Metadata to be attached to the comment section.
-For internal usage only.")
-
-(defvar code-review-comment-window-configuration nil
-  "Hold window configuration when adding comments.
-For internal usage only.")
-
-(defvar code-review-comment-commit? nil
+(defvar code-review-comment-commit-buffer? nil
   "Toggle if we are at the commit review buffer.
 For internal usage only.")
 
+;; remove free variable warnings
+(defvar code-review-comment-buffer-name)
+
 ;;; general functons
-
-(defun code-review-comment-make-group (raw-comments)
-  "Group RAW-COMMENTS to ease the access when building the buffer."
-  (-reduce-from
-   (lambda (acc node)
-     (let ((author (a-get-in node (list 'author 'login)))
-           (state (a-get node 'state)))
-       (if-let (comments (a-get-in node (list 'comments 'nodes)))
-           (-reduce-from
-            (lambda (grouped-comments comment)
-              (let-alist comment
-                (let* ((comment-enriched (a-assoc comment 'author author 'state state))
-                       (handled-pos (or .position .originalPosition))
-                       (path-pos (code-review-utils--comment-key .path handled-pos)))
-
-                  ;;; extra checks
-                  (when (not handled-pos)
-                    (throw :code-review/comment-missing-position
-                           "Every comment requires a position in the diff."))
-
-                  (when (not .path)
-                    (throw :code-review/comment-missing-path
-                           "Every comment requires a path in the diff."))
-
-                  (when (not .bodyText)
-                    (code-review-utils--log
-                     "code-review-comment-make-group"
-                     (format "Every comment should have a body. Nil value found. %S"
-                             (prin1-to-string comment)))
-                    (message "Comment with nil body"))
-
-                  ;;; TODO: should I guarantee that every comment has an associated diffHunk?
-                  ;;; this is currently not true for local comments.
-
-                  (if (or (not grouped-comments)
-                          (not (code-review-utils--comment-get grouped-comments path-pos)))
-                      (a-assoc grouped-comments path-pos (list comment-enriched))
-                    (a-update grouped-comments path-pos (lambda (v) (append v (list comment-enriched))))))))
-            acc
-            comments)
-         acc)))
-   nil
-   raw-comments))
 
 (defun code-review-comment-reset-global-vars ()
   "Reset all stateful vars."
-  (setq code-review-comment-metadata nil
-        code-review-comment-cursor-pos nil
-        code-review-comment-editing? nil
+  (setq code-review-comment-cursor-pos nil
         code-review-comment-feedback? nil
         code-review-comment-description? nil
         code-review-comment-title? nil
-        code-review-comment-window-configuration nil
-        code-review-comment-commit? nil))
+        code-review-comment-commit-buffer? nil))
 
-(defun code-review-comment--hold-metadata ()
-  "Save metadata to attach to local comment at commit phase."
-  ;; TODO: include safety checks
-  (with-slots (type value start end) (magit-current-section)
-    (let-alist value
-      (let ((metadata
-             (cond
-              ((string-equal type "hunk")
-               `((reply? . nil)
-                 (database-id . nil)))
-              ((-contains-p '(code-review-comment-body
-                              code-review-comment-header)
-                            type)
-               `((reply? . t)
-                 (database-id . ,.comment.databaseId)
-                 (comment-text . ,.comment.bodyText)
-                 (position . ,(or .comment.position .comment.originalPosition))))
-              ((-contains-p '(code-review-local-comment
-                              code-review-local-comment-header)
-                            type)
-               (a-assoc value 'start start 'end end))
-              (t
-               (progn
-                 (message "You can only comment on HUNK or COMMENTS.")
-                 nil)))))
-        (setq code-review-comment-metadata metadata)))))
+;;; Comment C_UD
 
 (defun code-review-comment-add ()
   "Add comment."
-  (code-review-comment--hold-metadata)
-  (when code-review-comment-metadata
-    (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-      (setq code-review-comment-editing? nil)
-      (with-current-buffer buffer
-        (erase-buffer)
-        (insert code-review-comment-buffer-msg)
-        (insert ?\n)
-        (switch-to-buffer-other-window buffer)
-        (code-review-comment-mode)))))
+  (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert code-review-comment-buffer-msg)
+      (insert ?\n)
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
 
 (defun code-review-comment-edit ()
   "Edit comment."
-  (with-slots (type value start end) (magit-current-section)
-    (let-alist value
-      (setq code-review-comment-metadata value
-            code-review-comment-editing? t)
-      (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-        (with-current-buffer buffer
-          (erase-buffer)
-          (insert .comment.bodyText)
-          (insert ?\n)
-          (goto-char (point-min)))
-        (switch-to-buffer-other-window buffer)
-        (code-review-comment-mode)))))
+  (with-slots (value) (magit-current-section)
+    (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
+      (with-current-buffer buffer
+        (erase-buffer)
+        (insert (oref value msg))
+        (insert ?\n)
+        (goto-char (point-min)))
+      (switch-to-buffer-other-window buffer)
+      (code-review-comment-mode))))
 
-;;; Public APIs
+;;; Add comments
 
 ;;;###autoload
-(defun code-review-comment-add-feedback ()
+(defun code-review-comment-set-feedback ()
   "Add review FEEDBACK."
   (interactive)
-  (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
-    (setq code-review-comment-window-configuration (current-window-configuration))
+  (let ((buffer (get-buffer-create code-review-comment-buffer-name))
+        (pr (code-review-db-get-pullreq)))
     (setq code-review-comment-feedback? t)
-    (setq code-review-comment-cursor-pos (point))
+    (setq code-review-comment-cursor-pos (point-min))
     (with-current-buffer buffer
       (erase-buffer)
-      (insert code-review-comment-feedback-msg)
+      (insert (or (oref pr feedback) code-review-comment-feedback-msg))
       (insert ?\n)
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
 
 ;;;###autoload
-(defun code-review-comment-add-title ()
+(defun code-review-comment-set-title ()
   "Add review title."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (setq code-review-comment-window-configuration (current-window-configuration))
+    (setq code-review-comment-cursor-pos (point-min))
     (setq code-review-comment-title? t)
-    (setq code-review-comment-cursor-pos (point))
     (with-current-buffer buffer
       (erase-buffer)
       (insert (oref pr title))
@@ -226,20 +143,141 @@ For internal usage only.")
       (code-review-comment-mode))))
 
 ;;;###autoload
-(defun code-review-comment-add-description ()
+(defun code-review-comment-set-description ()
   "Add review description."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (setq code-review-comment-window-configuration (current-window-configuration))
     (setq code-review-comment-description? t)
-    (setq code-review-comment-cursor-pos (point))
+    (setq code-review-comment-cursor-pos (point-min))
     (with-current-buffer buffer
       (erase-buffer)
       (insert (oref pr description))
       (insert ?\n)
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
+
+;;; handlers ADD or EDIT
+
+(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-code-comment-section))
+  "Reply to comment OBJ."
+  (let ((reply-comment (code-review-reply-comment-section
+                        :state (oref obj state)
+                        :author (oref obj author)
+                        :path (oref obj path)
+                        :position (oref obj position)
+                        :diffHunk (oref obj diffHunk)
+                        :id (oref obj id))))
+    (setq code-review-comment-uncommitted reply-comment)
+    (code-review-comment-add)))
+
+
+(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-local-comment-section))
+  "Edit local comment in OBJ."
+  (oset obj edit? t)
+  (setq code-review-comment-uncommitted obj)
+  (code-review-comment-edit))
+
+(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-title-section))
+  "Change title in OBJ."
+  (setq code-review-comment-uncommitted obj)
+  (code-review-comment-add-feedback))
+
+(cl-defmethod code-review-comment-handler-add-or-edit (obj)
+  "Add a comment in the OBJ."
+  ;;; only hunks allowed here
+  (with-slots (type) (magit-current-section)
+    (if (not (equal type 'hunk))
+        (message "You can't add text over unspecified region.")
+      (let ((current-line (line-number-at-pos))
+            (amount-loc nil))
+        (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file\\|deleted"))
+                    (not (equal (point) (point-min))))
+          (forward-line -1))
+        (let ((section (magit-current-section)))
+          (if (not section)
+              (setq amount-loc 0)
+            (with-slots (type value) section
+              (if (equal type 'file)
+                  (setq amount-loc 0)
+                (setq amount-loc (or (oref value amount-loc) 0)))))
+
+          (let* ((diff-pos (+ 1 (- current-line
+                                   amount-loc
+                                   (a-get obj 'head-pos))))
+                 (local-comment (code-review-local-comment-section
+                                 :state "LOCAL COMMENT"
+                                 :author (code-review-utils--git-get-user)
+                                 :path (a-get obj 'path)
+                                 :position diff-pos)))
+            (setq code-review-comment-uncommitted local-comment)
+            (code-review-comment-add)))))))
+
+;;;###autoload
+(defun code-review-comment-add-or-edit ()
+  "Add or edit comment depending on context."
+  (interactive)
+  (let ((section (magit-current-section)))
+    (with-slots (value) section
+      (setq code-review-comment-cursor-pos (point))
+      (code-review-comment-handler-add-or-edit value))))
+
+
+;;; handlers COMMIT
+
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-reply-comment-section))
+  "Commit the reply OBJ."
+  (let* ((reply-pos (- (+ (oref obj position)
+                          (length (split-string (oref obj msg) "\n")))
+                       2))
+         (buff-name (if code-review-comment-commit-buffer?
+                        code-review-commit-buffer-name
+                      code-review-buffer-name))
+         (clean-msg (code-review-utils--comment-clean-msg
+                     (oref obj msg)
+                     code-review-comment-buffer-msg))
+         (raw-comment `((author (login . ,(oref obj author)))
+                        (state . ,(oref obj state))
+                        (comments (nodes ((internal-id . ,(uuidgen-4))
+                                          (bodyText . ,clean-msg)
+                                          (path . ,(oref obj path))
+                                          (position . ,reply-pos)
+                                          (databaseId . ,(oref obj id))
+                                          (diffHunk . ,(oref obj diffHunk))
+                                          (outdated)
+                                          (local?)
+                                          (reply? . t)))))))
+    (code-review-db--pullreq-raw-comments-update raw-comment)
+    (code-review-section--build-buffer buff-name)
+    (setq code-review-comment-uncommitted nil)))
+
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
+  "Commit the reply OBJ."
+  (let* ((buff-name (if code-review-comment-commit-buffer?
+                        code-review-commit-buffer-name
+                      code-review-buffer-name))
+         (clean-msg (code-review-utils--comment-clean-msg
+                     (oref obj msg)
+                     code-review-comment-buffer-msg))
+         (raw-comment `((author (login . ,(oref obj author)))
+                        (state . ,(oref obj state))
+                        (comments (nodes ((internal-id . ,(uuidgen-4))
+                                          (bodyText . ,clean-msg)
+                                          (path . ,(oref obj path))
+                                          (position . ,(oref obj position))
+                                          (databaseId)
+                                          (diffHunk)
+                                          (outdated)
+                                          (reply?)
+                                          (local? . t)))))))
+
+    (when (oref obj edit?)
+      ;;; delete old comment from raw
+      (code-review-db-delete-raw-comment (oref obj internalId)))
+
+    (code-review-db--pullreq-raw-comments-update raw-comment)
+    (code-review-section--build-buffer buff-name)
+    (setq code-review-comment-uncommitted nil)))
 
 ;;;###autoload
 (defun code-review-comment-commit ()
@@ -251,33 +289,25 @@ For internal usage only.")
                             (with-current-buffer buffer
                               (save-excursion
                                 (buffer-substring-no-properties (point-min) (point-max)))))))
-        (setq code-review-section-full-refresh? nil)
         (kill-buffer buffer)
         (cond
          (code-review-comment-description?
           (code-review-utils--set-description-field comment-text))
-
          (code-review-comment-title?
           (code-review-utils--set-title-field comment-text))
-
          (code-review-comment-feedback?
-          (let* ((comment-cleaned
-                  (code-review-utils--comment-clean-msg
-                   comment-text
-                   code-review-comment-feedback-msg)))
-            (code-review-utils--set-feedback-field comment-cleaned)))
-
+          (code-review-utils--set-feedback-field
+           (code-review-utils--comment-clean-msg
+            comment-text
+            code-review-comment-feedback-msg)))
          (t
-          (let* ((comment-cleaned (code-review-utils--comment-clean-msg
-                                   comment-text
-                                   code-review-comment-buffer-msg)))
-            (code-review-utils--set-local-comment
-             comment-cleaned
-             (-> code-review-comment-metadata
-                 (a-assoc 'cursor-pos code-review-comment-cursor-pos 'editing? code-review-comment-editing?)
-                 (a-assoc-in (list 'comment 'bodyText) comment-cleaned)))))))
-
+          (progn
+            (oset code-review-comment-uncommitted msg comment-text)
+            (code-review-comment-handler-commit
+             code-review-comment-uncommitted)))))
     (code-review-comment-reset-global-vars)))
+
+;;; ----
 
 ;;;###autoload
 (defun code-review-comment-quit ()
@@ -285,53 +315,6 @@ For internal usage only.")
   (interactive)
   (code-review-comment-reset-global-vars)
   (kill-buffer code-review-comment-buffer-name))
-
-;;;###autoload
-(defun code-review-comment-add-or-edit ()
-  "Add or edit comment depending on context."
-  (interactive)
-  (setq code-review-comment-cursor-pos (line-beginning-position)
-        code-review-comment-window-configuration (current-window-configuration))
-
-  (let ((section (magit-current-section)))
-    (if (not section)
-        (message "You should call on a section.")
-      (with-slots (type value) section
-        (cond
-         ((-contains-p '(code-review-local-comment
-                         code-review-local-comment-header
-                         code-review-reply-comment
-                         code-review-reply-comment-header)
-                       type)
-          (setq code-review-comment-commit? (string-equal
-                                             (buffer-name (current-buffer))
-                                             code-review-commit-buffer-name))
-          (code-review-comment-edit))
-         ((string-equal type "hunk")
-          (code-review-comment-add))
-         ((-contains-p '(code-review-comment-body
-                         code-review-comment-header)
-                       type)
-          (code-review-comment-add))
-         ((-contains-p '(code-review-feedback-header
-                         code-review-feedback)
-                       type)
-          (if (not (a-get value 'feedback))
-              (progn
-                (set code-review-comment-commit? nil)
-                (code-review-comment-add-feedback))
-            (progn
-              (setq code-review-comment-feedback? t
-                    code-review-comment-commit? nil)
-              (code-review-comment-edit))))
-         (t
-          (message "Invalid operation")))))))
-
-;;;###autoload
-(defun code-review-comment-delete ()
-  "Delete comment."
-  (interactive)
-  (code-review-section-delete-local-comment))
 
 (defvar code-review-comment-mode-map
   (let ((map (copy-keymap markdown-mode-map)))

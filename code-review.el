@@ -116,70 +116,6 @@
   "Face for outdated comments"
   :group 'code-review)
 
-;;; buffer keymaps
-
-(defvar magit-code-review-commit-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-commit-at-point)
-    map)
-  "Keymap for the `commit' section.")
-
-(defvar magit-code-review-comment-body-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    map)
-  "Keymap for the `comment' section.")
-
-(defvar magit-code-review-comment-header-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    map)
-  "Keymap for the `comment' section.")
-
-(defvar magit-code-review-local-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
-    map)
-  "Keymap for the `local-comment' section.")
-
-(defvar magit-code-review-local-comment-header-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-comment-delete)
-    map)
-  "Keymap for the `local-comment-header' section.")
-
-(defvar magit-code-review-feedback-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    map)
-  "Keymap for the `feedback' section.")
-
-(defvar magit-code-review-feedback-header-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    map)
-  "Keymap for the `feedback' section.")
-
-(defvar magit-code-review-labels-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-label)
-    map)
-  "Keymap for the `label' section.")
-
-(defvar magit-code-review-assignee-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-assignee)
-    map)
-  "Keymap for the `assignee' section.")
-
-(defvar magit-code-review-milestone-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-milestone)
-    map)
-  "Keymap for the `milestone' section.")
-
 ;;; public functions
 
 ;;;###autoload
@@ -200,60 +136,183 @@
   (interactive)
   (code-review-submit "REQUEST_CHANGES"))
 
+;;; Submit structure
+
+(defclass code-review-submit-local-coment ()
+  ((path     :initarg :path)
+   (position :initarg :position)
+   (body     :initarg :body)
+   (internal-id :initarg :internal-id)))
+
+(defclass code-review-submit-review ()
+  ((state :initform nil)
+   (pr :initform nil)
+   (local-comments :initform nil
+                   :type (satisfies
+                          (lambda (it)
+                            (-all-p #'code-review-submit-local-coment-p it))))
+   (feedback :initform nil)))
+
+(defclass code-review-submit-reply ()
+  ((reply-to-id :initarg :reply-to-id)
+   (body        :initarg :body)
+   (internal-id :initarg :internal-id)))
+
+(defclass code-review-submit-replies ()
+  ((pr      :initform nil)
+   (replies :initform nil
+            :type (satisfies
+                   (lambda (it)
+                     (-all-p #'code-review-submit-reply-p it))))))
+
+(defun code-review-submit--unique? (previous-obj current-id)
+  "Verify if CURRENT-ID is in PREVIOUS-OBJ."
+  (if (not previous-obj)
+      t
+    (not (-contains-p (-map (lambda (it)
+                              (oref it internal-id))
+                            previous-obj)
+                      current-id))))
+
+(cl-defmethod code-review-core-send-review ((review code-review-submit-review) callback)
+  "Submit review comments given REVIEW and a CALLBACK fn."
+  (let* ((pr (oref review pr))
+         (payload (a-alist 'body (oref review feedback)
+                           'event (oref review state)
+                           'commit_id (oref pr sha)))
+         (payload (if (oref review local-comments)
+                      (a-assoc payload 'comments (--sort
+                                                  (< (a-get it 'position)
+                                                     (a-get other 'position))
+                                                  (-map
+                                                   (lambda (c)
+                                                     `((path . ,(oref c path))
+                                                       (position . ,(oref c position))
+                                                       (body . ,(oref c body))))
+                                                   (oref review local-comments))))
+                    payload)))
+    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
+                       (oref pr owner)
+                       (oref pr repo)
+                       (oref pr number))
+               nil
+               :auth 'code-review
+               :payload payload
+               :host code-review-github-host
+               :errorback #'code-review-github-errback
+               :callback callback)))
+
+(cl-defmethod code-review-core-send-replies ((replies code-review-submit-replies) callback)
+  "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
+  (let ((pr (oref replies pr)))
+    (deferred:$
+      (deferred:parallel
+        (-map
+         (lambda (reply)
+           (lambda ()
+             (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
+                                (oref pr owner)
+                                (oref pr repo)
+                                (oref pr number)
+                                (oref reply reply-to-id))
+                        nil
+                        :payload (a-alist 'body (oref reply body))
+                        :headers code-review-github-diffheader
+                        :auth 'code-review
+                        :host code-review-github-host
+                        :callback (lambda (&rest _))
+                        :errorback #'code-review-github-errback)))
+         (oref replies replies)))
+
+      (deferred:nextc it
+        (lambda (_x)
+          (prin1 "HOW MANY TIMES?\n")
+          (funcall callback)))
+
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from the Github Reply API %S!" err))))))
+
 ;;;###autoload
-(defun code-review-submit (event &optional feedback)
+(defun code-review-submit (event &optional feedback only-reply?)
   "Submit your review with a final verdict (EVENT).
-If you already have a FEEDBACK string use it."
+If you already have a FEEDBACK string use it.
+If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (interactive)
-  (let* ((obj (code-review-utils--gen-submit-structure feedback))
-         (send-review? (when (oref obj feedback) t))
-         (send-reply? (when (oref obj replies) t)))
-    (setq code-review-section-full-refresh? t)
-    (oset obj state event)
-    (code-review-db-update obj)
-    (cond
-     ((and (not send-reply?) (not send-review?))
-      (setq reload? nil)
-      (message "You should provide a feedback or comment replies before submit."))
+  (let ((review-obj (code-review-submit-review))
+        (replies-obj (code-review-submit-replies))
+        (pr (code-review-db-get-pullreq)))
 
-     ((and send-review? (not send-reply?))
-      (code-review-core-send-review
-       obj
-       (lambda (&rest _)
-         (code-review-section--build-buffer code-review-buffer-name)
-         (message "Done submitting review"))))
+    (oset review-obj state event)
+    (oset review-obj pr pr)
+    (oset replies-obj pr pr)
 
-     ((and send-reply? (not send-review?))
-      (code-review-core-send-replies
-       obj
-       (lambda (&rest _)
-         (code-review-section--build-buffer code-review-buffer-name)
-         (message "Done submitting review replies"))))
+    (let ((replies nil)
+          (local-comments nil))
+      (with-current-buffer (get-buffer code-review-buffer-name)
+        (save-excursion
+          (goto-char (point-min))
+          (magit-wash-sequence
+           (lambda ()
+             (let ((section (magit-current-section)))
+               (with-slots (value) section
+                 ;; get feedback
+                 (when (code-review-feedback-section-p section)
+                   (oset review-obj feedback (oref value msg)))
 
-     ((and send-reply? send-review?)
-      (progn
-        (code-review-core-send-replies
-         obj
-         (lambda (&rest _)
-           (code-review-section--build-buffer code-review-buffer-name)
-           (message "Done submitting review replies")))
-        (code-review-core-send-review
-         obj
-         (lambda (&rest _)
-           (code-review-section--build-buffer code-review-buffer-name)
-           (message "Done submitting review"))))))))
+                 ;; get replies
+                 (when (code-review-reply-comment-section-p section)
+                   (when (code-review-submit--unique? replies (oref value internalId))
+                     (push (code-review-submit-reply
+                            :reply-to-id (oref value id)
+                            :body (oref value msg)
+                            :internal-id (oref value internalId))
+                           replies)))
+
+                 ;; get local comments
+                 (when (code-review-local-comment-section-p section)
+                   (when (code-review-submit--unique? local-comments (oref value internalId))
+                     (push (code-review-submit-local-coment
+                            :path (oref value path)
+                            :position (oref value position)
+                            :body (oref value msg)
+                            :internal-id (oref value internalId))
+                           local-comments))))
+               (forward-line))))))
+
+      (oset replies-obj replies replies)
+      (oset review-obj local-comments local-comments)
+
+      (if (and (not (oref review-obj feedback))
+               (not only-reply?))
+          (message "You must provide a feedback msg before submit your Review.")
+        (progn
+          (when (not only-reply?)
+            (code-review-core-send-review
+             review-obj
+             (lambda (&rest _)
+               (let ((code-review-section-full-refresh? t))
+                 (code-review-section--build-buffer
+                  code-review-buffer-name
+                  nil
+                  "Done submitting review")))))
+
+          (when (oref replies-obj replies)
+            (code-review-core-send-replies
+             replies-obj
+             (lambda (&rest _)
+               (let ((code-review-section-full-refresh? t))
+                 (code-review-section--build-buffer
+                  code-review-buffer-name
+                  nil
+                  "Done submitting review and replies."))))))))))
 
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."
   (interactive)
-  (let ((section (magit-current-section)))
-    (if section
-        (with-slots (type value) section
-          (if (eq type 'code-review-commit)
-              (code-review-section--build-commit-buffer
-               code-review-commit-buffer-name)
-            (message "Can only be called from a commit section.")))
-      (message "Can only be called from a commit section."))))
+  (setq code-review-comment-commit-buffer? t)
+  (code-review-section--build-commit-buffer
+   code-review-commit-buffer-name))
 
 (defun code-review-commit-buffer-back ()
   "Move from commit buffer to review buffer."
@@ -261,7 +320,7 @@ If you already have a FEEDBACK string use it."
   (if (equal (current-buffer)
              (get-buffer code-review-commit-buffer-name))
       (progn
-        (setq code-review-comment-commit? nil
+        (setq code-review-comment-commit-buffer? nil
               code-review-section-full-refresh? nil)
         (kill-this-buffer)
         (code-review-section--trigger-hooks
@@ -300,6 +359,12 @@ If you already have a FEEDBACK string use it."
   (interactive)
   (code-review-submit "APPROVE" code-review-lgtm-message))
 
+
+;;;###autoload
+(defun code-review-submit-only-replies ()
+  "Submit only replies."
+  (interactive)
+  (code-review-submit nil nil t))
 
 ;;;###autoload
 (defun code-review-merge-merge ()
@@ -373,21 +438,22 @@ OUTDATED."
     ("a" "Approve" code-review-approve)
     ("r" "Request Changes" code-review-request-changes)
     ("c" "Comment" code-review-comments)
-    ("sf" "Add Feedback" code-review-comment-add-feedback)
     ("C-c C-c" "Submit" code-review-submit)]
    ["Merge"
     ("mm" "Merge" code-review-merge-merge)
     ("mr" "Merge Rebase" code-review-merge-rebase)
     ("ms" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
-   ("l" "LGTM - Approved" code-review-submit-lgtm)]
+   ("l" "LGTM - Approved" code-review-submit-lgtm)
+   ("p" "Submit Replies" code-review-submit-only-replies)]
   ["Setters"
-   ("sy" "Set Yourself as Assignee" code-review--set-assignee-yourself)
-   ("sa" "Set Assignee" code-review--set-assignee)
-   ("sm" "Set Milestone" code-review--set-milestone)
-   ("sl" "Set Labels" code-review--set-label)
-   ("st" "Set Title" code-review-comment-add-title)
-   ("sd" "Set Description" code-review-comment-add-description)]
+   ("sf" "Feedback" code-review-comment-set-feedback)
+   ("sy" "Yourself as Assignee" code-review--set-assignee-yourself)
+   ("sa" "Assignee" code-review--set-assignee)
+   ("sm" "Milestone" code-review--set-milestone)
+   ("sl" "Labels" code-review--set-label)
+   ("st" "Title" code-review-comment-set-title)
+   ("sd" "Description" code-review-comment-set-description)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

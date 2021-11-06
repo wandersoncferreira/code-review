@@ -10,6 +10,20 @@
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; For a full copy of the GNU General Public License
+;; see <http://www.gnu.org/licenses/>.
+
 ;;; Commentary:
 ;;
 ;;  Description
@@ -261,6 +275,7 @@
       (oset pullreq description .bodyText)
       (oset pullreq sha .headRef.target.oid)
       (oset pullreq raw-comments .reviews.nodes)
+      (oset pullreq assignees .assignees.nodes)
       (oset pullreq milestones `((title . ,.milestone.title)
                                  (perc . ,.milestone.progressPercentage)
                                  (number . nil)))
@@ -304,6 +319,10 @@
 (defun code-review-db--pullreq-labels ()
   "Get labels of pullreq."
   (oref (code-review-db-get-pullreq) labels))
+
+(defun code-review-db--pullreq-assignees ()
+  "Get assignees of pullreq."
+  (oref (code-review-db-get-pullreq) assignees))
 
 (defun code-review-db--pullreq-milestones ()
   "Get milestones of pullreq."

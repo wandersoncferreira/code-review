@@ -36,12 +36,12 @@
 (require 'forge-post)
 (require 'forge-core)
 (require 'forge-github)
+(require 'code-review-github)
 
 ;;;
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
 (defvar code-review-log-file)
-(defvar code-review-comment-commit?)
 
 (defun code-review-utils-current-project-buffer-name ()
   "Return the name of the buffer we are currently in."
@@ -127,6 +127,86 @@ using COMMENTS."
                             (a-keys grouped-comments))))
     (-difference expected-in-path written-in-path)))
 
+(defun code-review-utils-make-group (raw-comments)
+  "Group RAW-COMMENTS to ease the access when building the buffer."
+  (-reduce-from
+   (lambda (acc node)
+     (let ((author (a-get-in node (list 'author 'login)))
+           (state (a-get node 'state)))
+       (if-let (comments (a-get-in node (list 'comments 'nodes)))
+           (-reduce-from
+            (lambda (grouped-comments comment)
+              (let-alist comment
+                (let* ((handled-pos (or .position .originalPosition))
+                       (path-pos (code-review-utils--comment-key .path handled-pos))
+                       (obj (cond
+                             (.reply?
+                              (code-review-reply-comment-section
+                               :state state
+                               :author author
+                               :msg .bodyText
+                               :position handled-pos
+                               :path .path
+                               :diffHunk .diffHunk
+                               :internalId .internal-id
+                               :id .databaseId))
+                             (.outdated
+                              (code-review-outdated-comment-section
+                               :state state
+                               :author author
+                               :msg .bodyText
+                               :position handled-pos
+                               :internalId .internal-id
+                               :path .path
+                               :diffHunk .diffHunk
+                               :id .databaseId))
+                             (.local?
+                              (code-review-local-comment-section
+                               :state state
+                               :author author
+                               :msg .bodyText
+                               :position handled-pos
+                               :internalId .internal-id
+                               :path .path))
+                             (t
+                              (code-review-code-comment-section
+                               :state state
+                               :author author
+                               :msg .bodyText
+                               :position handled-pos
+                               :internalId .internal-id
+                               :path .path
+                               :diffHunk .diffHunk
+                               :id .databaseId)))))
+
+                  ;;; extra checks
+                  (when (not handled-pos)
+                    (throw :code-review/comment-missing-position
+                           "Every comment requires a position in the diff."))
+
+                  (when (not .path)
+                    (throw :code-review/comment-missing-path
+                           "Every comment requires a path in the diff."))
+
+                  (when (not .bodyText)
+                    (code-review-utils--log
+                     "code-review-comment-make-group"
+                     (format "Every comment should have a body. Nil value found. %S"
+                             (prin1-to-string comment)))
+                    (message "Comment with nil body"))
+
+                  ;;; TODO: should I guarantee that every comment has an associated diffHunk?
+                  ;;; this is currently not true for local comments.
+                  (if (or (not grouped-comments)
+                          (not (code-review-utils--comment-get grouped-comments path-pos)))
+                      (a-assoc grouped-comments path-pos (list obj))
+                    (a-update grouped-comments path-pos (lambda (v) (append v (list obj))))))))
+            acc
+            comments)
+         acc)))
+   nil
+   raw-comments))
+
 
 ;;; GIT
 
@@ -211,22 +291,25 @@ If you already have a FEEDBACK string to submit use it."
         (goto-char (point-min))
         (magit-wash-sequence
          (lambda ()
-           (with-slots (type value) (magit-current-section)
-             (cond
-              ((equal type 'code-review-reply-comment-header)
-               (let-alist value
-                 (push `((comment-id . ,.comment.databaseId)
-                         (body . ,.comment.bodyText))
-                       replies)))
-              ((equal type 'code-review-feedback)
-               (setq feedback (or (a-get value 'feedback) feedback)))
-              ((equal type 'code-review-local-comment-header)
-               (let-alist value
-                 (push `((path . ,.comment.path)
-                         (position . ,.comment.position)
-                         (body . ,.comment.bodyText))
-                       review-comments))))
-             (forward-line))))))
+           (let ((section (magit-current-section)))
+             (with-slots (type value) section
+               (cond
+                ((code-review-reply-comment-section-p section)
+                 )
+                ((equal type 'code-review-reply-comment-header)
+                 (let-alist value
+                   (push `((comment-id . ,.comment.databaseId)
+                           (body . ,.comment.bodyText))
+                         replies)))
+                ((equal type 'code-review-feedback)
+                 (setq feedback (or (a-get value 'feedback) feedback)))
+                ((equal type 'code-review-local-comment-header)
+                 (let-alist value
+                   (push `((path . ,.comment.path)
+                           (position . ,.comment.position)
+                           (body . ,.comment.bodyText))
+                         review-comments))))
+               (forward-line)))))))
     (oset pullreq replies replies)
     (oset pullreq review review-comments)
     (oset pullreq feedback feedback)
@@ -278,7 +361,7 @@ If a valid ASSIGNEE is provided, use that instead."
       (let* ((options (code-review-core-get-assignees obj))
              (choice (completing-read "Choose: " options)))
         (setq candidate choice)))
-    (oset obj assignees candidate)
+    (oset obj assignees (list `((name) (login . ,candidate))))
     (code-review-core-set-assignee obj)
     (closql-insert (code-review-db) obj t)
     (code-review-section--build-buffer
@@ -289,7 +372,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (let* ((options (code-review-core-get-milestones obj))
          (choice (completing-read "Choose: " (a-keys options)))
          (milestone `((title . ,choice)
-                      (perc . nil)
+                      (perc . 0)
                       (number .,(alist-get choice options nil nil 'equal)))))
     (oset obj milestones milestone)
     (code-review-core-set-milestone obj)
@@ -320,18 +403,6 @@ If a valid ASSIGNEE is provided, use that instead."
   (code-review-db--pullreq-feedback-update feedback)
   (code-review-section--build-buffer
    code-review-buffer-name))
-
-
-(defun code-review-utils--set-local-comment (comment metadata)
-  "Insert local COMMENT based on METADATA structure."
-  (let ((buff-name (if code-review-comment-commit?
-                       code-review-commit-buffer-name
-                     code-review-buffer-name)))
-    (code-review-section-insert-local-comment
-     comment
-     metadata
-     buff-name)
-    (code-review-section--build-buffer buff-name)))
 
 ;;; LOG
 
