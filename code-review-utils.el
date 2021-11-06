@@ -294,8 +294,7 @@ If you already have a FEEDBACK string to submit use it."
            (let ((section (magit-current-section)))
              (with-slots (type value) section
                (cond
-                ((code-review-reply-comment-section-p section)
-                 )
+                ((code-review-reply-comment-section-p section))
                 ((equal type 'code-review-reply-comment-header)
                  (let-alist value
                    (push `((comment-id . ,.comment.databaseId)

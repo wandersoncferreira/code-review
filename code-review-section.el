@@ -645,11 +645,6 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (magit-insert-heading)))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
-(defun veri ()
-  (interactive)
-  (with-slots (value) (magit-current-section)
-    (prin1 value)))
-
 (defun code-review-section--magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
 Code Review inserts PR comments sections in the diff buffer.
