@@ -33,6 +33,20 @@ The Emacs everywhere goal continues. These are the main features of
 - Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
 
 
+The basic workflow:
+
+- `RET` on a hunk diff line to add a comment
+- `RET` on a local comment to edit
+- `RET` on a previous sent comment to include a reply
+- `C-c C-k` on a local comment to remove it
+- `r s f` to enable transient and Set a feedback
+- `r a` to approve the PR | `r r` to reject the PR | `r c` to add comments in the PR
+
+You can include your own bindings to functions like
+`code-review-comment-set-feedback`, `code-review-approve`,
+`code-review-request-changes`, and `code-review-comments` to not rely on the
+transient panel. But I think you should see it :]
+
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
 # Installation
