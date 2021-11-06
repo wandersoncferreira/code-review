@@ -107,13 +107,13 @@
 (defface code-review-recent-comment-heading
   '((((supports (:box t))) :inherit magit-branch-remote :box t)
     (t                     :inherit magit-branch-remote :inverse-video t))
-  "Face for recent comments"
+  "Face for recent comments."
   :group 'code-review)
 
 (defface code-review-outdated-comment-heading
   '((((supports (:box t))) :inherit magit-cherry-equivalent :box t)
     (t                     :inherit magit-cherry-equivalent :inverse-video t))
-  "Face for outdated comments"
+  "Face for outdated comments."
   :group 'code-review)
 
 ;;; build buffer
@@ -249,7 +249,7 @@ If you want to provide a MSG for the end of the process."
                      (-all-p #'code-review-submit-reply-p it))))))
 
 (defun code-review-submit--unique? (previous-obj current-id)
-  "Verify if CURRENT-ID is in PREVIOUS-OBJ."
+  "Verify if PREVIOUS-OBJ has CURRENT-ID."
   (if (not previous-obj)
       t
     (not (-contains-p (-map (lambda (it)
@@ -520,7 +520,7 @@ OUTDATED."
 ;;; Transient
 
 (transient-define-prefix code-review-transient-api ()
-  "Code Review"
+  "Code Review."
   [["Review"
     ("a" "Approve" code-review-approve)
     ("r" "Request Changes" code-review-request-changes)
@@ -553,7 +553,7 @@ OUTDATED."
     map))
 
 (define-derived-mode code-review-mode magit-section-mode "Code Review"
-  "Code Review mode")
+  "Code Review mode.")
 
 (provide 'code-review)
 ;;; code-review.el ends here
