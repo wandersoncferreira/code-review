@@ -6,7 +6,6 @@
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Version: 0.0.1
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 
@@ -40,9 +39,7 @@
 (defvar magit-root-section)
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
-(defvar code-review-comment-cursor-pos)
-(defvar code-review-commit-minor-mode)
-(defvar code-review-mode)
+(defvar code-review-comment-commit-buffer?)
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -438,6 +435,9 @@ For internal usage only.")
 
 ;;; next sections
 
+(defclass code-review-check-section (magit-section)
+  ((details :initarg :details)))
+
 (defun code-review-section-insert-commits ()
   "Insert commits from PULL-REQUEST."
   (when-let (infos (code-review-db--pullreq-raw-infos))
@@ -734,90 +734,9 @@ Please Report this Bug" path-name))
           (oset section about about))))
     t))
 
-(defun code-review-section--trigger-hooks (buff-name &optional commit-focus? msg)
-  "Trigger magit section hooks and draw BUFF-NAME.
-Run code review commit buffer hook when COMMIT-FOCUS? is non-nil.
-If you want to display a minibuffer MSG in the end."
-  (unwind-protect
-      (progn
-        ;; advices
-        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
-
-        (setq code-review-section-grouped-comments
-              (code-review-utils-make-group
-               (code-review-db--pullreq-raw-comments))
-              code-review-section-hold-written-comment-count nil
-              code-review-section-hold-written-comment-ids nil)
-
-        (with-current-buffer (get-buffer-create buff-name)
-          (let* ((window (get-buffer-window buff-name))
-                 (ws (window-start window))
-                 (inhibit-read-only t))
-            (save-excursion
-              (erase-buffer)
-              (insert (code-review-db--pullreq-raw-diff))
-              (insert ?\n)
-              (insert ?\n))
-            (magit-insert-section (review-buffer)
-              (magit-insert-section (code-review)
-                (if commit-focus?
-                    (magit-run-section-hook 'code-review-sections-commit-hook)
-                  (magit-run-section-hook 'code-review-sections-hook)))
-              (magit-wash-sequence
-               (apply-partially #'magit-diff-wash-diff ())))
-            (if window
-                (progn
-                  (pop-to-buffer buff-name)
-                  (set-window-start window ws)
-                  (when code-review-comment-cursor-pos
-                    (goto-char code-review-comment-cursor-pos)))
-              (progn
-                (switch-to-buffer-other-window buff-name)
-                (goto-char (point-min))))
-            (if commit-focus?
-                (progn
-                  (code-review-mode)
-                  (code-review-commit-minor-mode))
-              (code-review-mode))
-            (code-review-section-insert-header-title)
-            (when msg
-              (message nil)
-              (message msg)))))
-
-    ;; remove advices
-    (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
-    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
-
-
-(defun code-review-section--build-buffer (buff-name &optional commit-focus? msg)
-  "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
-If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
-      (code-review-section--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq)))
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
-        (deferred:nextc it
-          (lambda (x)
-            (let-alist (-second-item x)
-              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-utils--clean-diff-prefixes
-                (a-get (-first-item x) 'message)))
-              (code-review-section--trigger-hooks buff-name msg))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review-section--build-buffer"
-             (prin1-to-string err))
-            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
-
 (defun code-review-section--build-commit-buffer (buff-name)
   "Build commit buffer review given by BUFF-NAME."
-  (code-review-section--build-buffer buff-name t))
+  (code-review--build-buffer buff-name t))
 
 ;;;###autoload
 (defun code-review-section-delete-comment ()
@@ -828,7 +747,7 @@ If you want to provide a MSG for the end of the process."
                      code-review-buffer-name)))
     (with-slots (value start end) (magit-current-section)
       (code-review-db-delete-raw-comment (oref value internalId))
-      (code-review-section--build-buffer buff-name))))
+      (code-review--build-buffer buff-name))))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here

@@ -6,7 +6,6 @@
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Version: 0.0.1
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 
@@ -329,7 +328,7 @@ If you already have a FEEDBACK string to submit use it."
                                 'url (when (forge-github-repository-p repo)
                                        "https://api.github.com"))))
         (code-review-utils-build-obj pr-alist)
-        (code-review-section--build-buffer
+        (code-review--build-buffer
          code-review-buffer-name)))))
 
 ;;; Header setters
@@ -348,7 +347,7 @@ Milestones, labels, projects, and more."
     (oset obj labels labels)
     (code-review-core-set-labels obj)
     (closql-insert (code-review-db) obj t)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
@@ -363,7 +362,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (oset obj assignees (list `((name) (login . ,candidate))))
     (code-review-core-set-assignee obj)
     (closql-insert (code-review-db) obj t)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-milestone-field (obj)
@@ -376,7 +375,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (oset obj milestones milestone)
     (code-review-core-set-milestone obj)
     (closql-insert (code-review-db) obj t)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      (code-review-utils-current-project-buffer-name))))
 
 (defun code-review-utils--set-title-field (title)
@@ -385,7 +384,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (oset pr title title)
     (code-review-core-set-title pr)
     (closql-insert (code-review-db) pr t)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name)))
 
 (defun code-review-utils--set-description-field (description)
@@ -394,13 +393,13 @@ If a valid ASSIGNEE is provided, use that instead."
     (oset pr description description)
     (code-review-core-set-description pr)
     (closql-insert (code-review-db) pr t)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name)))
 
 (defun code-review-utils--set-feedback-field (feedback)
   "Helper function to set a FEEDBACK."
   (code-review-db--pullreq-feedback-update feedback)
-  (code-review-section--build-buffer
+  (code-review--build-buffer
    code-review-buffer-name))
 
 ;;; LOG

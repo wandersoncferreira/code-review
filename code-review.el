@@ -116,6 +116,89 @@
   "Face for outdated comments"
   :group 'code-review)
 
+;;; build buffer
+
+(defun code-review--trigger-hooks (buff-name &optional commit-focus? msg)
+  "Trigger magit section hooks and draw BUFF-NAME.
+Run code review commit buffer hook when COMMIT-FOCUS? is non-nil.
+If you want to display a minibuffer MSG in the end."
+  (unwind-protect
+      (progn
+        ;; advices
+        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
+        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+
+        (setq code-review-section-grouped-comments
+              (code-review-utils-make-group
+               (code-review-db--pullreq-raw-comments))
+              code-review-section-hold-written-comment-count nil
+              code-review-section-hold-written-comment-ids nil)
+
+        (with-current-buffer (get-buffer-create buff-name)
+          (let* ((window (get-buffer-window buff-name))
+                 (ws (window-start window))
+                 (inhibit-read-only t))
+            (save-excursion
+              (erase-buffer)
+              (insert (code-review-db--pullreq-raw-diff))
+              (insert ?\n)
+              (insert ?\n))
+            (magit-insert-section (review-buffer)
+              (magit-insert-section (code-review)
+                (if commit-focus?
+                    (magit-run-section-hook 'code-review-sections-commit-hook)
+                  (magit-run-section-hook 'code-review-sections-hook)))
+              (magit-wash-sequence
+               (apply-partially #'magit-diff-wash-diff ())))
+            (if window
+                (progn
+                  (pop-to-buffer buff-name)
+                  (set-window-start window ws)
+                  (when code-review-comment-cursor-pos
+                    (goto-char code-review-comment-cursor-pos)))
+              (progn
+                (switch-to-buffer-other-window buff-name)
+                (goto-char (point-min))))
+            (if commit-focus?
+                (progn
+                  (code-review-mode)
+                  (code-review-commit-minor-mode))
+              (code-review-mode))
+            (code-review-section-insert-header-title)
+            (when msg
+              (message nil)
+              (message msg)))))
+
+    ;; remove advices
+    (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
+    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
+
+(defun code-review--build-buffer (buff-name &optional commit-focus? msg)
+  "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
+If you want to provide a MSG for the end of the process."
+  (if (not code-review-section-full-refresh?)
+      (code-review--trigger-hooks buff-name commit-focus? msg)
+    (let ((obj (code-review-db-get-pullreq)))
+      (deferred:$
+        (deferred:parallel
+          (lambda () (code-review-core-diff-deferred obj))
+          (lambda () (code-review-core-infos-deferred obj)))
+        (deferred:nextc it
+          (lambda (x)
+            (let-alist (-second-item x)
+              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+              (code-review-db--pullreq-raw-diff-update
+               (code-review-utils--clean-diff-prefixes
+                (a-get (-first-item x) 'message)))
+              (code-review--trigger-hooks buff-name msg))))
+        (deferred:error it
+          (lambda (err)
+            (code-review-utils--log
+             "code-review--build-buffer"
+             (prin1-to-string err))
+            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
+
+
 ;;; public functions
 
 ;;;###autoload
@@ -247,6 +330,9 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (oset review-obj pr pr)
     (oset replies-obj pr pr)
 
+    (when feedback
+      (oset review-obj feedback feedback))
+
     (let ((replies nil)
           (local-comments nil))
       (with-current-buffer (get-buffer code-review-buffer-name)
@@ -257,7 +343,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
              (let ((section (magit-current-section)))
                (with-slots (value) section
                  ;; get feedback
-                 (when (code-review-feedback-section-p section)
+                 (when (and (code-review-feedback-section-p section)
+                            (not feedback))
                    (oset review-obj feedback (oref value msg)))
 
                  ;; get replies
@@ -292,7 +379,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
              review-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
-                 (code-review-section--build-buffer
+                 (code-review--build-buffer
                   code-review-buffer-name
                   nil
                   "Done submitting review")))))
@@ -302,7 +389,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
              replies-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
-                 (code-review-section--build-buffer
+                 (code-review--build-buffer
                   code-review-buffer-name
                   nil
                   "Done submitting review and replies."))))))))))
@@ -323,7 +410,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
         (setq code-review-comment-commit-buffer? nil
               code-review-section-full-refresh? nil)
         (kill-this-buffer)
-        (code-review-section--trigger-hooks
+        (code-review--trigger-hooks
          code-review-buffer-name))
     (message "Command must be called from Code Review Commit buffer.")))
 
@@ -374,7 +461,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (code-review-core-merge pr "merge")
     (oset pr state "MERGED")
     (code-review-db-update pr)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name)))
 
 ;;;###autoload
@@ -385,7 +472,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (code-review-core-merge pr "rebase")
     (oset pr state "MERGED")
     (code-review-db-update pr)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name)))
 
 ;;;###autoload
@@ -396,7 +483,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (code-review-core-merge pr "squash")
     (oset pr state "MERGED")
     (code-review-db-update pr)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name)))
 
 ;;; Entrypoint
@@ -408,7 +495,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (setq code-review-section-full-refresh? t)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
-    (code-review-section--build-buffer
+    (code-review--build-buffer
      code-review-buffer-name))
   (setq code-review-section-full-refresh? nil))
 

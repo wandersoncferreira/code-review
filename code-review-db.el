@@ -6,7 +6,6 @@
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Version: 0.0.1
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;

@@ -6,7 +6,6 @@
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Version: 0.0.1
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 
@@ -51,6 +50,8 @@
 
 (defconst code-review-github-token-scopes '(repo)
   "Only repo scope needed to read PRs and submit reviews.")
+
+(defvar code-review-log-file)
 
 (defun code-review--log (origin msg)
   "Log MSG from ORIGIN to error file."

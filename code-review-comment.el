@@ -6,7 +6,6 @@
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Version: 0.0.1
 ;; Homepage: https://github.com/wandersoncferreira/code-review
-;; Package-Requires: ((emacs "25.1"))
 ;; This file is not part of GNU Emacs.
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -248,7 +247,7 @@ For internal usage only.")
                                           (local?)
                                           (reply? . t)))))))
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review-section--build-buffer buff-name)
+    (code-review--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
@@ -276,7 +275,7 @@ For internal usage only.")
       (code-review-db-delete-raw-comment (oref obj internalId)))
 
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review-section--build-buffer buff-name)
+    (code-review--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
 ;;;###autoload
