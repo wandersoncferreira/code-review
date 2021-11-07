@@ -421,16 +421,6 @@ If a valid ASSIGNEE is provided, use that instead."
 
 ;;; DIFF
 
-(defvar code-review-utils--regex-clean-prefix
-  (rx "diff --git"
-      space
-      "a/"
-      (group-n 1 (one-or-more not-newline))
-      space
-      "b/"
-      (group-n 2 (one-or-more not-newline)))
-  "String to fix prefixes in git diff.")
-
 (defun code-review-utils--clean-diff-prefixes (raw-diff)
   "Remove all prefixes from RAW-DIFF.
 Expect the same output as `git diff --no-prefix`"
