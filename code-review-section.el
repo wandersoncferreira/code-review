@@ -535,7 +535,7 @@ For internal usage only.")
                (oref first-hunk-commit path)
                amount-new-loc))
 
-        (magit-insert-section (code-review-outdated-hunk-section metadata1)
+        (magit-insert-section outdated-section (code-review-outdated-hunk-section metadata1)
           (let ((heading (format "Reviewed - [OUTDATED]")))
             (add-face-text-property 0 (length heading)
                                     'code-review-outdated-comment-heading
@@ -546,6 +546,9 @@ For internal usage only.")
                 (insert safe-hunk))
               (magit-diff-wash-hunk)
               (insert ?\n)
+              (insert ?\n)
+
+              (oset outdated-section hidden t)
 
               (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
                 (let* ((body-lines (code-review-utils--split-comment (oref c msg)))
