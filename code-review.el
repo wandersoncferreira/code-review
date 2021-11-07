@@ -141,7 +141,6 @@ If you want to display a minibuffer MSG in the end."
             (save-excursion
               (erase-buffer)
               (insert (code-review-db--pullreq-raw-diff))
-              (insert ?\n)
               (insert ?\n))
             (magit-insert-section (review-buffer)
               (magit-insert-section (code-review)
@@ -309,7 +308,6 @@ If you want to provide a MSG for the end of the process."
 
       (deferred:nextc it
         (lambda (_x)
-          (prin1 "HOW MANY TIMES?\n")
           (funcall callback)))
 
       (deferred:error it
