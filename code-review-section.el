@@ -40,6 +40,7 @@
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
 (defvar code-review-comment-commit-buffer?)
+(defvar code-review-fill-column)
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -233,7 +234,10 @@ For internal usage only.")
       (add-face-text-property 0 (length heading) (oref obj heading-face) t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-local-comment-section obj)
-      (dolist (l (code-review-utils--split-comment (oref obj msg)))
+      (dolist (l (code-review-utils--split-comment
+                  (code-review-utils--wrap-text
+                   (oref obj msg)
+                   code-review-fill-column)))
         (insert l)
         (insert ?\n))
       (insert ?\n))))
@@ -245,7 +249,10 @@ For internal usage only.")
       (add-face-text-property 0 (length heading) (oref obj heading-face) t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-reply-comment-section obj)
-      (dolist (l (code-review-utils--split-comment (oref obj msg)))
+      (dolist (l (code-review-utils--split-comment
+                  (code-review-utils--wrap-text
+                   (oref obj msg)
+                   code-review-fill-column)))
         (insert l)
         (insert ?\n))
       (insert ?\n))))
@@ -257,7 +264,10 @@ For internal usage only.")
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-code-comment-section obj)
-      (dolist (l (code-review-utils--split-comment (oref obj msg)))
+      (dolist (l (code-review-utils--split-comment
+                  (code-review-utils--wrap-text
+                   (oref obj msg)
+                   code-review-fill-column)))
         (insert l)
         (insert ?\n)))))
 
@@ -551,7 +561,10 @@ For internal usage only.")
               (oset outdated-section hidden t)
 
               (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
-                (let* ((body-lines (code-review-utils--split-comment (oref c msg)))
+                (let* ((body-lines (code-review-utils--split-comment
+                                    (code-review-utils--wrap-text
+                                     (oref c msg)
+                                     code-review-fill-column)))
                        (amount-new-loc-outdated (+ 2 (length body-lines))))
 
                   (setq code-review-section-hold-written-comment-count

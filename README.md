@@ -82,6 +82,10 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 # Configuration
 
+### Code Review
+
+Set `code-review-fill-column` to define line wrap comment sections.
+
 ### GitHub
 
 `code-review` needs a GitHub token to act on your behalf for fetching PRs and

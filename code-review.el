@@ -64,6 +64,11 @@
   :group 'code-review
   :type 'function)
 
+(defcustom code-review-fill-column 80
+  "Column number to wrap comments."
+  :group 'code-review
+  :type 'integer)
+
 (defcustom code-review-log-file (expand-file-name
                                  "code-review-error.log"
                                  user-emacs-directory)

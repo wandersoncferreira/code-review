@@ -78,6 +78,14 @@ using COMMENTS."
     ""
     msg)))
 
+(defun code-review-utils--wrap-text (text n)
+  "Wrap TEXT at every N column."
+  (let ((fill-column n))
+    (with-temp-buffer
+      (insert text)
+      (fill-paragraph)
+      (buffer-substring (point-min) (point-max)))))
+
 (defun code-review-utils--clean-suggestion (suggestion)
   "Clean SUGGESTION comment."
   (let ((res (-reduce-from
