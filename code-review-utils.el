@@ -40,6 +40,7 @@
 ;;;
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
+(defvar code-review--build-buffer)
 (defvar code-review-log-file)
 
 (defun code-review-utils-current-project-buffer-name ()
