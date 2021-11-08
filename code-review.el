@@ -25,11 +25,11 @@
 
 ;; For a full copy of the GNU General Public License
 ;; see <http://www.gnu.org/licenses/>.
+;;
 ;;; Commentary:
 ;;
-;; `code-review` lets you submit code review with Emacs.
-;;
-;; Currently only supports Github but contains extension points to other forges.
+;; Review Pull Request in Emacs using a modern interface based on Magit Section
+;; and Transient. Currently supports only Github.
 ;;
 
 ;;; Code:
