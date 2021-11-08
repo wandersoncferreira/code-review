@@ -152,6 +152,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       baseRefName
       headRefName
       isDraft
+      databaseId
       number
       milestone {
         title
@@ -193,8 +194,25 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       title
       state
       bodyText
+      reactions(first:50){
+        nodes {
+          id
+          content
+        }
+      }
       comments(first:50) {
-        nodes { author { login } bodyText }
+        nodes {
+          reactions(first:50){
+            nodes {
+              id
+              content
+            }
+          }
+          author {
+            login
+          }
+          bodyText
+        }
       }
       reviews(first: 50) {
         nodes { author { login } bodyText state
@@ -207,6 +225,12 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               outdated
               path
               databaseId
+              reactions(first:50){
+                nodes {
+                  id
+                  content
+                }
+              }
             }
           }
         }
@@ -343,6 +367,26 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               'merge_method strategy)
             :errorback (lambda (e &rest _)
                          (message "ERROR!! %S" (a-get (-fourth-item e) 'message)))))
+
+(cl-defmethod code-review-core-set-reaction ((github code-review-github-repo) comment-id reaction)
+  "Set REACTION in GITHUB pullreq COMMENT-ID."
+  (ghub-post (format "/repos/%s/%s/pulls/comments/%s/reactions"
+                     (oref github owner)
+                     (oref github repo)
+                     comment-id)
+             nil
+             :auth 'code-review
+             :payload (a-alist 'content reaction)))
+
+(cl-defmethod code-review-core-delete-reaction ((github code-review-github-repo) comment-id reaction-id)
+  "Delete REACTION-ID in GITHUB pullreq COMMENT-ID."
+  (ghub-delete (format "/repos/%s/%s/pulls/comments/%s/reactions/%s"
+                       (oref github owner)
+                       (oref github repo)
+                       comment-id
+                       reaction-id)
+               nil
+               :auth 'code-review))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

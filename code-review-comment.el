@@ -218,8 +218,11 @@ For internal usage only.")
   (interactive)
   (let ((section (magit-current-section)))
     (with-slots (value) section
-      (setq code-review-comment-cursor-pos (point))
-      (code-review-comment-handler-add-or-edit value))))
+      (if (code-review-reactions-section-p section)
+          (code-review-toggle-reaction-at-point)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (code-review-comment-handler-add-or-edit value))))))
 
 
 ;;; handlers COMMIT

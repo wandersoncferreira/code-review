@@ -121,6 +121,19 @@
   "Face for outdated comments."
   :group 'code-review)
 
+;;; vars
+
+(defvar code-review-reaction-types
+  `(("THUMBS_UP" . ":+1:")
+    ("THUMBS_DOWN" . ":-1:")
+    ("LAUGH" . ":laughing:")
+    ("CONFUSED" . ":confused:")
+    ("HEART" . ":heart:")
+    ("HOORAY" . ":tada:")
+    ("ROCKET" . ":rocket:")
+    ("EYES" . ":eyes:"))
+  "All available reactions.")
+
 ;;; build buffer
 
 (defun code-review--trigger-hooks (buff-name &optional commit-focus? msg)

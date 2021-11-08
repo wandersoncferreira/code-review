@@ -87,5 +87,8 @@
 (cl-defgeneric code-review-core-merge (obj strategy)
   "Merge a PR for an OBJ using a given STRATEGY.")
 
+(cl-defgeneric code-review-core-set-reaction (obj comment-id reaction)
+  "Set a REACTION to a COMMENT-ID in OBJ.")
+
 (provide 'code-review-core)
 ;;; code-review-core.el ends here

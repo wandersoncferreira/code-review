@@ -148,6 +148,47 @@ For internal usage only.")
       (insert l)
       (insert ?\n))))
 
+(defclass code-review-reaction-section ()
+  ((id :initarg :id)
+   (content :initarg :content)))
+
+(defclass code-review-reactions-section (magit-section)
+  ((keymap :initform 'code-review-reactions-section-map)
+   (comment-id :initarg :comment-id)
+   (reactions :initarg :reactions
+              :type (satisfies
+                     (lambda (it)
+                       (-all-p #'code-review-reaction-section-p it))))))
+
+(defvar code-review-reactions-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-toggle-reaction-at-point)
+    map)
+  "Keymaps for reactions section.")
+
+;;;###autoload
+(defun code-review-toggle-reaction-at-point ()
+  "Endorse or remove your reaction at point."
+  (interactive)
+  (let* ((section (magit-current-section))
+         (pr (code-review-db-get-pullreq))
+         (obj (oref section value))
+         (map-rev (-map
+                   (lambda (it)
+                     `(,(cdr it) . ,(car it)))
+                   code-review-reaction-types))
+         (gh-value (downcase
+                    (alist-get (get-text-property (point) 'emojify-text)
+                               map-rev
+                               nil nil 'equal)))
+         (res
+          (code-review-core-set-reaction pr (oref obj comment-id) gh-value)))
+    (if (-contains-p
+         (-map (lambda (r) (oref r id)) (oref obj reactions))
+         (a-get res 'node_id))
+        (code-review-core-delete-reaction pr (oref obj comment-id) (a-get res 'id))
+      (prin1 "DEU! \n"))))
+
 (defclass code-review-base-comment-section (magit-section)
   ((state      :initarg :state
                :type string)
@@ -157,6 +198,11 @@ For internal usage only.")
                :type string)
    (position   :initarg :position
                :type number)
+   (reactions :initarg :reactions
+              :type (or null
+                        (satisfies
+                         (lambda (it)
+                           (-all-p #'code-review-reaction-section-p it)))))
    (path       :initarg :path
                :type string)
    (diffHunk   :initarg :diffHunk
@@ -257,6 +303,22 @@ For internal usage only.")
         (insert ?\n))
       (insert ?\n))))
 
+(defun code-review-comment-insert-reactions (reactions comment-id)
+  "Insert REACTIONS in comment identified by COMMENT-ID."
+  (let* ((reactions-obj (code-review-reactions-section
+                         :comment-id comment-id
+                         :reactions reactions)))
+    (magit-insert-section (code-review-reactions-section reactions-obj)
+      (let ((reactions-group (-group-by #'identity reactions)))
+        (dolist (r (a-keys reactions-group))
+          (let ((rit (alist-get r reactions-group nil nil 'equal)))
+            (insert (alist-get (oref (-first-item rit) content)
+                               code-review-reaction-types
+                               nil nil 'equal))
+            (insert (format " %S " (length rit)))))
+        (insert ?\n)
+        (insert ?\n)))))
+
 (cl-defmethod code-review-comment-insert-lines (obj)
   "Default insert comment lines in the OBJ."
   (magit-insert-section (code-review-code-comment-section obj)
@@ -269,7 +331,11 @@ For internal usage only.")
                    (oref obj msg)
                    code-review-fill-column)))
         (insert l)
-        (insert ?\n)))))
+        (insert ?\n))
+      (when-let (reactions-obj (oref obj reactions))
+        (code-review-comment-insert-reactions
+         reactions-obj
+         (oref obj id))))))
 
 (defclass code-review-outdated-comment-section (code-review-base-comment-section)
   ((keymap       :initform 'code-review-outdated-comment-section-map)
@@ -481,7 +547,17 @@ For internal usage only.")
               (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
             (insert description-cleaned))
           (insert ?\n)
-          (insert ?\n))))))
+          (let-alist (code-review-db--pullreq-raw-infos)
+            (if-let (reactions .reactions.nodes)
+                (code-review-comment-insert-reactions
+                 (-map
+                  (lambda (r)
+                    (code-review-reaction-section
+                     :id (a-get r 'id)
+                     :content (a-get r 'content)))
+                  reactions)
+                 .databaseId))
+            (insert ?\n)))))))
 
 (defun code-review-section-insert-feedback-heading ()
   "Insert feedback heading."
@@ -515,8 +591,19 @@ For internal usage only.")
             (magit-insert-section (code-review-comment-section obj)
               (insert (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face)))
               (magit-insert-heading)
-              (code-review-insert-comment-lines obj))))
-        (insert ?\n)))))
+              (code-review-insert-comment-lines obj)
+
+              (if-let (reactions (a-get-in c (list 'reactions 'nodes)))
+                  (let ((reactions-obj (-map
+                                        (lambda (r)
+                                          (code-review-reaction-section
+                                           :id (a-get r 'id)
+                                           :content (a-get r 'content)))
+                                        reactions)))
+                    (code-review-comment-insert-reactions
+                     reactions-obj
+                     (a-get c 'databaseId)))
+                (insert ?\n)))))))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
@@ -565,7 +652,10 @@ For internal usage only.")
                                     (code-review-utils--wrap-text
                                      (oref c msg)
                                      code-review-fill-column)))
-                       (amount-new-loc-outdated (+ 2 (length body-lines))))
+                       (amount-new-loc-outdated-partial (+ 2 (length body-lines)))
+                       (amount-new-loc-outdated (if (oref c reactions)
+                                                    (+ 2 amount-new-loc-outdated-partial)
+                                                  amount-new-loc-outdated-partial)))
 
                   (setq code-review-section-hold-written-comment-count
                         (code-review-utils--comment-update-written-count
@@ -582,7 +672,11 @@ For internal usage only.")
                     (magit-insert-section (code-review-outdated-comment-section c)
                       (dolist (l body-lines)
                         (insert l)
-                        (insert ?\n))))
+                        (insert ?\n))
+                      (when-let (reactions-obj (oref c reactions))
+                        (code-review-comment-insert-reactions
+                         reactions-obj
+                         (oref c id)))))
                   (insert ?\n))))))))))
 
 (defun code-review-section-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
@@ -610,7 +704,10 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
       (forward-line)
       (dolist (c comments)
         (let* ((body-lines (code-review-utils--split-comment (oref c msg)))
-               (amount-loc-incr (+ 1 (length body-lines))))
+               (amount-loc-incr-partial (+ 1 (length body-lines)))
+               (amount-loc-incr (if (oref c reactions)
+                                    (+ 2 amount-loc-incr-partial)
+                                  amount-loc-incr-partial)))
           (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
           (oset c amount-loc new-amount-loc)
 
@@ -619,7 +716,6 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                  code-review-section-hold-written-comment-count
                  (oref c path)
                  amount-loc-incr))
-
           (code-review-comment-insert-lines c))))))
 
 (defun code-review-section--magit-diff-insert-file-section

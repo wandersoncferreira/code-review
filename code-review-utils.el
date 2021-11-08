@@ -146,6 +146,12 @@ using COMMENTS."
               (let-alist comment
                 (let* ((handled-pos (or .position .originalPosition))
                        (path-pos (code-review-utils--comment-key .path handled-pos))
+                       (reactions (-map
+                                   (lambda (r)
+                                     (code-review-reaction-section
+                                      :id (a-get r 'id)
+                                      :content (a-get r 'content)))
+                                   .reactions.nodes))
                        (obj (cond
                              (.reply?
                               (code-review-reply-comment-section
@@ -163,6 +169,7 @@ using COMMENTS."
                                :author author
                                :msg .bodyText
                                :position handled-pos
+                               :reactions reactions
                                :internalId .internal-id
                                :path .path
                                :diffHunk .diffHunk
@@ -181,6 +188,7 @@ using COMMENTS."
                                :author author
                                :msg .bodyText
                                :position handled-pos
+                               :reactions reactions
                                :internalId .internal-id
                                :path .path
                                :diffHunk .diffHunk
