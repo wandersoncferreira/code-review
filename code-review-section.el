@@ -193,7 +193,7 @@ For internal usage only.")
    (msg    :initarg :msg
            :type string)
    (id     :initarg :id
-           :type number)
+           :type (or null number))
    (reactions :initarg :reactions)
    (face   :initform 'magit-log-author)))
 
@@ -785,18 +785,18 @@ Optionally DELETE? flag must be set if you want to remove it."
                                                (string-empty-p (a-get n 'bodyText))))
                                             .reviews.nodes)))
           (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
-                 (reaction-objs (-map
-                                 (lambda (r)
-                                   (code-review-reaction-section
-                                    :id (a-get r 'id)
-                                    :content (a-get r 'content)))
-                                 reactions))
+                 (reaction-objs (when reactions
+                                  (-map
+                                   (lambda (r)
+                                     (code-review-reaction-section
+                                      :id (a-get r 'id)
+                                      :content (a-get r 'content)))
+                                   reactions)))
                  (obj (code-review-comment-section
                        :author (a-get-in c (list 'author 'login))
                        :msg (a-get c 'bodyText)
                        :id (a-get c 'databaseId)
                        :reactions reaction-objs)))
-
             (magit-insert-section (code-review-comment-section obj)
               (insert (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face)))
               (magit-insert-heading)

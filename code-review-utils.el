@@ -361,6 +361,7 @@ Milestones, labels, projects, and more."
                             (color . "0075ca")))
                         choices)
                   (oref obj labels))))
+    (setq code-review-comment-cursor-pos (point))
     (oset obj labels labels)
     (code-review-core-set-labels obj)
     (closql-insert (code-review-db) obj t)
@@ -389,6 +390,7 @@ If a valid ASSIGNEE is provided, use that instead."
          (milestone `((title . ,choice)
                       (perc . 0)
                       (number .,(alist-get choice options nil nil 'equal)))))
+    (setq code-review-comment-cursor-pos (point))
     (oset obj milestones milestone)
     (code-review-core-set-milestone obj)
     (closql-insert (code-review-db) obj t)
@@ -398,6 +400,7 @@ If a valid ASSIGNEE is provided, use that instead."
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
   (let ((pr (code-review-db-get-pullreq)))
+    (setq code-review-comment-cursor-pos (point))
     (oset pr title title)
     (code-review-core-set-title pr)
     (closql-insert (code-review-db) pr t)
