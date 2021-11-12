@@ -326,7 +326,7 @@ For internal usage only.")
     map))
 
 (define-derived-mode code-review-comment-mode markdown-mode "Code Review Comment"
-  "Code Review Comment")
+  "Code Review Comment.")
 
 (provide 'code-review-comment)
 ;;; code-review-comment.el ends here

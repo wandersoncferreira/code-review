@@ -463,7 +463,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Keymaps for reply-comment sections.")
 
 (defgeneric code-review-comment-insert-lines (obj)
-  "Insert comment lines in the code section based on section type.")
+  "Insert comment lines in the code section based on section type denoted by OBJ.")
 
 (cl-defmethod code-review-comment-insert-lines ((obj code-review-local-comment-section))
   "Insert local comment lines present in the OBJ."
