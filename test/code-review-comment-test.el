@@ -12,8 +12,12 @@
     ((author (login . "wandersoncferreira"))
      (bodyText . "This PR looks great")
      (state . "COMMENTED")
+     (createdAt . "2021-11-08T00:24:09Z")
+     (updatedAt . "2021-11-08T00:24:09Z")
      (comments
-      (nodes ((bodyText . "Why keep everything in Emacs?")
+      (nodes ((createdAt . "2021-11-08T00:24:09Z")
+              (updatedAt . "2021-11-08T00:24:09Z")
+              (bodyText . "Why keep everything in Emacs?")
               (originalPosition . 3)
               (diffHunk . "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)
@@ -28,8 +32,12 @@
     ((author (login . "another_user"))
      (bodyText . "This can be improved a lot!")
      (state . "REQUEST_CHANGES")
+     (createdAt . "2021-11-08T00:24:09Z")
+     (updatedAt . "2021-11-08T00:24:09Z")
      (comments
-      (nodes ((bodyText . "")
+      (nodes ((createdAt . "2021-11-08T00:24:09Z")
+              (updatedAt . "2021-11-08T00:24:09Z")
+              (bodyText . "")
               (originalPosition . 3)
               (diffHunk . "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)
@@ -44,6 +52,8 @@
   (a-alist "README.md:3"
            (list
             (code-review-code-comment-section
+             :createdAt "2021-11-08T00:24:09Z"
+             :updatedAt "2021-11-08T00:24:09Z"
              :state "COMMENTED"
              :author "wandersoncferreira"
              :msg "Why keep everything in Emacs?"
@@ -59,6 +69,8 @@
 
             ;; comment 2
             (code-review-code-comment-section
+             :createdAt "2021-11-08T00:24:09Z"
+             :updatedAt "2021-11-08T00:24:09Z"
              :state "REQUEST_CHANGES"
              :author "another_user"
              :msg ""
