@@ -87,8 +87,11 @@
 (cl-defgeneric code-review-core-merge (obj strategy)
   "Merge a PR for an OBJ using a given STRATEGY.")
 
-(cl-defgeneric code-review-core-set-reaction (obj comment-id reaction)
-  "Set a REACTION to a COMMENT-ID in OBJ.")
+(cl-defgeneric code-review-core-set-reaction (obj context-name comment-id reaction)
+  "Set a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
+
+(cl-defgeneric code-review-core-delete-reaction (obj context-name comment-id reaction-id)
+  "Delete a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
 (provide 'code-review-core)
 ;;; code-review-core.el ends here
