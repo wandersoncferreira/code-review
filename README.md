@@ -103,12 +103,24 @@ Add a line to your auth source files with your login and token:
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
 ```
 
-# Transient keys
+# Keybindings
 
 You can access the transient panel by hitting `r` from any place of the `Code
 Review` buffer.
 
 ![Transient keybindings](./docs/code_review_transient.png)
+
+| Binding | Object                                | Action                      |
+|:-------:|:-------------------------------------:|:---------------------------:|
+| RET     | hunk                                  | Add Comment                 |
+| RET     | comment                               | Add Reply                   |
+| RET     | local comment (not sent to forge yet) | Edit local comment          |
+| C-c C-k | local comment                         | Delete local comment        |
+| C-c C-c | Comment Buffer                        | Register your local comment |
+| C-c C-k | Comment Buffer                        | Cancel your local comment   |
+| C-c C-r | comment                               | Add Reaction                |
+| C-c C-r | pr description                        | Add Reaction                |
+| RET     | reaction (on emoji symbol)            | Endorse or Remove Reaction  |
 
 
 ## Binding suggestions
