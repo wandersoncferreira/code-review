@@ -50,7 +50,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
       (code-review-db--pullreq-raw-infos-update `((title . "My title")))
       (with-written-section
        (lambda () (code-review-section-insert-title))
-       `(((type . code-review-title)
+       `(((type . code-review-title-section)
           (value . "My title")))))
     (it "missing, should not break and not added to the buffer entirely."
       (code-review-db--pullreq-raw-infos-update nil)
@@ -63,38 +63,34 @@ Verify if the buffer has anything written using BUFFER-NIL?."
       (code-review-db--pullreq-raw-infos-update `((state . "OPEN")))
       (with-written-section
        (lambda () (code-review-section-insert-state))
-       `(((type . code-review-state)
+       `(((type . code-review-state-section)
           (value . "OPEN"))))))
 
   (describe "MILESTONE"
     (it "available raw-infos and should be added to the buffer."
-      (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
-                                                             (progressPercentage . "50"))))
-      (with-written-section
-       (lambda () (code-review-section-insert-milestone))
-       `(((type . code-review-milestone)
-          (value . ((title . "Milestone Title")
-                    (progress . "50")
-                    (visible-text . "Milestone Title (50%)")))))))
+      (let ((obj (code-review-milestone-section :title "Milestone Title" :perc "50")))
+        (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
+                                                               (progressPercentage . "50"))))
+        (with-written-section (lambda () (code-review-section-insert-milestone))
+                              `(((type . code-review-milestone-section)
+                                 (value . ,obj))))
+        (expect (code-review-pretty-milestone obj) :to-equal "Milestone Title (50%)")))
 
     (it "if title is missing, add default msg"
-      (code-review-db--pullreq-raw-infos-update `((milestone (title . nil)
-                                                             (progressPercentage . "50"))))
-      (with-written-section
-       (lambda () (code-review-section-insert-milestone))
-       `(((type . code-review-milestone)
-          (value . ((title)
-                    (progress . "50")
-                    (visible-text . "No milestone")))))))
+      (let ((obj (code-review-milestone-section :title nil :perc "50")))
+        (code-review-db--pullreq-raw-infos-update `((milestone (title . nil) (progressPercentage . "50"))))
+        (with-written-section (lambda () (code-review-section-insert-milestone))
+                              `(((type . code-review-milestone-section)
+                                 (value . ,obj))))
+        (expect (code-review-pretty-milestone obj) :to-equal "No milestone")))
 
     (it "if progress is missing, leave it out."
-      (code-review-db--pullreq-raw-infos-update `((milestone (title . "My title"))))
-      (with-written-section
-       (lambda () (code-review-section-insert-milestone))
-       `(((type . code-review-milestone)
-          (value . ((title . "My title")
-                    (progress)
-                    (visible-text . "My title"))))))))
+      (let ((obj (code-review-milestone-section :title "My title" :perc nil)))
+        (code-review-db--pullreq-raw-infos-update `((milestone (title . "My title"))))
+        (with-written-section (lambda () (code-review-section-insert-milestone))
+                              `(((type . code-review-milestone-section)
+                                 (value . ,obj))))
+        (expect (code-review-pretty-milestone obj) :to-equal "My title"))))
 
   (describe "COMMENTS"
     (it "inserting general comments in the buffer."
@@ -102,8 +98,8 @@ Verify if the buffer has anything written using BUFFER-NIL?."
                                                                     (bodyText . "Comment 1"))))))
       (with-written-section
        (lambda () (code-review-section-insert-general-comments))
-       `(((type . code-review-conversation-header))
-         ((type . code-review-general-comment)
+       `(((type . code-review-comment-header-section))
+         ((type . code-review-comment-header-section)
           (value . ((author (login . "Code Review"))
                     (bodyText . "Comment 1")))))))))
 
