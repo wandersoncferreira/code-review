@@ -31,6 +31,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Edit PR title
 - Edit PR description body
 - Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
+- Reactions. See details [react to comments](./docs/reactions.md)
 
 
 The basic workflow:
