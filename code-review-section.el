@@ -111,6 +111,35 @@ For internal usage only.")
     map)
   "Keymaps for description section.")
 
+(defun code-review-description-reaction-at-point ()
+  "Toggle reaction in description sections."
+  (interactive)
+  (let* ((section (magit-current-section))
+         (comment-id (oref (oref section value) id)))
+    (code-review-toggle-reaction-at-point comment-id "pr-description")))
+
+(defun code-review-description-add-reaction (node-id content)
+  "Add NODE-ID with CONTENT in pr description."
+  (let* ((pr (code-review-db-get-pullreq))
+         (infos (oref pr raw-infos))
+         (reactions (cons (a-alist 'content (upcase content) 'id node-id)
+                          (a-get-in infos (list 'reactions 'nodes)))))
+    (setf (alist-get 'reactions infos) (a-alist 'nodes reactions))
+    (oset pr raw-infos infos)
+    (code-review-db-update pr)))
+
+(defun code-review-description-delete-reaction (node-id)
+  "Delete NODE-ID from pr description."
+  (let* ((pr (code-review-db-get-pullreq))
+         (infos (oref pr raw-infos))
+         (reactions (a-get-in infos (list 'reactions 'nodes)))
+         (new-reactions (-filter
+                         (lambda (it)
+                           (not (string-equal node-id (a-get it 'id))))
+                         reactions)))
+    (setf (alist-get 'reactions infos) (a-alist 'nodes new-reactions))
+    (oset pr raw-infos infos)
+    (code-review-db-update pr)))
 (defclass code-review-feedback-section (magit-section)
   ((keymap :initform 'code-review-feedback-section-map)
    (msg    :initarg :msg)))
