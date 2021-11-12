@@ -211,6 +211,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           author {
             login
           }
+          databaseId
           bodyText
         }
       }
@@ -368,25 +369,42 @@ https://github.com/wandersoncferreira/code-review#configuration"))
             :errorback (lambda (e &rest _)
                          (message "ERROR!! %S" (a-get (-fourth-item e) 'message)))))
 
-(cl-defmethod code-review-core-set-reaction ((github code-review-github-repo) comment-id reaction)
-  "Set REACTION in GITHUB pullreq COMMENT-ID."
-  (ghub-post (format "/repos/%s/%s/pulls/comments/%s/reactions"
-                     (oref github owner)
-                     (oref github repo)
-                     comment-id)
-             nil
-             :auth 'code-review
-             :payload (a-alist 'content reaction)))
-
-(cl-defmethod code-review-core-delete-reaction ((github code-review-github-repo) comment-id reaction-id)
-  "Delete REACTION-ID in GITHUB pullreq COMMENT-ID."
-  (ghub-delete (format "/repos/%s/%s/pulls/comments/%s/reactions/%s"
+(cl-defmethod code-review-core-set-reaction ((github code-review-github-repo) context-name comment-id reaction)
+  "Set REACTION in GITHUB pullreq COMMENT-ID given a CONTEXT-NAME e.g. issue, pr, discussion."
+  (let ((path (pcase context-name
+                ("pr-description"
+                 (format "issues/%s/reactions" (oref github number)))
+                ("comment"
+                 (format "issues/comments/%s/reactions" comment-id))
+                ("code-comment"
+                 (format "pulls/comments/%s/reactions" comment-id))))
+        (r (pcase reaction
+             ("thumbs_up" "+1")
+             ("thumbs_down" "-1")
+             (_ reaction))))
+    (ghub-post (format "/repos/%s/%s/%s"
                        (oref github owner)
                        (oref github repo)
-                       comment-id
-                       reaction-id)
+                       path)
                nil
-               :auth 'code-review))
+               :auth 'code-review
+               :payload (a-alist 'content r))))
+
+(cl-defmethod code-review-core-delete-reaction ((github code-review-github-repo) context-name comment-id reaction-id)
+  "Delete REACTION-ID in GITHUB pullreq COMMENT-ID given a CONTEXT-NAME e.g. issue, pr, discussion."
+  (let ((path (pcase context-name
+                ("pr-description"
+                 (format "issues/%s/reactions/%s" (oref github number) reaction-id))
+                ("comment"
+                 (format "issues/comments/%s/reactions/%s" comment-id reaction-id))
+                ("code-comment"
+                 (format "pulls/comments/%s/reactions/%s" comment-id reaction-id)))))
+    (ghub-delete (format "/repos/%s/%s/%s"
+                         (oref github owner)
+                         (oref github repo)
+                         path)
+                 nil
+                 :auth 'code-review)))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
