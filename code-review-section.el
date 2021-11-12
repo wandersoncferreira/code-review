@@ -100,7 +100,16 @@ For internal usage only.")
   "Keymaps for milestone section.")
 
 (defclass code-review-description-section (magit-section)
-  ((msg :initarg :msg)))
+  ((keymap :initform 'code-review-description-section-map)
+   (id     :initarg :id)
+   (msg    :initarg :msg)
+   (reactions :initarg :reactions)))
+
+(defvar code-review-description-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-r") 'code-review-description-reaction-at-point)
+    map)
+  "Keymaps for description section.")
 
 (defclass code-review-feedback-section (magit-section)
   ((keymap :initform 'code-review-feedback-section-map)
@@ -136,11 +145,21 @@ For internal usage only.")
   "Keymaps for commit section.")
 
 (defclass code-review-comment-section (magit-section)
-  ((author :initarg :author
+  ((keymap :initform 'code-review-comment-section-map)
+   (author :initarg :author
            :type string)
    (msg    :initarg :msg
            :type string)
+   (id     :initarg :id
+           :type number)
+   (reactions :initarg :reactions)
    (face   :initform 'magit-log-author)))
+
+(defvar code-review-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
+    map)
+  "Keymaps for comment section.")
 
 (cl-defmethod code-review-insert-comment-lines ((obj code-review-comment-section))
   "Insert the comment lines given in the OBJ."
@@ -235,6 +254,7 @@ For internal usage only.")
 (defvar code-review-code-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
     map)
   "Keymaps for code-comment sections.")
 
