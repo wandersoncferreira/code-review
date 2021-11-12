@@ -173,6 +173,9 @@ For internal usage only.")
     map)
   "Keymaps for commit section.")
 
+
+;;; General Comment - Conversation
+
 (defclass code-review-comment-section (magit-section)
   ((keymap :initform 'code-review-comment-section-map)
    (author :initarg :author
@@ -189,6 +192,49 @@ For internal usage only.")
     (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
     map)
   "Keymaps for comment section.")
+
+(defun code-review-conversation-reaction-at-point ()
+  "Toggle reaction in conversation sections."
+  (interactive)
+  (let* ((section (magit-current-section))
+         (comment-id (oref (oref section value) id)))
+    (setq code-review-comment-cursor-pos (point))
+    (code-review-toggle-reaction-at-point comment-id "comment")))
+
+(defun code-review-conversation--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
+  "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.
+Optionally DELETE? flag must be set if you want to remove it."
+  (let* ((pr (code-review-db-get-pullreq))
+         (infos (oref pr raw-infos))
+         (update-comment (lambda (c)
+                           (let-alist c
+                             (when (equal .databaseId comment-id)
+                               (let ((reactions-nodes (if delete?
+                                                          (-filter (lambda (it)
+                                                                     (not (string-equal (a-get it 'id) reaction-id)))
+                                                                   .reactions.nodes)
+                                                        (append .reactions.nodes
+                                                                (list (a-alist 'id reaction-id
+                                                                               'content (upcase content)))))))
+                                 (setf (alist-get 'reactions c) (a-alist 'nodes reactions-nodes)))))
+                           c)))
+    (let-alist infos
+      (let ((new-comments
+             (-map (lambda (c) (funcall update-comment c)) .comments.nodes))
+            (new-comments-review
+             (-map (lambda (c) (funcall update-comment c)) .reviews.nodes)))
+        (setf (alist-get 'comments infos) (a-alist 'nodes new-comments))
+        (setf (alist-get 'reviews infos) (a-alist 'nodes new-comments-review))
+        (oset pr raw-infos infos)
+        (code-review-db-update pr)))))
+
+(defun code-review-conversation-add-reaction (comment-id reaction-id content)
+  "Add REACTION-ID with CONTENT in PR COMMENT-ID."
+  (code-review-conversation--add-or-delete-reaction comment-id reaction-id content))
+
+(defun code-review-conversation-delete-reaction (comment-id reaction-id)
+  "Delete REACTION-ID from COMMENT-ID."
+  (code-review-conversation--add-or-delete-reaction comment-id reaction-id nil t))
 
 (cl-defmethod code-review-insert-comment-lines ((obj code-review-comment-section))
   "Insert the comment lines given in the OBJ."
