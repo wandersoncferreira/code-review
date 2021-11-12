@@ -48,6 +48,7 @@
              :author "wandersoncferreira"
              :msg "Why keep everything in Emacs?"
              :position 3
+             :reactions nil
              :path "README.md"
              :diffHunk "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)
@@ -62,6 +63,7 @@
              :author "another_user"
              :msg ""
              :position 3
+             :reactions nil
              :path "README.md"
              :diffHunk "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)

@@ -94,14 +94,19 @@ Verify if the buffer has anything written using BUFFER-NIL?."
 
   (describe "COMMENTS"
     (it "inserting general comments in the buffer."
-      (code-review-db--pullreq-raw-infos-update `((comments (nodes ((author (login . "Code Review"))
-                                                                    (bodyText . "Comment 1"))))))
-      (with-written-section
-       (lambda () (code-review-section-insert-general-comments))
-       `(((type . code-review-comment-header-section))
-         ((type . code-review-comment-header-section)
-          (value . ((author (login . "Code Review"))
-                    (bodyText . "Comment 1")))))))))
+      (let ((obj (code-review-comment-section
+                  :author "Code Review"
+                  :msg "Comment 1"
+                  :id 1234
+                  :reactions nil)))
+        (code-review-db--pullreq-raw-infos-update `((comments (nodes ((author (login . "Code Review"))
+                                                                      (bodyText . "Comment 1")
+                                                                      (databaseId . 1234))))))
+        (with-written-section
+         (lambda () (code-review-section-insert-general-comments))
+         `(((type . code-review-comment-header-section))
+           ((type . code-review-comment-section)
+            (value . ,obj))))))))
 
 (provide 'code-review-section-test)
 ;;; code-review-section-test.el ends here
