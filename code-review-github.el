@@ -259,7 +259,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                                    (a-get x 'name))
                                                  (oref github labels))
                                            []))
-             :auth 'code-review)))
+             :auth 'code-review
+             :errorback #'code-review-github-errback)))
 
 (cl-defmethod code-review-core-get-assignees ((github code-review-github-repo))
   "Get labels from GITHUB."
@@ -284,7 +285,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              :auth 'code-review
              :payload (a-alist 'assignees (-map (lambda (it)
                                                   (a-get it 'login))
-                                                (oref github assignees)))))
+                                                (oref github assignees)))
+             :errorback #'code-review-github-errback))
 
 (cl-defmethod code-review-core-get-milestones ((github code-review-github-repo))
   "Get milestones from GITHUB."
@@ -307,7 +309,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                       (oref github number))
               nil
               :auth 'code-review
-              :payload (a-alist 'milestone (a-get (oref github milestones) 'number))))
+              :payload (a-alist 'milestone (a-get (oref github milestones) 'number))
+              :errorback #'code-review-github-errback))
 
 (cl-defmethod code-review-core-set-title ((github code-review-github-repo))
   "Set title for a pullreq in GITHUB."
@@ -317,7 +320,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                       (oref github number))
               nil
               :auth 'code-review
-              :payload (a-alist 'title (oref github title))))
+              :payload (a-alist 'title (oref github title))
+              :errorback #'code-review-github-errback))
 
 (cl-defmethod code-review-core-set-description ((github code-review-github-repo))
   "Set description for a pullreq in GITHUB."
@@ -327,7 +331,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                       (oref github number))
               nil
               :auth 'code-review
-              :payload (a-alist 'body (oref github description))))
+              :payload (a-alist 'body (oref github description))
+              :errorback #'code-review-github-errback))
 
 (cl-defmethod code-review-core-merge ((github code-review-github-repo) strategy)
   "Merge a PR in GITHUB using a STRATEGY."
@@ -341,8 +346,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               'commit_message (oref github description)
                               'sha (oref github sha)
                               'merge_method strategy)
-            :errorback (lambda (e &rest _)
-                         (message "ERROR!! %S" (a-get (-fourth-item e) 'message)))))
+            :errorback #'code-review-github-errback))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
