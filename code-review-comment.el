@@ -219,7 +219,7 @@ For internal usage only.")
   (let ((section (magit-current-section)))
     (with-slots (value) section
       (if (code-review-reactions-section-p section)
-          (code-review-toggle-reaction-at-point)
+          (code-review-reactions-reaction-at-point)
         (progn
           (setq code-review-comment-cursor-pos (point))
           (code-review-comment-handler-add-or-edit value))))))
