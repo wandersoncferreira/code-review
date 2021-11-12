@@ -307,7 +307,7 @@
   (oref (code-review-db-get-pullreq) state))
 
 (defun code-review-db--pullreq-title-update (pr title)
-  "Update the TITLE of a PR."
+  "Update the PR's TITLE."
   (oset pr title title)
   (closql-insert (code-review-db) pr t))
 
@@ -328,7 +328,7 @@
   (oref (code-review-db-get-pullreq) milestones))
 
 (defun code-review-db--pullreq-description-update (pr description)
-  "Update the DESCRIPTION of a PR."
+  "Update the PR's DESCRIPTION."
   (oset pr description description)
   (closql-insert (code-review-db) pr t))
 
