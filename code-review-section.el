@@ -333,6 +333,54 @@ Optionally DELETE? flag must be set if you want to remove it."
     map)
   "Keymaps for code-comment sections.")
 
+(defun code-review-code-comment-reaction-at-point ()
+  "Toggle reaction in code-comment section."
+  (interactive)
+  (let* ((section (magit-current-section))
+         (comment-id (oref (oref section value) id)))
+    (setq code-review-comment-cursor-pos (point))
+    (code-review-toggle-reaction-at-point comment-id "code-comment")))
+
+(defun code-review-code-comment--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
+  "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.
+Optionally DELETE? flag must be set if you want to remove it."
+  (let* ((pr (code-review-db-get-pullreq))
+         (infos (oref pr raw-infos)))
+    (let-alist infos
+      (let ((new-reviews
+             (-map
+              (lambda (r)
+                (let ((new-comments
+                       (-map
+                        (lambda (c)
+                          (let-alist c
+                            (when (equal .databaseId comment-id)
+                              (let ((reactions-nodes
+                                     (if delete?
+                                         (-filter (lambda (it)
+                                                    (not (string-equal (a-get it 'id) reaction-id)))
+                                                  .reactions.nodes)
+                                       (append .reactions.nodes
+                                               (list (a-alist 'id reaction-id 'content (upcase content)))))))
+                                (setf (alist-get 'reactions c) (a-alist 'nodes reactions-nodes)))))
+                          c)
+                        (a-get-in r (list 'comments 'nodes)))))
+                  (setf (alist-get 'comments r) (a-alist 'nodes new-comments))
+                  r))
+              .reviews.nodes)))
+        (setf (alist-get 'reviews infos) (a-alist 'nodes new-reviews))
+        (oset pr raw-infos infos)
+        (oset pr raw-comments new-reviews)
+        (code-review-db-update pr)))))
+
+(defun code-review-code-comment-add-reaction (comment-id reaction-id content)
+  "Add REACTION-ID with CONTENT in PR COMMENT-ID."
+  (code-review-code-comment--add-or-delete-reaction comment-id reaction-id content))
+
+(defun code-review-code-comment-delete-reaction (comment-id reaction-id)
+  "Delete REACTION-ID for COMMENT-ID."
+  (code-review-code-comment--add-or-delete-reaction comment-id reaction-id nil t))
+
 (defclass code-review-local-comment-section (code-review-base-comment-section)
   ((keymap       :initform 'code-review-local-comment-section-map)
    (local?       :initform t)
