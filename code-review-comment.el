@@ -179,8 +179,9 @@ For internal usage only.")
 
 (cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-title-section))
   "Change title in OBJ."
-  (setq code-review-comment-uncommitted obj)
-  (code-review-comment-add-feedback))
+  (setq code-review-comment-uncommitted obj
+        code-review-comment-title? t)
+  (code-review-comment-add))
 
 (cl-defmethod code-review-comment-handler-add-or-edit (obj)
   "Add a comment in the OBJ."
