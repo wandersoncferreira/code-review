@@ -36,6 +36,66 @@
 (require 'code-review-utils)
 (require 'emojify nil t)
 
+(defface code-review-timestamp-face
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "DimGrey"
+     :slant italic)
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "DimGrey"
+     :slant italic))
+  "Face for timestamps."
+  :group 'code-review)
+
+(defface code-review-comment-face
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "DimGrey")
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "LightGrey"))
+  "Face for comment sections."
+  :group 'code-review)
+
+(defface code-review-state-face
+  '((t :inherit bold))
+  "Face used for default state keywords."
+  :group 'code-review)
+
+(defface code-review-author-face
+  '((t :inherit font-lock-keyword-face))
+  "Face used for author names."
+  :group 'code-review)
+
+(defface code-review-error-state-face
+  '((t :inherit font-lock-warning-face :weight bold))
+  "Face used for error state (e.g. changes requested)."
+  :group 'code-review)
+
+(defface code-review-success-state-face
+  '((t :inherit font-lock-constant-face :weight bold))
+  "Face used for success state (e.g. merged)."
+  :group 'code-review)
+
+(defface code-review-info-state-face
+  '((t :slant italic))
+  "Face used for info (unimportant) state (e.g. resolved)."
+  :group 'code-review)
+
+(defun code-review--propertize-keyword (str)
+  "Add property face to STR."
+  (propertize str 'face
+              (cond
+               ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
+                'code-review-success-state-face)
+               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING"))
+                'code-review-error-state-face)
+               ((member str '("RESOLVED" "OUTDATED"))
+                'code-review-info-state-face)
+               (t
+                'code-review-state-face))))
+
 ;; fix unbound symbols
 (defvar magit-root-section)
 (defvar code-review-buffer-name)
@@ -342,8 +402,8 @@ Optionally DELETE? flag must be set if you want to remove it."
                :type string)
    (position   :initarg :position
                :type number)
-   (reactions :initarg :reactions
-              :type (or null
+   (reactions  :initarg :reactions
+               :type (or null
                         (satisfies
                          (lambda (it)
                            (-all-p #'code-review-reaction-section-p it)))))
@@ -360,7 +420,9 @@ Optionally DELETE? flag must be set if you want to remove it."
    (reply?     :initform nil
                :type boolean)
    (local?     :initform nil
-               :type boolean)))
+               :type boolean)
+   (createdAt  :initarg :createdAt)
+   (updatedAt  :initarg :updatedAt)))
 
 (defclass code-review-code-comment-section (code-review-base-comment-section)
   ((keymap     :initform 'code-review-code-comment-section-map)
@@ -516,7 +578,13 @@ Optionally DELETE? flag must be set if you want to remove it."
 (cl-defmethod code-review-comment-insert-lines (obj)
   "Default insert comment lines in the OBJ."
   (magit-insert-section (code-review-code-comment-section obj)
-    (let ((heading (format "Reviewed by @%s [%s]: " (oref obj author) (oref obj state))))
+    (let ((heading (concat
+                    (propertize "Reviewed by " 'face 'magit-section-heading)
+                    (propertize (concat "@" (oref obj author)) 'face 'code-review-author-face)
+                    " - "
+                    (code-review--propertize-keyword (oref obj state))
+                    " - "
+                    (propertize (code-review-utils--format-timestamp (oref obj createdAt)) 'face 'code-review-timestamp-face))))
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-code-comment-section obj)
@@ -524,7 +592,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                   (code-review-utils--wrap-text
                    (oref obj msg)
                    code-review-fill-column)))
-        (insert l)
+        (insert (propertize l 'face 'code-review-comment-face))
         (insert ?\n))
       (when-let (reactions-obj (oref obj reactions))
         (code-review-comment-insert-reactions
@@ -798,7 +866,10 @@ Optionally DELETE? flag must be set if you want to remove it."
                        :id (a-get c 'databaseId)
                        :reactions reaction-objs)))
             (magit-insert-section (code-review-comment-section obj)
-              (insert (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face)))
+              (insert (concat
+                       (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
+                       " - "
+                       (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
               (magit-insert-heading)
               (code-review-insert-comment-lines obj)
 

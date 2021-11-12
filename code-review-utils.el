@@ -160,10 +160,13 @@ using COMMENTS."
                                :author author
                                :msg .bodyText
                                :position handled-pos
+                               :reactions nil
                                :path .path
                                :diffHunk .diffHunk
                                :internalId .internal-id
-                               :id .databaseId))
+                               :id .databaseId
+                               :createdAt .createdAt
+                               :updatedAt .updatedAt))
                              (.outdated
                               (code-review-outdated-comment-section
                                :state state
@@ -174,15 +177,20 @@ using COMMENTS."
                                :internalId .internal-id
                                :path .path
                                :diffHunk .diffHunk
-                               :id .databaseId))
+                               :id .databaseId
+                               :createdAt .createdAt
+                               :updatedAt .updatedAt))
                              (.local?
                               (code-review-local-comment-section
                                :state state
                                :author author
                                :msg .bodyText
                                :position handled-pos
+                               :reactions nil
                                :internalId .internal-id
-                               :path .path))
+                               :path .path
+                               :createdAt .createdAt
+                               :updatedAt .updatedAt))
                              (t
                               (code-review-code-comment-section
                                :state state
@@ -193,7 +201,9 @@ using COMMENTS."
                                :internalId .internal-id
                                :path .path
                                :diffHunk .diffHunk
-                               :id .databaseId)))))
+                               :id .databaseId
+                               :createdAt .createdAt
+                               :updatedAt .updatedAt)))))
 
                   ;;; extra checks
                   (when (not handled-pos)
@@ -455,6 +465,13 @@ Expect the same output as `git diff --no-prefix`"
                "\\1 \\2"
                res))
     (string-trim res)))
+
+
+;;; DATE
+
+(defun code-review-utils--format-timestamp (str)
+  "Convert and format timestamp STR from json."
+  (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

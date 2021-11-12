@@ -154,6 +154,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       isDraft
       databaseId
       number
+      createdAt
+      updatedAt
       milestone {
         title
         progressPercentage
@@ -213,12 +215,21 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           }
           databaseId
           bodyText
+          createdAt
+          updatedAt
         }
       }
       reviews(first: 50) {
-        nodes { author { login } bodyText state
+        nodes {
+          author { login }
+          bodyText
+          state
+          createdAt
+          updatedAt
           comments(first: 50) {
             nodes {
+              createdAt
+              updatedAt
               bodyText
               originalPosition
               diffHunk
