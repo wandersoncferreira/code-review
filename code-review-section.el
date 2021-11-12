@@ -99,6 +99,8 @@ For internal usage only.")
     map)
   "Keymaps for milestone section.")
 
+;;; Description
+
 (defclass code-review-description-section (magit-section)
   ((keymap :initform 'code-review-description-section-map)
    (id     :initarg :id)
@@ -140,6 +142,9 @@ For internal usage only.")
     (setf (alist-get 'reactions infos) (a-alist 'nodes new-reactions))
     (oset pr raw-infos infos)
     (code-review-db-update pr)))
+
+;;; Feedback
+
 (defclass code-review-feedback-section (magit-section)
   ((keymap :initform 'code-review-feedback-section-map)
    (msg    :initarg :msg)))
@@ -149,6 +154,8 @@ For internal usage only.")
     (define-key map (kbd "RET") 'code-review-comment-set-feedback)
     map)
   "Keymaps for feedback section.")
+
+;;; Milestone
 
 (cl-defmethod code-review-pretty-milestone ((obj code-review-milestone-section))
   "Get the pretty version of milestone for a given OBJ."
@@ -161,6 +168,8 @@ For internal usage only.")
     (oref obj title))
    (t
     "No milestone")))
+
+;;; Commit
 
 (defclass code-review-commit-section (magit-section)
   ((keymap :initform 'code-review-commit-section-map)
@@ -243,28 +252,68 @@ Optionally DELETE? flag must be set if you want to remove it."
       (insert l)
       (insert ?\n))))
 
+;;; Reactions
+
 (defclass code-review-reaction-section ()
   ((id :initarg :id)
    (content :initarg :content)))
 
 (defclass code-review-reactions-section (magit-section)
-  ((keymap :initform 'code-review-reactions-section-map)
+  ((context-name :initarg :context-name)
    (comment-id :initarg :comment-id)
    (reactions :initarg :reactions
               :type (satisfies
                      (lambda (it)
                        (-all-p #'code-review-reaction-section-p it))))))
 
-(defvar code-review-reactions-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-toggle-reaction-at-point)
-    map)
-  "Keymaps for reactions section.")
+(defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
+  "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
+  (let* ((res (code-review-core-set-reaction pr context-name comment-id reaction))
+         (reaction-id (a-get res 'id))
+         (node-id (a-get res 'node_id))
+         (existing-reaction-ids (when existing-reactions
+                                  (-map (lambda (r) (oref r id)) existing-reactions))))
+    (if (-contains-p existing-reaction-ids node-id)
+        (progn
+          (code-review-core-delete-reaction pr context-name comment-id reaction-id)
+          (pcase context-name
+            ("pr-description" (code-review-description-delete-reaction node-id))
+            ("comment" (code-review-conversation-delete-reaction comment-id node-id))
+            ("code-comment" (code-review-code-comment-delete-reaction comment-id node-id))))
+      (pcase context-name
+        ("pr-description"
+         (code-review-description-add-reaction node-id reaction))
+        ("comment"
+         (code-review-conversation-add-reaction comment-id node-id reaction))
+        ("code-comment"
+         (code-review-code-comment-add-reaction comment-id node-id reaction))))
+    (code-review--build-buffer
+     code-review-buffer-name)))
 
-;;;###autoload
-(defun code-review-toggle-reaction-at-point ()
+(defun code-review-toggle-reaction-at-point (comment-id context-name)
+  "Add reaction at point given a COMMENT-ID and CONTEXT-NAME."
+  (let* ((allowed-reactions (-map
+                             (lambda (it)
+                               `(,(cdr it) . ,(car it)))
+                             code-review-reaction-types))
+         (choice (emojify-completing-read "Reaction: "
+                                          (lambda (string-display)
+                                            (let ((prefix (car (split-string string-display " -"))))
+                                              (-contains-p (a-keys allowed-reactions) prefix)))))
+         (pr (code-review-db-get-pullreq))
+         (reaction (downcase (alist-get choice allowed-reactions nil nil 'equal))))
+    (with-slots (value) (magit-current-section)
+      (code-review--toggle-reaction-at-point
+       pr
+       context-name
+       comment-id
+       (oref value reactions)
+       reaction))))
+
+(defun code-review-reactions-reaction-at-point ()
   "Endorse or remove your reaction at point."
   (interactive)
+  (setq code-review-comment-cursor-pos (point))
   (let* ((section (magit-current-section))
          (pr (code-review-db-get-pullreq))
          (obj (oref section value))
@@ -272,17 +321,16 @@ Optionally DELETE? flag must be set if you want to remove it."
                    (lambda (it)
                      `(,(cdr it) . ,(car it)))
                    code-review-reaction-types))
-         (gh-value (downcase
-                    (alist-get (get-text-property (point) 'emojify-text)
-                               map-rev
-                               nil nil 'equal)))
-         (res
-          (code-review-core-set-reaction pr (oref obj comment-id) gh-value)))
-    (if (-contains-p
-         (-map (lambda (r) (oref r id)) (oref obj reactions))
-         (a-get res 'node_id))
-        (code-review-core-delete-reaction pr (oref obj comment-id) (a-get res 'id))
-      (prin1 "DEU! \n"))))
+         (reaction-text (get-text-property (point) 'emojify-text))
+         (gh-value (downcase (alist-get reaction-text map-rev nil nil 'equal))))
+    (code-review--toggle-reaction-at-point
+     pr
+     (oref obj context-name)
+     (oref obj comment-id)
+     (oref obj reactions)
+     gh-value)))
+
+;;; Comment, Code Comment, Reply Comment
 
 (defclass code-review-base-comment-section (magit-section)
   ((state      :initarg :state
@@ -447,11 +495,12 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert ?\n))
       (insert ?\n))))
 
-(defun code-review-comment-insert-reactions (reactions comment-id)
-  "Insert REACTIONS in comment identified by COMMENT-ID."
+(defun code-review-comment-insert-reactions (reactions context-name comment-id)
+  "Insert REACTIONS in CONTEXT-NAME identified by COMMENT-ID."
   (let* ((reactions-obj (code-review-reactions-section
                          :comment-id comment-id
-                         :reactions reactions)))
+                         :reactions reactions
+                         :context-name context-name)))
     (magit-insert-section (code-review-reactions-section reactions-obj)
       (let ((reactions-group (-group-by #'identity reactions)))
         (dolist (r (a-keys reactions-group))
@@ -479,6 +528,7 @@ Optionally DELETE? flag must be set if you want to remove it."
       (when-let (reactions-obj (oref obj reactions))
         (code-review-comment-insert-reactions
          reactions-obj
+         "code-comment"
          (oref obj id))))))
 
 (defclass code-review-outdated-comment-section (code-review-base-comment-section)
@@ -679,28 +729,32 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defun code-review-section-insert-pr-description ()
   "Insert PULL-REQUEST description."
   (when-let (description (code-review-db--pullreq-description))
-    (let* ((description-cleaned (if (string-empty-p description)
-                                    "No description provided."
-                                  description))
-           (obj (code-review-description-section :msg description-cleaned)))
-      (magit-insert-section (code-review-description-section obj)
-        (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
-        (magit-insert-heading)
+    (let-alist (code-review-db--pullreq-raw-infos)
+      (let* ((description-cleaned (if (string-empty-p description)
+                                      "No description provided."
+                                    description))
+             (reaction-objs (-map
+                             (lambda (r)
+                               (code-review-reaction-section
+                                :id (a-get r 'id)
+                                :content (a-get r 'content)))
+                             .reactions.nodes))
+             (obj (code-review-description-section :msg description-cleaned
+                                                   :id .databaseId
+                                                   :reactions reaction-objs)))
         (magit-insert-section (code-review-description-section obj)
-          (if (string-empty-p description)
-              (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
-            (insert description-cleaned))
-          (insert ?\n)
-          (let-alist (code-review-db--pullreq-raw-infos)
-            (if-let (reactions .reactions.nodes)
-                (code-review-comment-insert-reactions
-                 (-map
-                  (lambda (r)
-                    (code-review-reaction-section
-                     :id (a-get r 'id)
-                     :content (a-get r 'content)))
-                  reactions)
-                 .databaseId))
+          (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
+          (magit-insert-heading)
+          (magit-insert-section (code-review-description-section obj)
+            (if (string-empty-p description)
+                (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
+              (insert description-cleaned))
+            (insert ?\n)
+            (when .reactions.nodes
+              (code-review-comment-insert-reactions
+               reaction-objs
+               "pr-description"
+               .databaseId))
             (insert ?\n)))))))
 
 (defun code-review-section-insert-feedback-heading ()
@@ -729,25 +783,30 @@ Optionally DELETE? flag must be set if you want to remove it."
                                               (not
                                                (string-empty-p (a-get n 'bodyText))))
                                             .reviews.nodes)))
-          (let ((obj (code-review-comment-section
-                      :author (a-get-in c (list 'author 'login))
-                      :msg (a-get c 'bodyText))))
+          (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
+                 (reaction-objs (-map
+                                 (lambda (r)
+                                   (code-review-reaction-section
+                                    :id (a-get r 'id)
+                                    :content (a-get r 'content)))
+                                 reactions))
+                 (obj (code-review-comment-section
+                       :author (a-get-in c (list 'author 'login))
+                       :msg (a-get c 'bodyText)
+                       :id (a-get c 'databaseId)
+                       :reactions reaction-objs)))
+
             (magit-insert-section (code-review-comment-section obj)
               (insert (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face)))
               (magit-insert-heading)
               (code-review-insert-comment-lines obj)
 
-              (if-let (reactions (a-get-in c (list 'reactions 'nodes)))
-                  (let ((reactions-obj (-map
-                                        (lambda (r)
-                                          (code-review-reaction-section
-                                           :id (a-get r 'id)
-                                           :content (a-get r 'content)))
-                                        reactions)))
-                    (code-review-comment-insert-reactions
-                     reactions-obj
-                     (a-get c 'databaseId)))
-                (insert ?\n)))))))))
+              (when reactions
+                (code-review-comment-insert-reactions
+                 reaction-objs
+                 "comment"
+                 (a-get c 'databaseId)))
+              (insert ?\n))))))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
@@ -820,6 +879,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                       (when-let (reactions-obj (oref c reactions))
                         (code-review-comment-insert-reactions
                          reactions-obj
+                         "outdated-comment"
                          (oref c id)))))
                   (insert ?\n))))))))))
 
