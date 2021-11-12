@@ -34,6 +34,7 @@
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)
+(require 'emojify nil t)
 
 ;; fix unbound symbols
 (defvar magit-root-section)
