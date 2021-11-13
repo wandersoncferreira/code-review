@@ -1046,7 +1046,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
            (path-name (oref path name))
            (head-pos (oref path head-pos)))
       (when (not head-pos)
-        (let ((adjusted-pos (+ 1 (line-number-at-pos))))
+        (let ((adjusted-pos (+ 1 (code-review--line-number-at-pos))))
           (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
           (setq head-pos adjusted-pos)
           (setq path-name path-name)))
@@ -1079,10 +1079,9 @@ Please Report this Bug" path-name))
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
-
             (let* ((comment-written-pos
                     (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal) 0))
-                   (diff-pos (+ 1 (- (line-number-at-pos)
+                   (diff-pos (+ 1 (- (code-review--line-number-at-pos)
                                      (or head-pos 0)
                                      comment-written-pos)))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))

@@ -473,5 +473,40 @@ Expect the same output as `git diff --no-prefix`"
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
 
+;;; line-number-at-pos replacement
+;; Function taken from https://emacs.stackexchange.com/questions/3821/a-faster-method-to-obtain-line-number-at-pos-in-large-buffers
+;; nlinum.el
+
+(defvar code-review--line-number-cache nil)
+(make-variable-buffer-local 'code-review--line-number-cache)
+
+;; We could try and avoid flushing the cache at every change, e.g. with:
+;;   (defun nlinum--before-change (start _end)
+;;     (if (and nlinum--line-number-cache
+;;              (< start (car nlinum--line-number-cache)))
+;;         (save-excursion (goto-char start) (nlinum--line-number-at-pos))))
+;; But it's far from clear that it's worth the trouble.  The current simplistic
+;; approach seems to be good enough in practice.
+
+(defun code-review--after-change (&rest _args)
+  "Flush cache after change."
+  (setq code-review--line-number-cache nil))
+
+(defun code-review--line-number-at-pos ()
+  "Like `line-number-at-pos' but sped up with a cache."
+  (let ((pos
+         (if (and code-review--line-number-cache
+                  (> (- (point) (point-min))
+                     (abs (- (point) (car code-review--line-number-cache)))))
+             (funcall (if (> (point) (car code-review--line-number-cache))
+                          #'+ #'-)
+                      (cdr code-review--line-number-cache)
+                      (count-lines (point) (car code-review--line-number-cache)))
+           (line-number-at-pos))))
+    (setq code-review--line-number-cache (cons (point) pos))
+    pos))
+
+(add-hook 'after-change-functions #'code-review--after-change nil t)
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
