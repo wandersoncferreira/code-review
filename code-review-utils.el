@@ -507,7 +507,5 @@ Expect the same output as `git diff --no-prefix`"
     (setq code-review--line-number-cache (cons (point) pos))
     pos))
 
-(add-hook 'after-change-functions #'code-review--after-change nil t)
-
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
