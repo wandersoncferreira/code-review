@@ -4,11 +4,6 @@ You can react with Emojis to any comment.
 
 ![Add and removing reactions from your buffer for every comment](./code_review_reactions_demo.gif)
 
-You need to install
-[emacs-emojify](https://github.com/iqbalansari/emacs-emojify) package or if you
-are using Doom Emacs I recommend enabling `(emoji +github)` in your `init.el`
-file.
-
 
 ### Keybindings
 

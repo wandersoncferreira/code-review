@@ -34,7 +34,7 @@
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)
-(require 'emojify nil t)
+(require 'emojify)
 
 (defface code-review-timestamp-face
   `((((class color) (background light))
