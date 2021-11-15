@@ -74,6 +74,9 @@ For internal usage only.")
 
 ;; remove free variable warnings
 (defvar code-review-comment-buffer-name)
+(defvar code-review-commit-buffer-name)
+(defvar code-review-buffer-name)
+(defvar code-review--build-buffer)
 
 ;;; general functons
 
