@@ -102,10 +102,10 @@
 (defvar code-review-commit-buffer-name)
 (defvar code-review-comment-commit-buffer?)
 (defvar code-review-fill-column)
-(defvar code-review--build-buffer)
 (defvar code-review-comment-cursor-pos)
 (defvar code-review-reaction-types)
 
+(declare-function code-review--build-buffer "code-review" ())
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.

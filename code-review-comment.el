@@ -76,7 +76,8 @@ For internal usage only.")
 (defvar code-review-comment-buffer-name)
 (defvar code-review-commit-buffer-name)
 (defvar code-review-buffer-name)
-(defvar code-review--build-buffer)
+
+(declare-function code-review--build-buffer "code-review" ())
 
 ;;; general functons
 

@@ -40,9 +40,10 @@
 ;;;
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
-(defvar code-review--build-buffer)
 (defvar code-review-log-file)
 (defvar code-review-comment-cursor-pos)
+
+(declare-function code-review--build-buffer "code-review" ())
 
 (defun code-review-utils-current-project-buffer-name ()
   "Return the name of the buffer we are currently in."
