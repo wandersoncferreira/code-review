@@ -263,6 +263,7 @@ For internal usage only.")
 (defvar code-review-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-new-issue)
     map)
   "Keymaps for comment section.")
 
@@ -273,6 +274,32 @@ For internal usage only.")
          (comment-id (oref (oref section value) id)))
     (setq code-review-comment-cursor-pos (point))
     (code-review-toggle-reaction-at-point comment-id "comment")))
+
+(defclass code-review-promote-comment-to-issue ()
+  ((reference-link :initarg :reference-link)
+   (author :initarg :author)
+   (title :initarg :title)
+   (body :initarg :body)
+   (buffer-text :initform nil)))
+
+(defun code-review-promote-comment-to-new-issue ()
+  "Promote the comment to a new issue."
+  (interactive)
+  (let* ((pr (code-review-db-get-pullreq))
+         (section (magit-current-section)))
+    (with-slots (value) section
+      (let* ((reference-link (format "https://github.com/%s/%s/issues/%s#issuecomment-%s"
+                                     (oref pr owner)
+                                     (oref pr repo)
+                                     (oref pr number)
+                                     (oref value id)))
+             (title (-first-item (split-string (oref value msg) "\n")))
+             (obj (code-review-promote-comment-to-issue
+                   :reference-link reference-link
+                   :author (oref value author)
+                   :title title
+                   :body (oref value msg))))
+        (code-review-comment-handler-add-or-edit obj)))))
 
 (defun code-review-conversation--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
   "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.
@@ -444,6 +471,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-issue)
     map)
   "Keymaps for code-comment sections.")
 
