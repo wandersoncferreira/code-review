@@ -243,10 +243,7 @@ If you want to provide a MSG for the end of the process."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr saved t)
     (oset pr saved-at (current-time-string))
-    (prin1 "AQUI?")
-    (prin1 (oref pr saved-at))
     (code-review-db-update pr)
-    (prin1 (oref (code-review-db-get-pullreq) saved-at))
     (message "PR saved successfully!")))
 
 ;;;###autoload
