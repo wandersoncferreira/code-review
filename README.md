@@ -32,6 +32,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Edit PR description body
 - Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
 - Reactions. See details [react to comments](./docs/reactions.md)
+- Promote comments to new issues.
 
 
 The basic workflow:
@@ -119,6 +120,7 @@ Review` buffer.
 | C-c C-c | Comment Buffer                        | Register your local comment |
 | C-c C-k | Comment Buffer                        | Cancel your local comment   |
 | C-c C-r | comment                               | Add Reaction                |
+| C-c C-n | comment                               | Promote to new issue        |
 | C-c C-r | pr description                        | Add Reaction                |
 | RET     | reaction (on emoji symbol)            | Endorse or Remove Reaction  |
 
