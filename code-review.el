@@ -136,6 +136,9 @@
 
 ;;; build buffer
 
+(defvar code-review-progress-reporter nil)
+(defvar code-review-progress-reporter-counter 0)
+
 (defun code-review--trigger-hooks (buff-name &optional commit-focus? msg)
   "Trigger magit section hooks and draw BUFF-NAME.
 Run code review commit buffer hook when COMMIT-FOCUS? is non-nil.
@@ -150,15 +153,20 @@ If you want to display a minibuffer MSG in the end."
               (code-review-utils-make-group
                (code-review-db--pullreq-raw-comments))
               code-review-section-hold-written-comment-count nil
-              code-review-section-hold-written-comment-ids nil)
+              code-review-section-hold-written-comment-ids nil
+              code-review-progress-reporter nil
+              code-review-progress-reporter-counter 0)
 
         (with-current-buffer (get-buffer-create buff-name)
           (let* ((window (get-buffer-window buff-name))
                  (ws (window-start window))
-                 (inhibit-read-only t))
+                 (inhibit-read-only t)
+                 (raw-diff (code-review-db--pullreq-raw-diff))
+                 (progress (make-progress-reporter "Loading PR..." 1 (+ 1 (length (split-string raw-diff "\n"))))))
+            (setq code-review-progress-reporter progress)
             (save-excursion
               (erase-buffer)
-              (insert (code-review-db--pullreq-raw-diff))
+              (insert raw-diff)
               (insert ?\n))
             (magit-insert-section (review-buffer)
               (magit-insert-section (code-review)
@@ -166,7 +174,11 @@ If you want to display a minibuffer MSG in the end."
                     (magit-run-section-hook 'code-review-sections-commit-hook)
                   (magit-run-section-hook 'code-review-sections-hook)))
               (magit-wash-sequence
-               (apply-partially #'magit-diff-wash-diff ())))
+               (lambda ()
+                 (setq code-review-progress-reporter-counter
+                       (1+ code-review-progress-reporter-counter))
+                 (progress-reporter-update code-review-progress-reporter code-review-progress-reporter-counter)
+                 (magit-diff-wash-diff ()))))
             (if window
                 (progn
                   (pop-to-buffer buff-name)
@@ -182,6 +194,7 @@ If you want to display a minibuffer MSG in the end."
                   (code-review-commit-minor-mode))
               (code-review-mode))
             (code-review-section-insert-header-title)
+            (progress-reporter-done code-review-progress-reporter)
             (when msg
               (message nil)
               (message msg)))))
@@ -193,28 +206,38 @@ If you want to display a minibuffer MSG in the end."
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
-      (code-review--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq)))
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
-        (deferred:nextc it
-          (lambda (x)
-            (let-alist (-second-item x)
-              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-utils--clean-diff-prefixes
-                (a-get (-first-item x) 'message)))
-              (code-review--trigger-hooks buff-name msg))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review--build-buffer"
-             (prin1-to-string err))
-            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
+  (let ((progress (make-progress-reporter "Fetch diff PR..." 1 4)))
+    (progress-reporter-update progress 1)
+    (if (not code-review-section-full-refresh?)
+        (code-review--trigger-hooks buff-name commit-focus? msg)
+      (let ((obj (code-review-db-get-pullreq)))
+        (deferred:$
+          (deferred:parallel
+            (lambda () (code-review-core-diff-deferred obj))
+            (lambda () (code-review-core-infos-deferred obj)))
+          (deferred:nextc it
+            (lambda (x)
+              (progress-reporter-update progress 2)
+              (let-alist (-second-item x)
+                (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+                (progress-reporter-update progress 3)
+                (code-review-db--pullreq-raw-diff-update
+                 (code-review-utils--clean-diff-prefixes
+                  (a-get (-first-item x) 'message)))
+                (progress-reporter-update progress 4)
+                (code-review--trigger-hooks buff-name msg))))
+          (deferred:error it
+            (lambda (err)
+              (code-review-utils--log
+               "code-review--build-buffer"
+               (prin1-to-string err))
+              (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
 
+(defun code-review-auth-source-debug ()
+  "Do not warn on auth source search because it messes with progress reporter."
+  (setq-local auth-source-debug (lambda (&rest _))))
+
+(code-review-auth-source-debug)
 
 ;;; public functions
 

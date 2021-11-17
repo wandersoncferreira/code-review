@@ -1002,6 +1002,10 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
   "Overwrite the original Magit function on `magit-diff.el' FILE.
 ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the original fn."
 
+  (setq code-review-progress-reporter-counter
+        (1+ code-review-progress-reporter-counter))
+  (progress-reporter-update code-review-progress-reporter code-review-progress-reporter-counter)
+
   ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
   ;;; so the positioning of comments is done correctly.
@@ -1042,6 +1046,10 @@ Code Review inserts PR comments sections in the diff buffer.
 Argument GROUPED-COMMENTS comments grouped by path and diff position."
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
 
+    (setq code-review-progress-reporter-counter
+          (1+ code-review-progress-reporter-counter))
+    (progress-reporter-update code-review-progress-reporter code-review-progress-reporter-counter)
+
     ;;; --- beg -- code-review specific code.
     ;;; I need to set a reference point for the first hunk header
     ;;; so the positioning of comments is done correctly.
@@ -1079,6 +1087,9 @@ Please Report this Bug" path-name))
                               'font-lock-face 'magit-diff-hunk-heading))
           (magit-insert-heading)
           (while (not (or (eobp) (looking-at "^[^-+\s\\]")))
+            (setq code-review-progress-reporter-counter
+                  (1+ code-review-progress-reporter-counter))
+            (progress-reporter-update code-review-progress-reporter code-review-progress-reporter-counter)
           ;;; --- beg -- code-review specific code.
           ;;; code-review specific code.
           ;;; add code comments
