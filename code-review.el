@@ -237,8 +237,6 @@ If you want to provide a MSG for the end of the process."
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
-(code-review-auth-source-debug)
-
 ;;; public functions
 
 ;;;###autoload
@@ -532,6 +530,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer
@@ -544,6 +543,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 OUTDATED."
   (interactive)
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils--start-from-forge-at-point))
   (setq code-review-section-full-refresh? nil))
