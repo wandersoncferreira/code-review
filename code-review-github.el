@@ -31,6 +31,7 @@
 (require 'ghub)
 (require 'deferred)
 (require 'code-review-core)
+(require 'code-review-db)
 (require 'a)
 
 (defclass code-review-github-repo (code-review-db-pullreq)
