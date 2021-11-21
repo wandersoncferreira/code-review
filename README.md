@@ -52,31 +52,11 @@ Missing something? Please, [let us know](https://github.com/wandersoncferreira/c
 
 # Installation
 
-### With melpa
+I highly recommend installing `code-review` through `package.el`.
 
-TBD
+It's available on `MELPA`.
 
-### Directly from source
-
-Clone and add the package to your `load-path`:
-
-``` emacs-lisp
-(add-to-list 'load-path "~/<path-to-the-place-you-cloned>/code-review")
-(require 'code-review)
-
-```
-
-if you are using `use-package`:
-
-``` emacs-lisp
-
-(use-package code-review
-  :load-path "/path-to-the-place-you-cloned")
-```
-
-You also need to install the dependencies manually for now: `closql`, `uuidgen`,
-`magit`, `markdown-mode`, `forge`, `ghub`. `deferred`.
-
+`M-x package-install code-review`
 
 Then you can either `M-x code-review-start` and provide a PR URL or `M-x
 code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
