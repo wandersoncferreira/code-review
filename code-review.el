@@ -38,6 +38,7 @@
 (require 'magit-section)
 (require 'code-review-section)
 (require 'code-review-github)
+(require 'code-review-gitlab)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
@@ -80,9 +81,11 @@
   '(code-review-section-insert-header-title
     code-review-section-insert-title
     code-review-section-insert-state
-    code-review-section-insert-ref
+    ;; FIXME --- need investigation
+    ;; code-review-section-insert-ref
     code-review-section-insert-milestone
-    code-review-section-insert-labels
+    ;; FIXME --- need investigation
+    ;; code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
     code-review-section-insert-suggested-reviewers
@@ -93,10 +96,13 @@
 
 (defcustom code-review-sections-hook
   '(code-review-section-insert-headers
-    code-review-section-insert-commits
+    ;; FIXME --- need investigation
+    ;; code-review-section-insert-commits
     code-review-section-insert-pr-description
     code-review-section-insert-feedback-heading
-    code-review-section-insert-general-comments)
+    ;; FIXME --- find endpoint to provide comments
+    ;; code-review-section-insert-general-comments
+    )
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
@@ -199,15 +205,31 @@ If you want to provide a MSG for the end of the process."
       (deferred:$
         (deferred:parallel
           (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
+          (lambda ()  (code-review-core-infos-deferred obj)))
         (deferred:nextc it
           (lambda (x)
-            (let-alist (-second-item x)
-              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+            (cond
+
+             ;; gitlab
+             ((code-review-gitlab-repo-p obj)
+              (code-review-db--pullreq-raw-diff-update
+               (code-review-gitlab-fix-diff
+                (a-get (-first-item x) 'changes)))
+              (code-review-db--pullreq-raw-infos-update
+               (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+              (code-review--trigger-hooks buff-name msg))
+
+             ;; github
+             ((code-review-github-repo-p obj)
               (code-review-db--pullreq-raw-diff-update
                (code-review-utils--clean-diff-prefixes
                 (a-get (-first-item x) 'message)))
-              (code-review--trigger-hooks buff-name msg))))
+              (code-review-db--pullreq-raw-infos-update
+               (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+              (code-review--trigger-hooks buff-name msg))
+
+             (t
+              (message "Forge not supported")))))
         (deferred:error it
           (lambda (err)
             (code-review-utils--log
@@ -573,6 +595,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (code-review--build-buffer
      code-review-buffer-name))
   (setq code-review-section-full-refresh? nil))
+
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
