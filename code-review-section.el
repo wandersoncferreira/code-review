@@ -706,7 +706,10 @@ Optionally DELETE? flag must be set if you want to remove it."
         (if labels
             (dolist (label labels)
               (insert (a-get label 'name))
-              (let* ((color (concat "#" (a-get label 'color)))
+              (let* ((raw-color (a-get label 'color))
+                     (color (if (string-prefix-p "#" raw-color)
+                                raw-color
+                              (concat "#" raw-color)))
                      (background (code-review-utils--sanitize-color color))
                      (foreground (code-review-utils--contrast-color color))
                      (o (make-overlay (- (point) (length (a-get label 'name))) (point))))

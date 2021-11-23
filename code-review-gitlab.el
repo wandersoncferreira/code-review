@@ -116,6 +116,12 @@ Optionally using VARIABLES. Provide HOST and CALLBACK fn."
 repository:project(fullPath: \"%s\") {
     pullRequest:mergeRequest(iid: \"%s\") {
       id
+      diffRefs {
+        baseSha
+        headSha
+      }
+      headRefName:sourceBranch
+      baseRefName:targetBranch
       number: iid
       isDraft: draft
       databaseId: iid

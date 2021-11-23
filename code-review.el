@@ -81,11 +81,9 @@
   '(code-review-section-insert-header-title
     code-review-section-insert-title
     code-review-section-insert-state
-    ;; FIXME --- need investigation
-    ;; code-review-section-insert-ref
+    code-review-section-insert-ref
     code-review-section-insert-milestone
-    ;; FIXME --- need investigation
-    ;; code-review-section-insert-labels
+    code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
     code-review-section-insert-suggested-reviewers
