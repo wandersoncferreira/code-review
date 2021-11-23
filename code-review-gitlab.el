@@ -116,12 +116,31 @@ Optionally using VARIABLES. Provide HOST and CALLBACK fn."
 repository:project(fullPath: \"%s\") {
     pullRequest:mergeRequest(iid: \"%s\") {
       id
+      comments:notes(first: 50){
+        nodes {
+          databaseId:id
+          bodyText: body
+          author {
+            login:username
+          }
+          createdAt
+          updatedAt
+          system
+        }
+      }
       diffRefs {
         baseSha
         headSha
       }
       headRefName:sourceBranch
       baseRefName:targetBranch
+      commitCount
+      commitsWithoutMergeCommits(first: 100) {
+        nodes {
+          abbreviatedOid:shortId
+          message
+        }
+      }
       number: iid
       isDraft: draft
       databaseId: iid

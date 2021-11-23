@@ -255,8 +255,7 @@ For internal usage only.")
            :type string)
    (msg    :initarg :msg
            :type string)
-   (id     :initarg :id
-           :type (or null number))
+   (id     :initarg :id)
    (reactions :initarg :reactions)
    (face   :initform 'magit-log-author)))
 

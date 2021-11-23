@@ -94,13 +94,10 @@
 
 (defcustom code-review-sections-hook
   '(code-review-section-insert-headers
-    ;; FIXME --- need investigation
-    ;; code-review-section-insert-commits
+    code-review-section-insert-commits
     code-review-section-insert-pr-description
     code-review-section-insert-feedback-heading
-    ;; FIXME --- find endpoint to provide comments
-    ;; code-review-section-insert-general-comments
-    )
+    code-review-section-insert-general-comments)
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
@@ -213,8 +210,22 @@ If you want to provide a MSG for the end of the process."
               (code-review-db--pullreq-raw-diff-update
                (code-review-gitlab-fix-diff
                 (a-get (-first-item x) 'changes)))
-              (code-review-db--pullreq-raw-infos-update
-               (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+              (let* ((-infos (a-get-in (-second-item x)
+                                       (list 'data 'repository 'pullRequest)))
+                     (gitlab-infos (-> -infos
+                                       (a-assoc 'commits
+                                                (a-alist 'totalCount (a-get -infos 'commitCount)
+                                                         'nodes (-map
+                                                                 (lambda (c)
+                                                                   (a-alist 'commit c))
+                                                                 (a-get-in -infos (list 'commitsWithoutMergeCommits 'nodes)))))
+                                       (a-assoc 'comments
+                                                (a-alist 'nodes
+                                                         (-filter
+                                                          (lambda (c)
+                                                            (not (a-get c 'system)))
+                                                          (a-get-in -infos (list 'comments 'nodes))))))))
+                (code-review-db--pullreq-raw-infos-update gitlab-infos))
               (code-review--trigger-hooks buff-name msg))
 
              ;; github
