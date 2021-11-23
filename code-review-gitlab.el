@@ -171,7 +171,6 @@ repository:project(fullPath: \"%s\") {
 
 (cl-defmethod code-review-core-infos-deferred ((gitlab code-review-gitlab-repo))
   "Get PR infos from GITLAB."
-  (prin1 "AQUI?")
   (let ((d (deferred:new #'identity)))
     (code-review-core-pullreq-infos
      gitlab
@@ -179,14 +178,6 @@ repository:project(fullPath: \"%s\") {
                         (deferred:callback-post d v))
                       d))
     d))
-
-;; (let-alist (code-review-utils-pr-from-url
-;;             "https://gitlab.com/code-review-experiment/default/-/merge_requests/1")
-;;   (let ((obj (code-review-gitlab-repo :owner .owner
-;;                                       :repo .repo
-;;                                       :number .num)))
-;;     (code-review-core-pullreq-infos obj (lambda (res &rest v)
-;;                                           (prin1 res)))))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
