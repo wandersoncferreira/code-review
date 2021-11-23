@@ -28,8 +28,11 @@
 ;;
 ;;; Code:
 
-(require 'code-review-db)
 (require 'code-review-core)
+(require 'code-review-db)
+(require 'let-alist)
+(require 'subr)
+(require 'subr-x)
 
 (defgroup code-review-gitlab nil
   "User options for GitLab code reviews."
