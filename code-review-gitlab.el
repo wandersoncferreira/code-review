@@ -31,6 +31,10 @@
 (require 'code-review-db)
 (require 'code-review-core)
 
+(defgroup code-review-gitlab nil
+  "User options for GitLab code reviews."
+  :group 'code-review)
+
 (defcustom code-review-gitlab-host "gitlab.com/api/v4"
   "Host for the Gitlab api if you use the hosted version of Gitlab."
   :group 'code-review-gitlab

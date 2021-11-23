@@ -27,6 +27,10 @@
 ;;
 ;;; Code:
 
+(defgroup code-review nil
+  "Code review tool for VC forges."
+  :link '(custom-group-link 'code-review-gitlab))
+
 (cl-defgeneric code-review-core-pullreq-infos (obj callback)
   "Return infos Pull Request from a OBJ running CALLBACK with results.")
 
