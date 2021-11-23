@@ -110,7 +110,7 @@ Review` buffer.
 You can place `code-review-forge-pr-at-point` to a key binding for your convenience:
 
 ``` emacs-lisp
-(define-key forge-topic-mode-map (kbd "C-c r") 'github-review-forge-pr-at-point)
+(define-key forge-topic-mode-map (kbd "C-c r") 'code-review-forge-pr-at-point)
 ```
 
 # Extension to other forges

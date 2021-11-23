@@ -259,7 +259,7 @@ For internal usage only.")
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
-  "Commit the reply OBJ."
+  "Commit the local comment OBJ."
   (let* ((buff-name (if code-review-comment-commit-buffer?
                         code-review-commit-buffer-name
                       code-review-buffer-name))
