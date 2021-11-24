@@ -1108,10 +1108,11 @@ Please Report this Bug" path-name))
                                     path-name
                                     code-review-section-hold-written-comment-ids
                                     code-review-section-grouped-comments))
-            (code-review-section-insert-outdated-comment-missing
-             path-name
-             missing-paths
-             code-review-section-grouped-comments))
+            (when (eobp)
+              (code-review-section-insert-outdated-comment-missing
+               path-name
+               missing-paths
+               code-review-section-grouped-comments)))
 
         ;;; --- end -- code-review specific code.
           (oset section end (point))
