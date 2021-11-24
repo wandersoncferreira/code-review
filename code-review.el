@@ -601,8 +601,7 @@ OUTDATED."
     ("r" "Request Changes" code-review-request-changes)
     ("c" "Comment" code-review-comments)
     ("C-c C-s" "Save Unfinished" code-review-save-unfinished-review)
-    ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)
-    ("C-c C-c" "Submit" code-review-submit)]
+    ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)]
    ["Merge"
     ("mm" "Merge" code-review-merge-merge)
     ("mr" "Merge Rebase" code-review-merge-rebase)
