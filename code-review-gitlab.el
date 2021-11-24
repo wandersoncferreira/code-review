@@ -44,6 +44,31 @@
 (defclass code-review-gitlab-repo (code-review-db-pullreq)
   ((callback :initform nil)))
 
+(defvar code-review-log-file)
+
+(defun code-review--log (origin msg)
+  "Log MSG from ORIGIN to error file."
+  (with-temp-file code-review-log-file
+    (when (not (file-exists-p code-review-log-file))
+      (write-file code-review-log-file))
+    (insert-file-contents code-review-log-file)
+    (goto-char (point-max))
+    (insert ?\n)
+    (insert (current-time-string))
+    (insert " - ")
+    (insert origin)
+    (insert " - ")
+    (insert msg)
+    (insert ?\n)))
+
+(defun code-review-gitlab-errback (&rest m)
+  "Error callback, displays the error message M."
+  (let-alist m
+    (code-review--log
+     "code-review-gitlab-errback"
+     (prin1-to-string m))
+    (message "Unknown error talking to Gitlab: %s" m)))
+
 (defun code-review-gitlab-fix-diff (pr-changes)
   "Get all PR-CHANGES and produce standard git diff."
   (let ((d
@@ -216,9 +241,7 @@ repository:project(fullPath: \"%s\") {
                                              (comments (nodes ((bodyText . ,.bodyText)
                                                                (path . ,.position.oldPath)
                                                                (position . ,.position.oldLine)
-                                                               (databaseId . ,(format "NoteId:%s|DiscussionId:%s"
-                                                                                      .databaseId
-                                                                                      .discussion.id))
+                                                               (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
                                                                (createdAt . ,.createdAt)
                                                                (updatedAt . ,.updatedAt)))))))))
     (-reduce-from
@@ -232,6 +255,80 @@ repository:project(fullPath: \"%s\") {
            (cons (funcall comment->code-review-comment comments) acc))))
      nil
      (a-keys grouped-comments))))
+
+(defclass code-review-submit-gitlab-replies ()
+  ((pr      :initform nil)
+   (replies :initform nil
+            :type (satisfies
+                   (lambda (it)
+                     (-all-p #'code-review-submit-reply-p it))))))
+
+(cl-defmethod code-review-core-send-replies ((replies code-review-submit-gitlab-replies) callback)
+  "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
+  (let ((pr (oref replies pr)))
+    (deferred:$
+      (deferred:parallel
+        (-map
+         (lambda (reply)
+           (lambda ()
+             (glab-post (format "/projects/%s/merge_requests/%s/discussions/%s/notes"
+                                (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                                (oref pr number)
+                                (oref reply reply-to-id))
+                        nil
+                        :payload (a-alist 'body (oref reply body))
+                        :auth 'code-review
+                        :host code-review-gitlab-host
+                        :errorback #'code-review-gitlab-errback
+                        :callback (lambda (&rest _)))))
+         (oref replies replies)))
+
+      (deferred:nextc it
+        (lambda (_x)
+          ;; seems like we need to wait a bit for gitlab's API to update the new reply record
+          (sit-for 0.5)
+          (funcall callback)))
+
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from the Gitlab Reply API %S!" err))))))
+
+(defclass code-review-submit-gitlab-review ()
+  ((state :initform nil)
+   (pr :initform nil)
+   (local-comments :initform nil
+                   :type (satisfies
+                          (lambda (it)
+                            (-all-p #'code-review-submit-local-coment-p it))))
+   (feedback :initform nil)))
+
+(cl-defmethod code-review-core-send-review ((review code-review-submit-gitlab-review) callback)
+  "Submit review comments given REVIEW and a CALLBACK fn."
+  (let* ((pr (oref review pr))
+         (payload (a-alist 'body (oref review feedback)
+                           'event (oref review state)
+                           'commit_id (oref pr sha)))
+         (payload (if (oref review local-comments)
+                      (a-assoc payload 'comments (--sort
+                                                  (< (a-get it 'position)
+                                                     (a-get other 'position))
+                                                  (-map
+                                                   (lambda (c)
+                                                     `((path . ,(oref c path))
+                                                       (position . ,(oref c position))
+                                                       (body . ,(oref c body))))
+                                                   (oref review local-comments))))
+                    payload)))
+    ;; (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
+    ;;                    (oref pr owner)
+    ;;                    (oref pr repo)
+    ;;                    (oref pr number))
+    ;;            nil
+    ;;            :auth 'code-review
+    ;;            :payload payload
+    ;;            :host code-review-gitlab-host
+    ;;            :callback callback)
+    ))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here

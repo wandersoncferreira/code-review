@@ -371,15 +371,20 @@ If you want to provide a MSG for the end of the process."
 If you already have a FEEDBACK string use it.
 If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (interactive)
+  (setq code-review-comment-cursor-pos (point))
   (let* ((pr (code-review-db-get-pullreq))
          (review-obj (cond
                       ((code-review-github-repo-p pr)
                        (code-review-submit-github-review))
+                      ((code-review-gitlab-repo-p pr)
+                       (code-review-submit-gitlab-review))
                       (t
                        (code-review-submit-review))))
          (replies-obj (cond
                        ((code-review-github-repo-p pr)
                         (code-review-submit-github-replies))
+                       ((code-review-gitlab-repo-p pr)
+                        (code-review-submit-gitlab-replies))
                        (t
                         (code-review-submit-replies)))))
 
