@@ -422,5 +422,79 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                  nil
                  :auth 'code-review)))
 
+(defclass code-review-submit-github-replies ()
+  ((pr      :initform nil)
+   (replies :initform nil
+            :type (satisfies
+                   (lambda (it)
+                     (-all-p #'code-review-submit-reply-p it))))))
+
+(cl-defmethod code-review-core-send-replies ((replies code-review-submit-github-replies) callback)
+  "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
+  (let ((pr (oref replies pr)))
+    (deferred:$
+      (deferred:parallel
+        (-map
+         (lambda (reply)
+           (lambda ()
+             (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
+                                (oref pr owner)
+                                (oref pr repo)
+                                (oref pr number)
+                                (oref reply reply-to-id))
+                        nil
+                        :payload (a-alist 'body (oref reply body))
+                        :headers code-review-github-diffheader
+                        :auth 'code-review
+                        :host code-review-github-host
+                        :callback (lambda (&rest _))
+                        :errorback #'code-review-github-errback)))
+         (oref replies replies)))
+
+      (deferred:nextc it
+        (lambda (_x)
+          (funcall callback)))
+
+      (deferred:error it
+        (lambda (err)
+          (message "Got an error from the Github Reply API %S!" err))))))
+
+(defclass code-review-submit-github-review ()
+  ((state :initform nil)
+   (pr :initform nil)
+   (local-comments :initform nil
+                   :type (satisfies
+                          (lambda (it)
+                            (-all-p #'code-review-submit-local-coment-p it))))
+   (feedback :initform nil)))
+
+(cl-defmethod code-review-core-send-review ((review code-review-submit-github-review) callback)
+  "Submit review comments given REVIEW and a CALLBACK fn."
+  (let* ((pr (oref review pr))
+         (payload (a-alist 'body (oref review feedback)
+                           'event (oref review state)
+                           'commit_id (oref pr sha)))
+         (payload (if (oref review local-comments)
+                      (a-assoc payload 'comments (--sort
+                                                  (< (a-get it 'position)
+                                                     (a-get other 'position))
+                                                  (-map
+                                                   (lambda (c)
+                                                     `((path . ,(oref c path))
+                                                       (position . ,(oref c position))
+                                                       (body . ,(oref c body))))
+                                                   (oref review local-comments))))
+                    payload)))
+    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
+                       (oref pr owner)
+                       (oref pr repo)
+                       (oref pr number))
+               nil
+               :auth 'code-review
+               :payload payload
+               :host code-review-github-host
+               :errorback #'code-review-github-errback
+               :callback callback)))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
