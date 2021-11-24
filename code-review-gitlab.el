@@ -119,6 +119,9 @@ repository:project(fullPath: \"%s\") {
       comments:notes(first: 50){
         nodes {
           databaseId:id
+          discussion {
+            id
+          }
           bodyText: body
           author {
             login:username
@@ -213,7 +216,9 @@ repository:project(fullPath: \"%s\") {
                                              (comments (nodes ((bodyText . ,.bodyText)
                                                                (path . ,.position.oldPath)
                                                                (position . ,.position.oldLine)
-                                                               (databaseId . ,.databaseId)
+                                                               (databaseId . ,(format "NoteId:%s|DiscussionId:%s"
+                                                                                      .databaseId
+                                                                                      .discussion.id))
                                                                (createdAt . ,.createdAt)
                                                                (updatedAt . ,.updatedAt)))))))))
     (-reduce-from
