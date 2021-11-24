@@ -365,73 +365,23 @@ If you want to provide a MSG for the end of the process."
                             previous-obj)
                       current-id))))
 
-(cl-defmethod code-review-core-send-review ((review code-review-submit-review) callback)
-  "Submit review comments given REVIEW and a CALLBACK fn."
-  (let* ((pr (oref review pr))
-         (payload (a-alist 'body (oref review feedback)
-                           'event (oref review state)
-                           'commit_id (oref pr sha)))
-         (payload (if (oref review local-comments)
-                      (a-assoc payload 'comments (--sort
-                                                  (< (a-get it 'position)
-                                                     (a-get other 'position))
-                                                  (-map
-                                                   (lambda (c)
-                                                     `((path . ,(oref c path))
-                                                       (position . ,(oref c position))
-                                                       (body . ,(oref c body))))
-                                                   (oref review local-comments))))
-                    payload)))
-    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-                       (oref pr owner)
-                       (oref pr repo)
-                       (oref pr number))
-               nil
-               :auth 'code-review
-               :payload payload
-               :host code-review-github-host
-               :errorback #'code-review-github-errback
-               :callback callback)))
-
-(cl-defmethod code-review-core-send-replies ((replies code-review-submit-replies) callback)
-  "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
-  (let ((pr (oref replies pr)))
-    (deferred:$
-      (deferred:parallel
-        (-map
-         (lambda (reply)
-           (lambda ()
-             (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
-                                (oref pr owner)
-                                (oref pr repo)
-                                (oref pr number)
-                                (oref reply reply-to-id))
-                        nil
-                        :payload (a-alist 'body (oref reply body))
-                        :headers code-review-github-diffheader
-                        :auth 'code-review
-                        :host code-review-github-host
-                        :callback (lambda (&rest _))
-                        :errorback #'code-review-github-errback)))
-         (oref replies replies)))
-
-      (deferred:nextc it
-        (lambda (_x)
-          (funcall callback)))
-
-      (deferred:error it
-        (lambda (err)
-          (message "Got an error from the Github Reply API %S!" err))))))
-
 ;;;###autoload
 (defun code-review-submit (event &optional feedback only-reply?)
   "Submit your review with a final verdict (EVENT).
 If you already have a FEEDBACK string use it.
 If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (interactive)
-  (let ((review-obj (code-review-submit-review))
-        (replies-obj (code-review-submit-replies))
-        (pr (code-review-db-get-pullreq)))
+  (let* ((pr (code-review-db-get-pullreq))
+         (review-obj (cond
+                      ((code-review-github-repo-p pr)
+                       (code-review-submit-github-review))
+                      (t
+                       (code-review-submit-review))))
+         (replies-obj (cond
+                       ((code-review-github-repo-p pr)
+                        (code-review-submit-github-replies))
+                       (t
+                        (code-review-submit-replies)))))
 
     (oset review-obj state event)
     (oset review-obj pr pr)
