@@ -212,6 +212,7 @@ If you want to provide a MSG for the end of the process."
                 (a-get (-first-item x) 'changes)))
               (let* ((-infos (a-get-in (-second-item x)
                                        (list 'data 'repository 'pullRequest)))
+                     (comment-nodes (a-get-in -infos (list 'comments 'nodes)))
                      (gitlab-infos (-> -infos
                                        (a-assoc 'commits
                                                 (a-alist 'totalCount (a-get -infos 'commitCount)
@@ -223,8 +224,11 @@ If you want to provide a MSG for the end of the process."
                                                 (a-alist 'nodes
                                                          (-filter
                                                           (lambda (c)
-                                                            (not (a-get c 'system)))
-                                                          (a-get-in -infos (list 'comments 'nodes))))))))
+                                                            (and (not (a-get c 'system))
+                                                                 (not (a-get c 'resolvable))))
+                                                          comment-nodes)))
+                                       (a-assoc 'reviews
+                                                (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
                 (code-review-db--pullreq-raw-infos-update gitlab-infos))
               (code-review--trigger-hooks buff-name msg))
 

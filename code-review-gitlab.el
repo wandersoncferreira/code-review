@@ -126,6 +126,17 @@ repository:project(fullPath: \"%s\") {
           createdAt
           updatedAt
           system
+          resolvable
+          position {
+            height
+            newLine
+            newPath
+            oldLine
+            oldPath
+            width
+            x
+            y
+          }
         }
       }
       diffRefs {
@@ -178,6 +189,44 @@ repository:project(fullPath: \"%s\") {
                         (deferred:callback-post d v))
                       d))
     d))
+
+(defun code-review-gitlab-fix-review-comments (raw-comments)
+  "Format RAW-COMMENTS to be compatible with established shape in the package."
+  (let* ((review-comments (-filter
+                           (lambda (c)
+                             (and (not (a-get c 'system))
+                                  (a-get c 'resolvable)))
+                           raw-comments))
+         (grouped-comments (-group-by
+                            (lambda (c)
+                              (let ((line (a-get-in c (list 'position 'oldLine)))
+                                    (path (a-get-in c (list 'position 'oldPath))))
+                                (concat path ":" (number-to-string line))))
+                            review-comments))
+         (comment->code-review-comment (lambda (c)
+                                         (let-alist c
+                                           `((author (login . ,.author.login))
+                                             (state . ,"")
+                                             (bodyText .,"")
+                                             (createdAt . ,.createdAt)
+                                             (updatedAt . ,.updatedAt)
+                                             (comments (nodes ((bodyText . ,.bodyText)
+                                                               (path . ,.position.oldPath)
+                                                               (position . ,.position.oldLine)
+                                                               (databaseId . ,.databaseId)
+                                                               (createdAt . ,.createdAt)
+                                                               (updatedAt . ,.updatedAt)))))))))
+    (-reduce-from
+     (lambda (acc k)
+       (let* ((comments (alist-get k grouped-comments nil nil 'equal)))
+         (if (> (length comments) 1)
+             (append acc (-map
+                          (lambda (c)
+                            (funcall comment->code-review-comment c))
+                          (nreverse comments)))
+           (cons (funcall comment->code-review-comment comments) acc))))
+     nil
+     (a-keys grouped-comments))))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
