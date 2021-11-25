@@ -170,6 +170,7 @@ repository:project(fullPath: \"%s\") {
       diffRefs {
         baseSha
         headSha
+        startSha
       }
       headRefName:sourceBranch
       baseRefName:targetBranch
@@ -305,30 +306,40 @@ repository:project(fullPath: \"%s\") {
 (cl-defmethod code-review-core-send-review ((review code-review-submit-gitlab-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
-         (payload (a-alist 'body (oref review feedback)
-                           'event (oref review state)
-                           'commit_id (oref pr sha)))
-         (payload (if (oref review local-comments)
-                      (a-assoc payload 'comments (--sort
-                                                  (< (a-get it 'position)
-                                                     (a-get other 'position))
-                                                  (-map
-                                                   (lambda (c)
-                                                     `((path . ,(oref c path))
-                                                       (position . ,(oref c position))
-                                                       (body . ,(oref c body))))
-                                                   (oref review local-comments))))
-                    payload)))
-    ;; (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-    ;;                    (oref pr owner)
-    ;;                    (oref pr repo)
-    ;;                    (oref pr number))
-    ;;            nil
-    ;;            :auth 'code-review
-    ;;            :payload payload
-    ;;            :host code-review-gitlab-host
-    ;;            :callback callback)
-    ))
+         (infos (oref pr raw-infos)))
+    ;; 1.1. send all comments to the MR
+    (dolist (c (oref review local-comments))
+      (glab-post (format "/projects/%s/merge_requests/%s/discussions"
+                         (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                         (oref pr number))
+                 nil
+                 :auth 'code-review
+                 :payload (a-alist 'body (oref c body)
+                                   'position (a-alist 'position_type "text"
+                                                      'base_sha (a-get-in infos (list 'diffRefs 'baseSha))
+                                                      'head_sha (a-get-in infos (list 'diffRefs 'headSha))
+                                                      'start_sha (a-get-in infos (list 'diffRefs 'startSha))
+                                                      'new_path (oref c path)
+                                                      'old_path (oref c path)
+                                                      'old_line 2 ;; FIXME - verify if old_line/new_line or both  should be sent
+                                                      'new_line 2 ;; FIXME - discover the line number in the diff buffer
+                                                      ))
+                 :callback (lambda (&rest _)
+                             (message "Review Comments successfully!")
+                             ;; 1.2. send the review verdict
+                             (pcase (oref review state)
+                               ("APPROVE"
+                                (glab-post (format "/projects/%s/merge_requests/%s/approve"
+                                                   (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                                                   (oref pr number))
+                                           nil
+                                           :auth 'code-review
+                                           :payload (a-alist 'sha (oref pr sha))
+                                           :callback (lambda (&rest _)
+                                                       (message "Approved"))))
+                               ("REQUEST_CHANGES"
+                                (message "Not supported in Gitlab"))
+                               ("COMMENT")))))))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
