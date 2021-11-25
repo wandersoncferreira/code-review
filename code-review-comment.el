@@ -193,8 +193,17 @@ For internal usage only.")
   (with-slots (type) (magit-current-section)
     (if (not (equal type 'hunk))
         (message "You can't add text over unspecified region.")
-      (let ((current-line (line-number-at-pos))
-            (amount-loc nil))
+      (let* ((current-line (line-number-at-pos))
+             (line (save-excursion
+                     (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+             (line-type (cond
+                         ((string-prefix-p "-" line)
+                          "REMOVED")
+                         ((string-prefix-p "+" line)
+                          "ADDED")
+                         (t
+                          "UNCHANGED")))
+             (amount-loc nil))
         (while (and (not (looking-at "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
                     (not (equal (point) (point-min))))
           (forward-line -1))
@@ -213,7 +222,8 @@ For internal usage only.")
                                  :state "LOCAL COMMENT"
                                  :author (code-review-utils--git-get-user)
                                  :path (a-get obj 'path)
-                                 :position diff-pos)))
+                                 :position diff-pos
+                                 :line-type line-type)))
             (setq code-review-comment-uncommitted local-comment)
             (code-review-comment-add)))))))
 
@@ -276,6 +286,7 @@ For internal usage only.")
                                           (diffHunk)
                                           (outdated)
                                           (reply?)
+                                          (line-type . ,(oref obj line-type))
                                           (local? . t)))))))
 
     (when (oref obj edit?)

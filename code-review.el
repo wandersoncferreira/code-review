@@ -205,40 +205,39 @@ If you want to provide a MSG for the end of the process."
           (lambda (x)
             (cond
 
-             ;; gitlab
+             ;;; GITLAB
              ((code-review-gitlab-repo-p obj)
+
+              ;; 1. save raw diff data
               (code-review-db--pullreq-raw-diff-update
                (code-review-gitlab-fix-diff
                 (a-get (-first-item x) 'changes)))
-              (let* ((-infos (a-get-in (-second-item x)
-                                       (list 'data 'repository 'pullRequest)))
-                     (comment-nodes (a-get-in -infos (list 'comments 'nodes)))
-                     (gitlab-infos (-> -infos
-                                       (a-assoc 'commits
-                                                (a-alist 'totalCount (a-get -infos 'commitCount)
-                                                         'nodes (-map
-                                                                 (lambda (c)
-                                                                   (a-alist 'commit c))
-                                                                 (a-get-in -infos (list 'commitsWithoutMergeCommits 'nodes)))))
-                                       (a-assoc 'comments
-                                                (a-alist 'nodes
-                                                         (-filter
-                                                          (lambda (c)
-                                                            (and (not (a-get c 'system))
-                                                                 (not (a-get c 'resolvable))))
-                                                          comment-nodes)))
-                                       (a-assoc 'reviews
-                                                (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
-                (code-review-db--pullreq-raw-infos-update gitlab-infos))
+
+              ;; 1.1. compute position line numbers to diff line numbers
+              (code-review-gitlab-pos-line-number->diff-line-number
+               (a-get (-first-item x) 'changes))
+
+              ;; 1.1. save raw info data e.g. data from GraphQL API
+              (code-review-db--pullreq-raw-infos-update
+               (code-review-gitlab-fix-infos
+                (a-get-in (-second-item x) (list 'data 'repository 'pullRequest))))
+
+              ;; 1.2. trigger renders
               (code-review--trigger-hooks buff-name msg))
 
-             ;; github
+             ;;; GITHUB
              ((code-review-github-repo-p obj)
+
+              ;; 2. save raw diff data
               (code-review-db--pullreq-raw-diff-update
                (code-review-utils--clean-diff-prefixes
                 (a-get (-first-item x) 'message)))
+
+              ;; 2.1 save raw info data e.g. data from GraphQL API
               (code-review-db--pullreq-raw-infos-update
                (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+
+              ;; 2.2 trigger renders
               (code-review--trigger-hooks buff-name msg))
 
              (t
@@ -333,7 +332,8 @@ If you want to provide a MSG for the end of the process."
   ((path     :initarg :path)
    (position :initarg :position)
    (body     :initarg :body)
-   (internal-id :initarg :internal-id)))
+   (internal-id :initarg :internal-id)
+   (line-type :initarg :line-type)))
 
 (defclass code-review-submit-review ()
   ((state :initform nil)
@@ -425,7 +425,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                             :path (oref value path)
                             :position (oref value position)
                             :body (oref value msg)
-                            :internal-id (oref value internalId))
+                            :internal-id (oref value internalId)
+                            :line-type (oref value line-type))
                            local-comments))))
                (forward-line))))))
 
