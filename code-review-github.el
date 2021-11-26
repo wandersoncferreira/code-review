@@ -72,10 +72,10 @@
 (defun code-review-github-errback (&rest m)
   "Error callback, displays the error message M."
   (let-alist m
+    (code-review--log
+     "code-review-github-errback"
+     (prin1-to-string m))
     (let* ((status (-second-item .error)))
-      (code-review--log
-       "code-review-github-errback"
-       (prin1-to-string m))
       (cond
        ((= status 422)
         (let ((errors (string-join
