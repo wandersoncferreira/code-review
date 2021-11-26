@@ -1,4 +1,5 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
+[![MELPA](https://melpa.org/packages/code-review-badge.svg)](https://melpa.org/#/code-review)
 ![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
 
 # Code Review
@@ -32,6 +33,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Edit PR description body
 - Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
 - Reactions. See details [react to comments](./docs/reactions.md)
+- Save/Resume in-progress Reviews
 
 
 The basic workflow:
@@ -52,31 +54,11 @@ Missing something? Please, [let us know](https://github.com/wandersoncferreira/c
 
 # Installation
 
-### With melpa
+I highly recommend installing `code-review` through `package.el`.
 
-TBD
+It's available on `MELPA`.
 
-### Directly from source
-
-Clone and add the package to your `load-path`:
-
-``` emacs-lisp
-(add-to-list 'load-path "~/<path-to-the-place-you-cloned>/code-review")
-(require 'code-review)
-
-```
-
-if you are using `use-package`:
-
-``` emacs-lisp
-
-(use-package code-review
-  :load-path "/path-to-the-place-you-cloned")
-```
-
-You also need to install the dependencies manually for now: `closql`, `uuidgen`,
-`magit`, `markdown-mode`, `forge`, `ghub`. `deferred`.
-
+`M-x package-install code-review`
 
 Then you can either `M-x code-review-start` and provide a PR URL or `M-x
 code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
@@ -128,7 +110,7 @@ Review` buffer.
 You can place `code-review-forge-pr-at-point` to a key binding for your convenience:
 
 ``` emacs-lisp
-(define-key forge-topic-mode-map (kbd "C-c r") 'github-review-forge-pr-at-point)
+(define-key forge-topic-mode-map (kbd "C-c r") 'code-review-forge-pr-at-point)
 ```
 
 # Extension to other forges

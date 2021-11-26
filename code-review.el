@@ -257,6 +257,62 @@ If you want to provide a MSG for the end of the process."
   (interactive)
   (code-review-submit "REQUEST_CHANGES"))
 
+;;;###autoload
+(defun code-review-save-unfinished-review ()
+  "Save unfinished review work."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (oset pr saved t)
+    (oset pr saved-at (current-time-string))
+    (code-review-db-update pr)
+    (message "PR saved successfully!")))
+
+;;;###autoload
+(defun code-review-recover-unfinished-review (url)
+  "Recover unfinished review for URL."
+  (interactive "sPR URL: ")
+  (let-alist (code-review-utils-pr-from-url url)
+    (let ((obj (code-review-db-search .owner .repo .num)))
+      (if (not obj)
+          (message "No Review found for this URL.")
+        (progn
+          (setq code-review-db--pullreq-id (oref obj id))
+          (let ((code-review-section-full-refresh? nil))
+            (code-review--build-buffer
+             code-review-buffer-name)))))))
+
+;;;###autoload
+(defun code-review-choose-unfinished-review ()
+  "Choose an unfinished review to work on."
+  (interactive)
+  (let* ((objs (code-review-db-all-unfinished))
+         (choice (completing-read "Unifinished Reviews: "
+                                  (-map
+                                   (lambda (o)
+                                     (format "%s/%s - %s - %s"
+                                             (oref o owner)
+                                             (oref o repo)
+                                             (oref o number)
+                                             (oref o saved-at)))
+                                   objs)))
+         (obj-chosen (car (-filter
+                           (lambda (o)
+                             (save-match-data
+                               (and (string-match "\\(.*\\)/\\(.*\\) - \\(.*\\) - \\(.*\\)" choice)
+                                    (let ((owner (match-string 1 choice))
+                                          (repo (match-string 2 choice))
+                                          (number (match-string 3 choice))
+                                          (saved-at (match-string 4 choice)))
+                                      (and (string-equal (oref o owner) owner)
+                                           (string-equal (oref o repo) repo)
+                                           (string-equal (oref o number) number)
+                                           (string-equal (oref o saved-at) saved-at))))))
+                           objs))))
+    (setq code-review-db--pullreq-id (oref obj-chosen id))
+    (let ((code-review-section-full-refresh? nil))
+      (code-review--build-buffer
+       code-review-buffer-name))))
+
 ;;; Submit structure
 
 (defclass code-review-submit-local-coment ()
@@ -295,73 +351,23 @@ If you want to provide a MSG for the end of the process."
                             previous-obj)
                       current-id))))
 
-(cl-defmethod code-review-core-send-review ((review code-review-submit-review) callback)
-  "Submit review comments given REVIEW and a CALLBACK fn."
-  (let* ((pr (oref review pr))
-         (payload (a-alist 'body (oref review feedback)
-                           'event (oref review state)
-                           'commit_id (oref pr sha)))
-         (payload (if (oref review local-comments)
-                      (a-assoc payload 'comments (--sort
-                                                  (< (a-get it 'position)
-                                                     (a-get other 'position))
-                                                  (-map
-                                                   (lambda (c)
-                                                     `((path . ,(oref c path))
-                                                       (position . ,(oref c position))
-                                                       (body . ,(oref c body))))
-                                                   (oref review local-comments))))
-                    payload)))
-    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-                       (oref pr owner)
-                       (oref pr repo)
-                       (oref pr number))
-               nil
-               :auth 'code-review
-               :payload payload
-               :host code-review-github-host
-               :errorback #'code-review-github-errback
-               :callback callback)))
-
-(cl-defmethod code-review-core-send-replies ((replies code-review-submit-replies) callback)
-  "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
-  (let ((pr (oref replies pr)))
-    (deferred:$
-      (deferred:parallel
-        (-map
-         (lambda (reply)
-           (lambda ()
-             (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
-                                (oref pr owner)
-                                (oref pr repo)
-                                (oref pr number)
-                                (oref reply reply-to-id))
-                        nil
-                        :payload (a-alist 'body (oref reply body))
-                        :headers code-review-github-diffheader
-                        :auth 'code-review
-                        :host code-review-github-host
-                        :callback (lambda (&rest _))
-                        :errorback #'code-review-github-errback)))
-         (oref replies replies)))
-
-      (deferred:nextc it
-        (lambda (_x)
-          (funcall callback)))
-
-      (deferred:error it
-        (lambda (err)
-          (message "Got an error from the Github Reply API %S!" err))))))
-
 ;;;###autoload
 (defun code-review-submit (event &optional feedback only-reply?)
   "Submit your review with a final verdict (EVENT).
 If you already have a FEEDBACK string use it.
 If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (interactive)
-  (let ((review-obj (code-review-submit-review))
-        (replies-obj (code-review-submit-replies))
-        (pr (code-review-db-get-pullreq)))
+  (let* ((pr (code-review-db-get-pullreq))
+         (review-obj (cond
+                      ((code-review-github-repo-p pr)
+                       (code-review-submit-github-review))
+                      (t
+                       (code-review-submit-review))))
+         (replies-obj (cond
+                       ((code-review-github-repo-p pr)
+                        (code-review-submit-github-replies))
+                       (t
+                        (code-review-submit-replies)))))
 
     (oset review-obj state event)
     (oset review-obj pr pr)
@@ -408,7 +414,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
       (oset review-obj local-comments local-comments)
 
       (if (and (not (oref review-obj feedback))
-               (not only-reply?))
+               (not only-reply?)
+               (not (string-equal event "APPROVE")))
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
@@ -416,6 +423,9 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
              review-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
+                 (oset pr finished t)
+                 (oset pr finished-at (current-time-string))
+                 (code-review-db-update pr)
                  (code-review--build-buffer
                   code-review-buffer-name
                   nil
@@ -564,7 +574,8 @@ OUTDATED."
     ("a" "Approve" code-review-approve)
     ("r" "Request Changes" code-review-request-changes)
     ("c" "Comment" code-review-comments)
-    ("C-c C-c" "Submit" code-review-submit)]
+    ("C-c C-s" "Save Unfinished" code-review-save-unfinished-review)
+    ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)]
    ["Merge"
     ("mm" "Merge" code-review-merge-merge)
     ("mr" "Merge Rebase" code-review-merge-rebase)

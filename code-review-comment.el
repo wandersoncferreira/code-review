@@ -195,7 +195,7 @@ For internal usage only.")
         (message "You can't add text over unspecified region.")
       (let ((current-line (line-number-at-pos))
             (amount-loc nil))
-        (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file\\|deleted"))
+        (while (and (not (looking-at "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
                     (not (equal (point) (point-min))))
           (forward-line -1))
         (let ((section (magit-current-section)))
@@ -259,7 +259,7 @@ For internal usage only.")
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
-  "Commit the reply OBJ."
+  "Commit the local comment OBJ."
   (let* ((buff-name (if code-review-comment-commit-buffer?
                         code-review-commit-buffer-name
                       code-review-buffer-name))
