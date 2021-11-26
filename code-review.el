@@ -315,7 +315,8 @@ If you want to provide a MSG for the end of the process."
   ((path     :initarg :path)
    (position :initarg :position)
    (body     :initarg :body)
-   (internal-id :initarg :internal-id)))
+   (internal-id :initarg :internal-id)
+   (line-type :initarg :line-type)))
 
 (defclass code-review-submit-review ()
   ((state :initform nil)
@@ -402,7 +403,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                             :path (oref value path)
                             :position (oref value position)
                             :body (oref value msg)
-                            :internal-id (oref value internalId))
+                            :internal-id (oref value internalId)
+                            :line-type (oref value line-type))
                            local-comments))))
                (forward-line))))))
 

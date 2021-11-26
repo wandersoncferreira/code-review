@@ -192,7 +192,8 @@ using COMMENTS."
                                :internalId .internal-id
                                :path .path
                                :createdAt .createdAt
-                               :updatedAt .updatedAt))
+                               :updatedAt .updatedAt
+                               :line-type .line-type))
                              (t
                               (code-review-code-comment-section
                                :state state
