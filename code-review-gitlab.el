@@ -124,11 +124,8 @@ an object then we need to build the diff string ourselves here."
   (let* ((review-comments (nreverse
                            (-filter
                             (lambda (c)
-                              (and (not (a-get c 'system))
-                                   (a-get c 'resolvable)
-                                   (a-get c 'position)))
+                              (not (code-review-gitlab--regular-comment? c)))
                             raw-comments)))
-
          (grouped-comments (-group-by
                             (lambda (c)
                               (let ((line (or (a-get-in c (list 'position 'oldLine))
@@ -183,6 +180,23 @@ an object then we need to build the diff string ourselves here."
      nil
      (a-keys grouped-comments))))
 
+(defun code-review-gitlab--regular-comment? (comment)
+  "Predicate to identify regular (overview) COMMENT from review comment."
+  (let-alist comment
+    (let ((has-in-mapping?
+           (or (a-get-in (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
+                                    nil nil 'equal)
+                         (list 'old 'beg))
+               (a-get-in (alist-get .position.newPath code-review-gitlab-line-diff-mapping
+                                    nil nil 'equal)
+                         (list 'new 'beg)))))
+      (or (and (not .system)
+               (not has-in-mapping?))
+          (and (not .system)
+               (or (not (a-get comment 'resolvable))
+                   (not (a-get comment 'position))))
+          (not has-in-mapping?)))))
+
 (defun code-review-gitlab-fix-infos (gitlab-infos)
   "Make GITLAB-INFOS structure compatible with GITHUB."
   (let ((comment-nodes (a-get-in gitlab-infos (list 'comments 'nodes))))
@@ -198,9 +212,7 @@ an object then we need to build the diff string ourselves here."
                           (nreverse
                            (-filter
                             (lambda (c)
-                              (and (not (a-get c 'system))
-                                   (or (not (a-get c 'resolvable))
-                                       (not (a-get c 'position)))))
+                              (code-review-gitlab--regular-comment? c))
                             comment-nodes))))
         (a-assoc 'reviews
                  (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
@@ -378,7 +390,10 @@ repository:project(fullPath: \"%s\") {
              (let ((str (a-get it 'diff)))
                (save-match-data
                  (and (string-match regex str)
-                      (a-assoc acc (a-get it 'old_path)
+                      ;;; NOTE: it's possible that using "old_path" blindly here
+                      ;;; might cause issues when this value is null
+                      (a-assoc acc (or (a-get it 'old_path)
+                                       (a-get it 'new_path))
                                (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 1 str))
                                                       'end (funcall if-zero-null (match-string 2 str))
                                                       'path (a-get it 'old_path))
