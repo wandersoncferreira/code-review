@@ -66,6 +66,9 @@ For internal usage only.")
      (prin1-to-string m))
     (message "Unknown error talking to Gitlab: %s" m)))
 
+;;; Functions to standardize Gitlab returned datastructure to the ones used by
+;;; Github, adopted as standard in the project conception :/.
+
 (defun code-review-gitlab-fix-diff (pr-changes)
   "Get all PR-CHANGES and produce standard git diff."
   (-reduce-from
@@ -98,6 +101,121 @@ For internal usage only.")
                  .diff))))
    ""
    pr-changes))
+
+(defun code-review-gitlab-fix-review-comments (raw-comments)
+  "Format RAW-COMMENTS to be compatible with established shape in the package."
+  (let* ((review-comments (nreverse
+                           (-filter
+                            (lambda (c)
+                              (and (not (a-get c 'system))
+                                   (a-get c 'resolvable)
+                                   (a-get c 'position)))
+                            raw-comments)))
+
+         (grouped-comments (-group-by
+                            (lambda (c)
+                              (let ((line (or (a-get-in c (list 'position 'oldLine))
+                                              (a-get-in c (list 'position 'newLine))))
+                                    (path (a-get-in c (list 'position 'oldPath))))
+                                (concat path ":" (number-to-string line))))
+                            review-comments))
+         (comment->code-review-comment
+          (lambda (c)
+            (let-alist c
+              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping nil nil 'equal))
+                     (diff-pos
+                      ;; NOTE: not sure if this should not be a little different in the future
+                      ;; e.g. verify if the comment was done in Added/Removed/Unchanged line
+                      ;; and handling accordingly.
+                      (+ 1 (- (or .position.oldLine
+                                  .position.newLine)
+                              (or (a-get-in mapping (list 'old 'beg))
+                                  (a-get-in mapping (list 'new 'beg)))))))
+                `((author (login . ,.author.login))
+                  (state . ,"")
+                  (bodyText .,"")
+                  (createdAt . ,.createdAt)
+                  (updatedAt . ,.updatedAt)
+                  (comments (nodes ((bodyText . ,.bodyText)
+                                    (path . ,.position.oldPath)
+                                    (position . ,diff-pos)
+                                    (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
+                                    (createdAt . ,.createdAt)
+                                    (updatedAt . ,.updatedAt))))))))))
+    (-reduce-from
+     (lambda (acc k)
+       (let* ((comments (alist-get k grouped-comments nil nil 'equal)))
+         (if (> (length comments) 1)
+             (append acc (-map
+                          (lambda (c)
+                            (funcall comment->code-review-comment c))
+                          (nreverse comments)))
+           (cons (funcall comment->code-review-comment (-first-item comments)) acc))))
+     nil
+     (a-keys grouped-comments))))
+
+(defun code-review-gitlab-fix-infos (gitlab-infos)
+  "Make GITLAB-INFOS structure compatible with GITHUB."
+  (let ((comment-nodes (a-get-in gitlab-infos (list 'comments 'nodes))))
+    (-> gitlab-infos
+        (a-assoc 'commits
+                 (a-alist 'totalCount (a-get gitlab-infos 'commitCount)
+                          'nodes (-map
+                                  (lambda (c)
+                                    (a-alist 'commit c))
+                                  (a-get-in gitlab-infos (list 'commitsWithoutMergeCommits 'nodes)))))
+        (a-assoc 'comments
+                 (a-alist 'nodes
+                          (nreverse
+                           (-filter
+                            (lambda (c)
+                              (and (not (a-get c 'system))
+                                   (or (not (a-get c 'resolvable))
+                                       (not (a-get c 'position)))))
+                            comment-nodes))))
+        (a-assoc 'reviews
+                 (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
+
+(defun code-review-gitlab-fix-payload (payload comment)
+  "Adjust the PAYLOAD based on the COMMENT."
+  (let* ((mapping (alist-get (oref comment path)
+                             code-review-gitlab-line-diff-mapping
+                             nil nil 'equal))
+         (line-type (oref comment line-type))
+         (pos (oref comment position)))
+    (pcase line-type
+      ("ADDED"
+       (a-assoc-in payload (list 'position 'new_line)
+                   (+ (- pos (a-get-in mapping (list 'new 'end))) 1)))
+      ("REMOVED"
+       (a-assoc-in payload (list 'position 'old_line)
+                   (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
+      ("UNCHANGED"
+       (-> payload
+           (a-assoc-in (list 'position 'new_line)
+                       (+ (- pos (a-get-in mapping (list 'new 'end))) 1))
+           (a-assoc-in (list 'position 'old_line)
+                       (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))))))
+
+;;; classes
+
+(defclass code-review-submit-gitlab-replies ()
+  ((pr      :initform nil)
+   (replies :initform nil
+            :type (satisfies
+                   (lambda (it)
+                     (-all-p #'code-review-submit-reply-p it))))))
+
+(defclass code-review-submit-gitlab-review ()
+  ((state :initform nil)
+   (pr :initform nil)
+   (local-comments :initform nil
+                   :type (satisfies
+                          (lambda (it)
+                            (-all-p #'code-review-submit-local-coment-p it))))
+   (feedback :initform nil)))
+
+;;; reify
 
 (cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
@@ -217,58 +335,6 @@ repository:project(fullPath: \"%s\") {
       d))
     d))
 
-(defun code-review-gitlab-fix-review-comments (raw-comments)
-  "Format RAW-COMMENTS to be compatible with established shape in the package."
-  (let* ((review-comments (nreverse
-                           (-filter
-                            (lambda (c)
-                              (and (not (a-get c 'system))
-                                   (a-get c 'resolvable)
-                                   (a-get c 'position)))
-                            raw-comments)))
-
-         (grouped-comments (-group-by
-                            (lambda (c)
-                              (let ((line (or (a-get-in c (list 'position 'oldLine))
-                                              (a-get-in c (list 'position 'newLine))))
-                                    (path (a-get-in c (list 'position 'oldPath))))
-                                (concat path ":" (number-to-string line))))
-                            review-comments))
-         (comment->code-review-comment
-          (lambda (c)
-            (let-alist c
-              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping nil nil 'equal))
-                     (diff-pos
-                      ;; NOTE: not sure if this should not be a little different in the future
-                      ;; e.g. verify if the comment was done in Added/Removed/Unchanged line
-                      ;; and handling accordingly.
-                      (+ 1 (- (or .position.oldLine
-                                  .position.newLine)
-                              (or (a-get-in mapping (list 'old 'beg))
-                                  (a-get-in mapping (list 'new 'beg)))))))
-                `((author (login . ,.author.login))
-                  (state . ,"")
-                  (bodyText .,"")
-                  (createdAt . ,.createdAt)
-                  (updatedAt . ,.updatedAt)
-                  (comments (nodes ((bodyText . ,.bodyText)
-                                    (path . ,.position.oldPath)
-                                    (position . ,diff-pos)
-                                    (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
-                                    (createdAt . ,.createdAt)
-                                    (updatedAt . ,.updatedAt))))))))))
-    (-reduce-from
-     (lambda (acc k)
-       (let* ((comments (alist-get k grouped-comments nil nil 'equal)))
-         (if (> (length comments) 1)
-             (append acc (-map
-                          (lambda (c)
-                            (funcall comment->code-review-comment c))
-                          (nreverse comments)))
-           (cons (funcall comment->code-review-comment (-first-item comments)) acc))))
-     nil
-     (a-keys grouped-comments))))
-
 (defun code-review-gitlab-pos-line-number->diff-line-number (gitlab-diff)
   "Get mapping of pos-line to diff-line given GITLAB-DIFF."
   (let ((if-zero-null (lambda (n)
@@ -300,36 +366,6 @@ repository:project(fullPath: \"%s\") {
            nil
            gitlab-diff))))
 
-
-(defun code-review-gitlab-fix-infos (gitlab-infos)
-  "Make GITLAB-INFOS structure compatible with GITHUB."
-  (let ((comment-nodes (a-get-in gitlab-infos (list 'comments 'nodes))))
-    (-> gitlab-infos
-        (a-assoc 'commits
-                 (a-alist 'totalCount (a-get gitlab-infos 'commitCount)
-                          'nodes (-map
-                                  (lambda (c)
-                                    (a-alist 'commit c))
-                                  (a-get-in gitlab-infos (list 'commitsWithoutMergeCommits 'nodes)))))
-        (a-assoc 'comments
-                 (a-alist 'nodes
-                          (nreverse
-                           (-filter
-                            (lambda (c)
-                              (and (not (a-get c 'system))
-                                   (or (not (a-get c 'resolvable))
-                                       (not (a-get c 'position)))))
-                            comment-nodes))))
-        (a-assoc 'reviews
-                 (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
-
-(defclass code-review-submit-gitlab-replies ()
-  ((pr      :initform nil)
-   (replies :initform nil
-            :type (satisfies
-                   (lambda (it)
-                     (-all-p #'code-review-submit-reply-p it))))))
-
 (cl-defmethod code-review-core-send-replies ((replies code-review-submit-gitlab-replies) callback)
   "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
   (let ((pr (oref replies pr)))
@@ -359,36 +395,6 @@ repository:project(fullPath: \"%s\") {
       (deferred:error it
         (lambda (err)
           (message "Got an error from the Gitlab Reply API %S!" err))))))
-
-(defclass code-review-submit-gitlab-review ()
-  ((state :initform nil)
-   (pr :initform nil)
-   (local-comments :initform nil
-                   :type (satisfies
-                          (lambda (it)
-                            (-all-p #'code-review-submit-local-coment-p it))))
-   (feedback :initform nil)))
-
-(defun code-review-gitlab-fix-payload (payload comment)
-  "Adjust the PAYLOAD based on the COMMENT."
-  (let* ((mapping (alist-get (oref comment path)
-                             code-review-gitlab-line-diff-mapping
-                             nil nil 'equal))
-         (line-type (oref comment line-type))
-         (pos (oref comment position)))
-    (pcase line-type
-      ("ADDED"
-       (a-assoc-in payload (list 'position 'new_line)
-                   (+ (- pos (a-get-in mapping (list 'new 'end))) 1)))
-      ("REMOVED"
-       (a-assoc-in payload (list 'position 'old_line)
-                   (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
-      ("UNCHANGED"
-       (-> payload
-           (a-assoc-in (list 'position 'new_line)
-                       (+ (- pos (a-get-in mapping (list 'new 'end))) 1))
-           (a-assoc-in (list 'position 'old_line)
-                       (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))))))
 
 (cl-defmethod code-review-core-send-review ((review code-review-submit-gitlab-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
