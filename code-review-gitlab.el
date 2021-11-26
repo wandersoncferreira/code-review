@@ -51,12 +51,18 @@
 (defclass code-review-gitlab-repo (code-review-db-pullreq)
   ((callback :initform nil)))
 
-;; vars
+;;; vars
 (defvar code-review-log-file)
 
 (defvar code-review-gitlab-line-diff-mapping nil
   "Hold structure to convert Line number position into diff positions.
 For internal usage only.")
+
+;;; helpers
+
+(defun code-review-gitlab--project-id (pr)
+  "Return the project ID for a PR."
+  (format "%s%%2F%s" (oref pr owner) (oref pr repo)))
 
 (defun code-review-gitlab-errback (&rest m)
   "Error callback, displays the error message M."
@@ -66,11 +72,22 @@ For internal usage only.")
      (prin1-to-string m))
     (message "Unknown error talking to Gitlab: %s" m)))
 
+(defun code-review-gitlab--graphql (graphql callback)
+  "Make GRAPHQL call to GITLAB.
+Optionally using VARIABLES. Provide HOST and CALLBACK fn."
+  (glab-request "POST" "/graphql" nil
+                :payload (json-encode `(("query" . ,graphql)))
+                :auth 'code-review
+                :host code-review-gitlab-graphql-host
+                :callback callback))
+
 ;;; Functions to standardize Gitlab returned datastructure to the ones used by
 ;;; Github, adopted as standard in the project conception :/.
 
 (defun code-review-gitlab-fix-diff (pr-changes)
-  "Get all PR-CHANGES and produce standard git diff."
+  "Get all PR-CHANGES and produce standard git diff.
+Unfortunately, Gitlab's API returns the elements of the diff in
+an object then we need to build the diff string ourselves here."
   (-reduce-from
    (lambda (acc c)
      (let-alist c
@@ -117,7 +134,19 @@ For internal usage only.")
                               (let ((line (or (a-get-in c (list 'position 'oldLine))
                                               (a-get-in c (list 'position 'newLine))))
                                     (path (a-get-in c (list 'position 'oldPath))))
-                                (concat path ":" (number-to-string line))))
+                                ;; we assume that every review comment requires
+                                ;; a positional line number to be possible to
+                                ;; place it in the diff. However, Gitlab's API
+                                ;; does not provide a good differentiation
+                                ;; between a Overview comment and a Diff comment
+                                ;; so the heuristic used here might be incomplete.
+                                (if (not (numberp line))
+                                    (throw "Review Comment
+                                    without position line number
+                                    found! Possibly a bug in
+                                    heuristic to identify Review
+                                    Comments.")
+                                  (concat path ":" (number-to-string line)))))
                             review-comments))
          (comment->code-review-comment
           (lambda (c)
@@ -177,7 +206,8 @@ For internal usage only.")
                  (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
 
 (defun code-review-gitlab-fix-payload (payload comment)
-  "Adjust the PAYLOAD based on the COMMENT."
+  "Adjust the PAYLOAD based on the COMMENT.
+The payload is used to send a MR review to Gitlab."
   (let* ((mapping (alist-get (oref comment path)
                              code-review-gitlab-line-diff-mapping
                              nil nil 'equal))
@@ -220,7 +250,7 @@ For internal usage only.")
 (cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
   (glab-get (format "/projects/%s/merge_requests/%s/changes"
-                    (format "%s%%2F%s" (oref gitlab owner) (oref gitlab repo))
+                    (code-review-gitlab--project-id gitlab)
                     (oref gitlab number))
             nil
             :unpaginate t
@@ -237,15 +267,6 @@ For internal usage only.")
         (deferred:callback-post d v))
       d))
     d))
-
-(defun code-review-gitlab--graphql (graphql callback)
-  "Make GRAPHQL call to GITLAB.
-Optionally using VARIABLES. Provide HOST and CALLBACK fn."
-  (glab-request "POST" "/graphql" nil
-                :payload (json-encode `(("query" . ,graphql)))
-                :auth 'code-review
-                :host code-review-gitlab-graphql-host
-                :callback callback))
 
 (cl-defmethod code-review-core-pullreq-infos ((gitlab code-review-gitlab-repo) callback)
   "Get PR details from GITLAB and dispatch to CALLBACK."
@@ -375,7 +396,7 @@ repository:project(fullPath: \"%s\") {
          (lambda (reply)
            (lambda ()
              (glab-post (format "/projects/%s/merge_requests/%s/discussions/%s/notes"
-                                (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                                (code-review-gitlab--project-id pr)
                                 (oref pr number)
                                 (oref reply reply-to-id))
                         nil
@@ -410,7 +431,7 @@ repository:project(fullPath: \"%s\") {
                                                   'new_path (oref c path)
                                                   'old_path (oref c path)))))
         (glab-post (format "/projects/%s/merge_requests/%s/discussions"
-                           (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                           (code-review-gitlab--project-id pr)
                            (oref pr number))
                    nil
                    :auth 'code-review
@@ -421,7 +442,7 @@ repository:project(fullPath: \"%s\") {
     (pcase (oref review state)
       ("APPROVE"
        (glab-post (format "/projects/%s/merge_requests/%s/approve"
-                          (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                          (code-review-gitlab--project-id pr)
                           (oref pr number))
                   nil
                   :auth 'code-review
