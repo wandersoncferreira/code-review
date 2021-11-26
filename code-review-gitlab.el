@@ -343,10 +343,10 @@ repository:project(fullPath: \"%s\") {
                         :callback (lambda (&rest _)))))
          (oref replies replies)))
 
+      (deferred:wait 500)
+
       (deferred:nextc it
         (lambda (_x)
-          ;; seems like we need to wait a bit for gitlab's API to update the new reply record
-          (sit-for 0.5)
           (funcall callback)))
 
       (deferred:error it
