@@ -408,7 +408,8 @@ repository:project(fullPath: \"%s\") {
                           (oref pr number))
                   nil
                   :auth 'code-review
-                  :callback (lambda (&rest _) (message "Approved"))))
+                  :callback (lambda (&rest _)
+                              (message "Approved!"))))
       ("REQUEST_CHANGES"
        (message "Not supported in Gitlab"))
       ("COMMENT"))
