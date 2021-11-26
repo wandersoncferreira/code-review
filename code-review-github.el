@@ -72,10 +72,10 @@
 (defun code-review-github-errback (&rest m)
   "Error callback, displays the error message M."
   (let-alist m
+    (code-review--log
+     "code-review-github-errback"
+     (prin1-to-string m))
     (let* ((status (-second-item .error)))
-      (code-review--log
-       "code-review-github-errback"
-       (prin1-to-string m))
       (cond
        ((= status 422)
         (let ((errors (string-join
@@ -471,9 +471,11 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 (cl-defmethod code-review-core-send-review ((review code-review-submit-github-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
-         (payload (a-alist 'body (oref review feedback)
-                           'event (oref review state)
+         (payload (a-alist 'event (oref review state)
                            'commit_id (oref pr sha)))
+         (payload (if (oref review feedback)
+                      (a-assoc payload 'body (oref review feedback))
+                    payload))
          (payload (if (oref review local-comments)
                       (a-assoc payload 'comments (--sort
                                                   (< (a-get it 'position)

@@ -191,6 +191,10 @@ If you want to display a minibuffer MSG in the end."
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
+(defun code-review-auth-source-debug ()
+  "Do not warn on auth source search because it messes with progress reporter."
+  (setq-local auth-source-debug (lambda (&rest _))))
+
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
@@ -434,7 +438,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
       (oset review-obj local-comments local-comments)
 
       (if (and (not (oref review-obj feedback))
-               (not only-reply?))
+               (not only-reply?)
+               (not (string-equal event "APPROVE")))
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
@@ -559,6 +564,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer
@@ -572,6 +578,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 OUTDATED."
   (interactive)
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils--start-from-forge-at-point))
   (setq code-review-section-full-refresh? nil))
