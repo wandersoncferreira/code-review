@@ -38,7 +38,7 @@
   :group 'code-review
   :link '(custom-group-link 'code-review-github))
 
-(defcustom code-review-gitlab-host "gitlab.com/api/v4"
+(defcustom code-review-gitlab-host "gitlab.com/api"
   "Host for the Gitlab api if you use the hosted version of Gitlab."
   :group 'code-review-gitlab
   :type 'string)
@@ -249,11 +249,12 @@ The payload is used to send a MR review to Gitlab."
 
 (cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
-  (glab-get (format "/projects/%s/merge_requests/%s/changes"
+  (glab-get (format "/v4/projects/%s/merge_requests/%s/changes"
                     (code-review-gitlab--project-id gitlab)
                     (oref gitlab number))
             nil
             :unpaginate t
+            :host code-review-gitlab-host
             :auth 'code-review
             :callback callback))
 
@@ -395,7 +396,7 @@ repository:project(fullPath: \"%s\") {
         (-map
          (lambda (reply)
            (lambda ()
-             (glab-post (format "/projects/%s/merge_requests/%s/discussions/%s/notes"
+             (glab-post (format "/v4/projects/%s/merge_requests/%s/discussions/%s/notes"
                                 (code-review-gitlab--project-id pr)
                                 (oref pr number)
                                 (oref reply reply-to-id))
@@ -430,22 +431,24 @@ repository:project(fullPath: \"%s\") {
                                                   'start_sha (a-get-in infos (list 'diffRefs 'startSha))
                                                   'new_path (oref c path)
                                                   'old_path (oref c path)))))
-        (glab-post (format "/projects/%s/merge_requests/%s/discussions"
+        (glab-post (format "/v4/projects/%s/merge_requests/%s/discussions"
                            (code-review-gitlab--project-id pr)
                            (oref pr number))
                    nil
                    :auth 'code-review
+                   :host code-review-gitlab-host
                    :payload (code-review-gitlab-fix-payload payload c)
                    :callback (lambda (&rest _)
                                (message "Review Comments successfully!")))))
     ;; 2. send the review verdict
     (pcase (oref review state)
       ("APPROVE"
-       (glab-post (format "/projects/%s/merge_requests/%s/approve"
+       (glab-post (format "/v4/projects/%s/merge_requests/%s/approve"
                           (code-review-gitlab--project-id pr)
                           (oref pr number))
                   nil
                   :auth 'code-review
+                  :host code-review-gitlab-host
                   :callback (lambda (&rest _)
                               (message "Approved!"))))
       ("REQUEST_CHANGES"

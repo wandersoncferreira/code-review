@@ -92,14 +92,12 @@ machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
 
 #### Auth
 
-Unfortunately for Gitlab you need two lines in your `~/.authsource` file: i) for
-REST API and ii) for GraphQL.
+Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
+and token:
 
 ``` emacs-lisp
-machine gitlab.com/api/v4 login yourlogin^code-review password MYTOKENGOESHERE
 machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
 ```
-
 
 # Keybindings
 
