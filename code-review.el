@@ -393,7 +393,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
       (oset review-obj local-comments local-comments)
 
       (if (and (not (oref review-obj feedback))
-               (not only-reply?))
+               (not only-reply?)
+               (not (string-equal event "APPROVE")))
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
