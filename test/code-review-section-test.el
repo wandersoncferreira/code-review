@@ -5,8 +5,9 @@
 (require 'uuidgen)
 (require 'buttercup)
 (require 'code-review-db)
-(require 'code-review-section)
+(require 'code-review-gitlab)
 (require 'code-review-github)
+(require 'code-review-section)
 
 (defconst sample-pr-obj
   (code-review-github-repo
