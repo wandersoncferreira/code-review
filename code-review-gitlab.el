@@ -213,12 +213,14 @@ repository:project(fullPath: \"%s\") {
 
 (defun code-review-gitlab-fix-review-comments (raw-comments)
   "Format RAW-COMMENTS to be compatible with established shape in the package."
-  (let* ((review-comments (-filter
-                           (lambda (c)
-                             (and (not (a-get c 'system))
-                                  (a-get c 'resolvable)
-                                  (a-get c 'position)))
-                           raw-comments))
+  (let* ((review-comments (nreverse
+                           (-filter
+                            (lambda (c)
+                              (and (not (a-get c 'system))
+                                   (a-get c 'resolvable)
+                                   (a-get c 'position)))
+                            raw-comments)))
+
          (grouped-comments (-group-by
                             (lambda (c)
                               (let ((line (or (a-get-in c (list 'position 'oldLine))
@@ -305,12 +307,13 @@ repository:project(fullPath: \"%s\") {
                                   (a-get-in gitlab-infos (list 'commitsWithoutMergeCommits 'nodes)))))
         (a-assoc 'comments
                  (a-alist 'nodes
-                          (-filter
-                           (lambda (c)
-                             (and (not (a-get c 'system))
-                                  (or (not (a-get c 'resolvable))
-                                      (not (a-get c 'position)))))
-                           comment-nodes)))
+                          (nreverse
+                           (-filter
+                            (lambda (c)
+                              (and (not (a-get c 'system))
+                                   (or (not (a-get c 'resolvable))
+                                       (not (a-get c 'position)))))
+                            comment-nodes))))
         (a-assoc 'reviews
                  (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
 
