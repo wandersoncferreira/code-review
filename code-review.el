@@ -190,30 +190,47 @@ If you want to display a minibuffer MSG in the end."
     (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
     (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
 
+(defun code-review-auth-source-debug ()
+  "Do not warn on auth source search because it messes with progress reporter."
+  (setq-local auth-source-debug (lambda (&rest _))))
+
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
-      (code-review--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq)))
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
-        (deferred:nextc it
-          (lambda (x)
-            (let-alist (-second-item x)
-              (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-utils--clean-diff-prefixes
-                (a-get (-first-item x) 'message)))
-              (code-review--trigger-hooks buff-name msg))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review--build-buffer"
-             (prin1-to-string err))
-            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
+  (let ((progress (make-progress-reporter "Fetch diff PR..." 1 4)))
+
+    (progress-reporter-update progress 1)
+
+    (if (not code-review-section-full-refresh?)
+        (code-review--trigger-hooks buff-name commit-focus? msg)
+      (let ((obj (code-review-db-get-pullreq)))
+        (deferred:$
+          (deferred:parallel
+            (lambda () (code-review-core-diff-deferred obj))
+            (lambda () (code-review-core-infos-deferred obj)))
+          (deferred:nextc it
+            (lambda (x)
+
+              (progress-reporter-update progress 2)
+
+              (let-alist (-second-item x)
+                (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+
+                (progress-reporter-update progress 3)
+
+                (code-review-db--pullreq-raw-diff-update
+                 (code-review-utils--clean-diff-prefixes
+                  (a-get (-first-item x) 'message)))
+
+                (progress-reporter-update progress 4)
+                (code-review--trigger-hooks buff-name msg)
+                (progress-reporter-done progress))))
+          (deferred:error it
+            (lambda (err)
+              (code-review-utils--log
+               "code-review--build-buffer"
+               (prin1-to-string err))
+              (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
 
 
 ;;; public functions
@@ -519,6 +536,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer
@@ -531,6 +549,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 OUTDATED."
   (interactive)
   (setq code-review-section-full-refresh? t)
+  (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils--start-from-forge-at-point))
   (setq code-review-section-full-refresh? nil))
