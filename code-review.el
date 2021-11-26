@@ -44,6 +44,10 @@
 (require 'code-review-db)
 (require 'code-review-core)
 
+(defgroup code-review nil
+  "Code Review tool for VC forges."
+  :group 'tools)
+
 (defcustom code-review-buffer-name "*Code Review*"
   "Name of the code review main buffer."
   :group 'code-review

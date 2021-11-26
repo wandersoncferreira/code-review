@@ -33,6 +33,11 @@
 (require 'code-review-utils)
 (require 'let-alist)
 
+(defgroup code-review-gitlab nil
+  "Interact with Gitlab REST and GraphQL APIs."
+  :group 'code-review
+  :link '(custom-group-link 'code-review-github))
+
 (defcustom code-review-gitlab-host "gitlab.com/api/v4"
   "Host for the Gitlab api if you use the hosted version of Gitlab."
   :group 'code-review-gitlab
@@ -46,6 +51,7 @@
 (defclass code-review-gitlab-repo (code-review-db-pullreq)
   ((callback :initform nil)))
 
+;; vars
 (defvar code-review-log-file)
 
 (defvar code-review-gitlab-line-diff-mapping nil
