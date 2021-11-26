@@ -30,6 +30,8 @@
 
 (require 'code-review-db)
 (require 'code-review-core)
+(require 'code-review-utils)
+(require 'let-alist)
 
 (defcustom code-review-gitlab-host "gitlab.com/api/v4"
   "Host for the Gitlab api if you use the hosted version of Gitlab."
@@ -45,63 +47,51 @@
   ((callback :initform nil)))
 
 (defvar code-review-log-file)
-(defvar code-review-gitlab-line-diff-mapping nil)
 
-(defun code-review--log (origin msg)
-  "Log MSG from ORIGIN to error file."
-  (with-temp-file code-review-log-file
-    (when (not (file-exists-p code-review-log-file))
-      (write-file code-review-log-file))
-    (insert-file-contents code-review-log-file)
-    (goto-char (point-max))
-    (insert ?\n)
-    (insert (current-time-string))
-    (insert " - ")
-    (insert origin)
-    (insert " - ")
-    (insert msg)
-    (insert ?\n)))
+(defvar code-review-gitlab-line-diff-mapping nil
+  "Hold structure to convert Line number position into diff positions.
+For internal usage only.")
 
 (defun code-review-gitlab-errback (&rest m)
   "Error callback, displays the error message M."
   (let-alist m
-    (code-review--log
+    (code-review-utils--log
      "code-review-gitlab-errback"
      (prin1-to-string m))
     (message "Unknown error talking to Gitlab: %s" m)))
 
 (defun code-review-gitlab-fix-diff (pr-changes)
   "Get all PR-CHANGES and produce standard git diff."
-  (let ((d
-         (-map
-          (lambda (c)
-            (let-alist c
-              (let ((header1 (format "diff --git %s %s\n" .new_path .old_path))
-                    (header2 (cond
-                              (.deleted_file
-                               (format "deleted file mode %s\n" .a_mode))
-                              (.new_file
-                               (format "new file mode %s\nindex 0000000000000000000000000000000000000000..1111\n" .b_mode))
-                              (.renamed_file)
-                              (t
-                               (format "index 1111..2222 %s\n" .a_mode))))
-                    (header3 (cond
-                              (.deleted_file
-                               (format "--- %s\n+++ /dev/null\n" .old_path))
-                              (.new_file
-                               (format "--- /dev/null\n+++ %s\n" .new_path))
-                              (.renamed_file)
-                              (t
-                               (format "--- %s\n+++ %s\n"
-                                       .old_path
-                                       .new_path)))))
-                (format "%s%s%s%s"
-                        header1
-                        header2
-                        header3
-                        .diff))))
-          pr-changes)))
-    (string-join d "")))
+  (-reduce-from
+   (lambda (acc c)
+     (let-alist c
+       (let ((header1 (format "diff --git %s %s\n" .new_path .old_path))
+             (header2 (cond
+                       (.deleted_file
+                        (format "deleted file mode %s\n" .a_mode))
+                       (.new_file
+                        (format "new file mode %s\nindex 0000000000000000000000000000000000000000..1111\n" .b_mode))
+                       (.renamed_file)
+                       (t
+                        (format "index 1111..2222 %s\n" .a_mode))))
+             (header3 (cond
+                       (.deleted_file
+                        (format "--- %s\n+++ /dev/null\n" .old_path))
+                       (.new_file
+                        (format "--- /dev/null\n+++ %s\n" .new_path))
+                       (.renamed_file)
+                       (t
+                        (format "--- %s\n+++ %s\n"
+                                .old_path
+                                .new_path)))))
+         (format "%s%s%s%s%s"
+                 acc
+                 header1
+                 header2
+                 header3
+                 .diff))))
+   ""
+   pr-changes))
 
 (cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
@@ -215,9 +205,10 @@ repository:project(fullPath: \"%s\") {
   (let ((d (deferred:new #'identity)))
     (code-review-core-pullreq-infos
      gitlab
-     (apply-partially (lambda (d v &rest _)
-                        (deferred:callback-post d v))
-                      d))
+     (apply-partially
+      (lambda (d v &rest _)
+        (deferred:callback-post d v))
+      d))
     d))
 
 (defun code-review-gitlab-fix-review-comments (raw-comments)
@@ -234,25 +225,29 @@ repository:project(fullPath: \"%s\") {
                                     (path (a-get-in c (list 'position 'oldPath))))
                                 (concat path ":" (number-to-string line))))
                             review-comments))
-         (comment->code-review-comment (lambda (c)
-                                         (let-alist c
-                                           (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping nil nil 'equal))
-                                                  (diff-pos
-                                                   (+ 1 (- (or .position.oldLine
-                                                               .position.newLine)
-                                                           (or (a-get-in mapping (list 'old 'beg))
-                                                               (a-get-in mapping (list 'new 'beg)))))))
-                                             `((author (login . ,.author.login))
-                                               (state . ,"")
-                                               (bodyText .,"")
-                                               (createdAt . ,.createdAt)
-                                               (updatedAt . ,.updatedAt)
-                                               (comments (nodes ((bodyText . ,.bodyText)
-                                                                 (path . ,.position.oldPath)
-                                                                 (position . ,diff-pos)
-                                                                 (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
-                                                                 (createdAt . ,.createdAt)
-                                                                 (updatedAt . ,.updatedAt))))))))))
+         (comment->code-review-comment
+          (lambda (c)
+            (let-alist c
+              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping nil nil 'equal))
+                     (diff-pos
+                      ;; NOTE: not sure if this should not be a little different in the future
+                      ;; e.g. verify if the comment was done in Added/Removed/Unchanged line
+                      ;; and handling accordingly.
+                      (+ 1 (- (or .position.oldLine
+                                  .position.newLine)
+                              (or (a-get-in mapping (list 'old 'beg))
+                                  (a-get-in mapping (list 'new 'beg)))))))
+                `((author (login . ,.author.login))
+                  (state . ,"")
+                  (bodyText .,"")
+                  (createdAt . ,.createdAt)
+                  (updatedAt . ,.updatedAt)
+                  (comments (nodes ((bodyText . ,.bodyText)
+                                    (path . ,.position.oldPath)
+                                    (position . ,diff-pos)
+                                    (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
+                                    (createdAt . ,.createdAt)
+                                    (updatedAt . ,.updatedAt))))))))))
     (-reduce-from
      (lambda (acc k)
        (let* ((comments (alist-get k grouped-comments nil nil 'equal)))
@@ -270,21 +265,22 @@ repository:project(fullPath: \"%s\") {
   (let ((if-zero-null (lambda (n)
                         (let ((nn (string-to-number n)))
                           (when (> nn 0)
-                            nn)))))
+                            nn))))
+        (regex
+         (rx "@@ -"
+             (group-n 1 (one-or-more digit))
+             ","
+             (group-n 2 (one-or-more digit))
+             " +"
+             (group-n 3 (one-or-more digit))
+             ","
+             (group-n 4 (one-or-more digit)))))
     (setq code-review-gitlab-line-diff-mapping
           (-reduce-from
            (lambda (acc it)
              (let ((str (a-get it 'diff)))
                (save-match-data
-                 (and (string-match (rx "@@ -"
-                                        (group-n 1 (one-or-more digit))
-                                        ","
-                                        (group-n 2 (one-or-more digit))
-                                        " +"
-                                        (group-n 3 (one-or-more digit))
-                                        ","
-                                        (group-n 4 (one-or-more digit)))
-                                    str)
+                 (and (string-match regex str)
                       (a-assoc acc (a-get it 'old_path)
                                (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 1 str))
                                                       'end (funcall if-zero-null (match-string 2 str))
@@ -362,14 +358,34 @@ repository:project(fullPath: \"%s\") {
                             (-all-p #'code-review-submit-local-coment-p it))))
    (feedback :initform nil)))
 
+(defun code-review-gitlab-fix-payload (payload comment)
+  "Adjust the PAYLOAD based on the COMMENT."
+  (let* ((mapping (alist-get (oref comment path)
+                             code-review-gitlab-line-diff-mapping
+                             nil nil 'equal))
+         (line-type (oref comment line-type))
+         (pos (oref comment position)))
+    (pcase line-type
+      ("ADDED"
+       (a-assoc-in payload (list 'position 'new_line)
+                   (+ (- pos (a-get-in mapping (list 'new 'end))) 1)))
+      ("REMOVED"
+       (a-assoc-in payload (list 'position 'old_line)
+                   (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
+      ("UNCHANGED"
+       (-> payload
+           (a-assoc-in (list 'position 'new_line)
+                       (+ (- pos (a-get-in mapping (list 'new 'end))) 1))
+           (a-assoc-in (list 'position 'old_line)
+                       (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))))))
+
 (cl-defmethod code-review-core-send-review ((review code-review-submit-gitlab-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
          (infos (oref pr raw-infos)))
-    ;; 1.1. send all comments to the MR
+    ;; 1. send all comments to the MR
     (dolist (c (oref review local-comments))
-      (let* ((mapping (alist-get (oref c path) code-review-gitlab-line-diff-mapping nil nil 'equal))
-             (payload (a-alist 'body (oref c body)
+      (let* ((payload (a-alist 'body (oref c body)
                                'position (a-alist 'position_type "text"
                                                   'base_sha (a-get-in infos (list 'diffRefs 'baseSha))
                                                   'head_sha (a-get-in infos (list 'diffRefs 'headSha))
@@ -381,29 +397,18 @@ repository:project(fullPath: \"%s\") {
                            (oref pr number))
                    nil
                    :auth 'code-review
-                   :payload (cond
-                             ((string-equal (oref c line-type) "ADDED")
-                              (a-assoc-in payload (list 'position 'new_line) (+ (- (oref c position) (a-get-in mapping (list 'new 'end))) 1)))
-                             ((string-equal (oref c line-type) "REMOVED")
-                              (a-assoc-in payload (list 'position 'old_line) (- (+ (oref c position) (a-get-in mapping (list 'old 'beg))) 1)))
-                             ((string-equal (oref c line-type) "UNCHANGED")
-                              (-> payload
-                                  (a-assoc-in (list 'position 'new_line) (+ (- (oref c position) (a-get-in mapping (list 'new 'end))) 1))
-                                  (a-assoc-in (list 'position 'old_line) (- (+ (oref c position) (a-get-in mapping (list 'old 'beg))) 1)))))
+                   :payload (code-review-gitlab-fix-payload payload c)
                    :callback (lambda (&rest _)
                                (message "Review Comments successfully!")))))
     ;; 2. send the review verdict
     (pcase (oref review state)
       ("APPROVE"
-       ;; FIXME: verify when the PR requires password for approval
-       ;; (glab-post (format "/projects/%s/merge_requests/%s/approve"
-       ;;                    (format "%s%%2F%s" (oref pr owner) (oref pr repo))
-       ;;                    (oref pr number))
-       ;;            nil
-       ;;            :auth 'code-review
-       ;;            :callback (lambda (&rest _)
-       ;;                        (message "Approved")))
-       )
+       (glab-post (format "/projects/%s/merge_requests/%s/approve"
+                          (format "%s%%2F%s" (oref pr owner) (oref pr repo))
+                          (oref pr number))
+                  nil
+                  :auth 'code-review
+                  :callback (lambda (&rest _) (message "Approved"))))
       ("REQUEST_CHANGES"
        (message "Not supported in Gitlab"))
       ("COMMENT"))

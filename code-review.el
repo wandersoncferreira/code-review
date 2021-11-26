@@ -200,7 +200,7 @@ If you want to provide a MSG for the end of the process."
       (deferred:$
         (deferred:parallel
           (lambda () (code-review-core-diff-deferred obj))
-          (lambda ()  (code-review-core-infos-deferred obj)))
+          (lambda () (code-review-core-infos-deferred obj)))
         (deferred:nextc it
           (lambda (x)
             (cond
@@ -217,12 +217,12 @@ If you want to provide a MSG for the end of the process."
               (code-review-gitlab-pos-line-number->diff-line-number
                (a-get (-first-item x) 'changes))
 
-              ;; 1.1. save raw info data e.g. data from GraphQL API
+              ;; 1.2. save raw info data e.g. data from GraphQL API
               (code-review-db--pullreq-raw-infos-update
                (code-review-gitlab-fix-infos
                 (a-get-in (-second-item x) (list 'data 'repository 'pullRequest))))
 
-              ;; 1.2. trigger renders
+              ;; 1.3. trigger renders
               (code-review--trigger-hooks buff-name msg))
 
              ;;; GITHUB
