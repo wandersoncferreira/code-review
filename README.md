@@ -5,7 +5,7 @@
 # Code Review
 
 Package to help you perform code reviews from your VC provider. Currently
-supports only Github.
+supports Github and basic Gitlab workflow.
 
 ![Demo of code review package](./docs/code_review_demo.png)
 
