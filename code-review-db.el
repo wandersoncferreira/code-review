@@ -231,8 +231,7 @@
                                   (is finished nil))]
                   owner
                   repo
-                  number
-                  )
+                  number)
          (mapcar
           (lambda (row) (closql--remake-instance class db row)))
          (-last-item))))
