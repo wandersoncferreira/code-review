@@ -255,8 +255,7 @@ For internal usage only.")
            :type string)
    (msg    :initarg :msg
            :type string)
-   (id     :initarg :id
-           :type (or null number))
+   (id     :initarg :id)
    (reactions :initarg :reactions)
    (face   :initform 'magit-log-author)))
 
@@ -503,7 +502,8 @@ Optionally DELETE? flag must be set if you want to remove it."
    (outdated?    :initform nil)
    (heading-face :initform 'code-review-recent-comment-heading)
    (body-face    :initform nil)
-   (diffHunk     :initform nil)))
+   (diffHunk     :initform nil)
+   (line-type    :initarg :line-type)))
 
 (defclass code-review-reply-comment-section (code-review-base-comment-section)
   ((keymap       :initform 'code-review-reply-comment-section-map)
@@ -706,7 +706,10 @@ Optionally DELETE? flag must be set if you want to remove it."
         (if labels
             (dolist (label labels)
               (insert (a-get label 'name))
-              (let* ((color (concat "#" (a-get label 'color)))
+              (let* ((raw-color (a-get label 'color))
+                     (color (if (string-prefix-p "#" raw-color)
+                                raw-color
+                              (concat "#" raw-color)))
                      (background (code-review-utils--sanitize-color color))
                      (foreground (code-review-utils--contrast-color color))
                      (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
