@@ -148,7 +148,10 @@ an object then we need to build the diff string ourselves here."
          (comment->code-review-comment
           (lambda (c)
             (let-alist c
-              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping nil nil 'equal))
+              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
+                                          nil nil 'equal))
+                     (discussion-id (-second-item
+                                     (split-string .discussion.id "DiffDiscussion/")))
                      (diff-pos
                       ;; NOTE: not sure if this should not be a little different in the future
                       ;; e.g. verify if the comment was done in Added/Removed/Unchanged line
@@ -165,7 +168,7 @@ an object then we need to build the diff string ourselves here."
                   (comments (nodes ((bodyText . ,.bodyText)
                                     (path . ,.position.oldPath)
                                     (position . ,diff-pos)
-                                    (databaseId . ,(-second-item (split-string .discussion.id "DiffDiscussion/")))
+                                    (databaseId . ,discussion-id)
                                     (createdAt . ,.createdAt)
                                     (updatedAt . ,.updatedAt))))))))))
     (-reduce-from
@@ -261,7 +264,7 @@ The payload is used to send a MR review to Gitlab."
 
 (cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
-  (glab-get (format "/v4/projects/%s/merge_requests/%s/changes"
+  (glab-get (format "/v4/projects/%s/merge_requests/%s/changes?access_raw_diffs=true"
                     (code-review-gitlab--project-id gitlab)
                     (oref gitlab number))
             nil
