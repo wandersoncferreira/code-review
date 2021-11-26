@@ -216,7 +216,8 @@ repository:project(fullPath: \"%s\") {
   (let* ((review-comments (-filter
                            (lambda (c)
                              (and (not (a-get c 'system))
-                                  (a-get c 'resolvable)))
+                                  (a-get c 'resolvable)
+                                  (a-get c 'position)))
                            raw-comments))
          (grouped-comments (-group-by
                             (lambda (c)
@@ -307,7 +308,8 @@ repository:project(fullPath: \"%s\") {
                           (-filter
                            (lambda (c)
                              (and (not (a-get c 'system))
-                                  (not (a-get c 'resolvable))))
+                                  (or (not (a-get c 'resolvable))
+                                      (not (a-get c 'position)))))
                            comment-nodes)))
         (a-assoc 'reviews
                  (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))

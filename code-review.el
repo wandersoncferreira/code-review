@@ -239,7 +239,7 @@ If you want to provide a MSG for the end of the process."
                 ;; 1.3. trigger renders
                 (progress-reporter-update progress 6)
                 (code-review--trigger-hooks buff-name msg)
-                (progress-reporter-done))
+                (progress-reporter-done progress))
 
              ;;; GITHUB
                ((code-review-github-repo-p obj)
