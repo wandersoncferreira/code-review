@@ -198,60 +198,76 @@ If you want to display a minibuffer MSG in the end."
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
-      (code-review--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq)))
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
-        (deferred:nextc it
-          (lambda (x)
-            (cond
+  (let ((progress (make-progress-reporter "Fetch diff PR..." 1 6)))
+
+    (progress-reporter-update progress 1)
+
+    (if (not code-review-section-full-refresh?)
+        (code-review--trigger-hooks buff-name commit-focus? msg)
+      (let ((obj (code-review-db-get-pullreq)))
+        (deferred:$
+          (deferred:parallel
+            (lambda () (code-review-core-diff-deferred obj))
+            (lambda () (code-review-core-infos-deferred obj)))
+          (deferred:nextc it
+            (lambda (x)
+
+              (progress-reporter-update progress 2)
+
+              (cond
 
              ;;; GITLAB
-             ((code-review-gitlab-repo-p obj)
+               ((code-review-gitlab-repo-p obj)
 
-              ;; 1. save raw diff data
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-gitlab-fix-diff
-                (a-get (-first-item x) 'changes)))
+                ;; 1. save raw diff data
+                (progress-reporter-update progress 3)
+                (code-review-db--pullreq-raw-diff-update
+                 (code-review-gitlab-fix-diff
+                  (a-get (-first-item x) 'changes)))
 
-              ;; 1.1. compute position line numbers to diff line numbers
-              (code-review-gitlab-pos-line-number->diff-line-number
-               (a-get (-first-item x) 'changes))
+                ;; 1.1. compute position line numbers to diff line numbers
+                (progress-reporter-update progress 4)
+                (code-review-gitlab-pos-line-number->diff-line-number
+                 (a-get (-first-item x) 'changes))
 
-              ;; 1.2. save raw info data e.g. data from GraphQL API
-              (code-review-db--pullreq-raw-infos-update
-               (code-review-gitlab-fix-infos
-                (a-get-in (-second-item x) (list 'data 'repository 'pullRequest))))
+                ;; 1.2. save raw info data e.g. data from GraphQL API
+                (progress-reporter-update progress 5)
+                (code-review-db--pullreq-raw-infos-update
+                 (code-review-gitlab-fix-infos
+                  (a-get-in (-second-item x) (list 'data 'repository 'pullRequest))))
 
-              ;; 1.3. trigger renders
-              (code-review--trigger-hooks buff-name msg))
+                ;; 1.3. trigger renders
+                (progress-reporter-update progress 6)
+                (code-review--trigger-hooks buff-name msg)
+                (progress-reporter-done))
 
              ;;; GITHUB
-             ((code-review-github-repo-p obj)
+               ((code-review-github-repo-p obj)
 
-              ;; 2. save raw diff data
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-utils--clean-diff-prefixes
-                (a-get (-first-item x) 'message)))
+                ;; 2. save raw diff data
+                (progress-reporter-update progress 3)
+                (code-review-db--pullreq-raw-diff-update
+                 (code-review-utils--clean-diff-prefixes
+                  (a-get (-first-item x) 'message)))
 
-              ;; 2.1 save raw info data e.g. data from GraphQL API
-              (code-review-db--pullreq-raw-infos-update
-               (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+                ;; 2.1 save raw info data e.g. data from GraphQL API
+                (progress-reporter-update progress 4)
+                (code-review-db--pullreq-raw-infos-update
+                 (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
 
-              ;; 2.2 trigger renders
-              (code-review--trigger-hooks buff-name msg))
+                ;; 2.2 trigger renders
+                (progress-reporter-update progress 5)
+                (code-review--trigger-hooks buff-name msg)
+                (progress-reporter-done progress))
 
-             (t
-              (message "Forge not supported")))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review--build-buffer"
-             (prin1-to-string err))
-            (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))
+               (t
+                (message "Forge not supported")))))
+          (deferred:error it
+            (lambda (err)
+              (code-review-utils--log
+               "code-review--build-buffer"
+               (prin1-to-string err))
+              (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
 
 
 ;;; public functions
