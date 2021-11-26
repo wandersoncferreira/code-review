@@ -34,6 +34,8 @@
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)
+(require 'code-review-github)
+(require 'code-review-gitlab)
 (require 'emojify)
 
 (defface code-review-timestamp-face
