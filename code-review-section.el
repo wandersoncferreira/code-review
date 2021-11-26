@@ -844,45 +844,49 @@ Optionally DELETE? flag must be set if you want to remove it."
       (insert ?\n)
       (insert ?\n))))
 
+(cl-defmethod code-review--insert-conversation-section ((github code-review-github-repo))
+  "Function to insert conversation section for GITHUB PRs."
+  (let-alist (oref github raw-infos)
+    (dolist (c (append .comments.nodes (-filter
+                                        (lambda (n)
+                                          (not
+                                           (string-empty-p (a-get n 'bodyText))))
+                                        .reviews.nodes)))
+      (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
+             (reaction-objs (when reactions
+                              (-map
+                               (lambda (r)
+                                 (code-review-reaction-section
+                                  :id (a-get r 'id)
+                                  :content (a-get r 'content)))
+                               reactions)))
+             (obj (code-review-comment-section
+                   :author (a-get-in c (list 'author 'login))
+                   :msg (a-get c 'bodyText)
+                   :id (a-get c 'databaseId)
+                   :reactions reaction-objs)))
+        (magit-insert-section (code-review-comment-section obj)
+          (insert (concat
+                   (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
+                   " - "
+                   (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
+          (magit-insert-heading)
+          (code-review-insert-comment-lines obj)
+
+          (when reactions
+            (code-review-comment-insert-reactions
+             reaction-objs
+             "comment"
+             (a-get c 'databaseId)))
+          (insert ?\n))))))
+
 (defun code-review-section-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (magit-insert-section (code-review-comment-header-section)
-        (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
-        (magit-insert-heading)
-        (dolist (c (append .comments.nodes (-filter
-                                            (lambda (n)
-                                              (not
-                                               (string-empty-p (a-get n 'bodyText))))
-                                            .reviews.nodes)))
-          (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
-                 (reaction-objs (when reactions
-                                  (-map
-                                   (lambda (r)
-                                     (code-review-reaction-section
-                                      :id (a-get r 'id)
-                                      :content (a-get r 'content)))
-                                   reactions)))
-                 (obj (code-review-comment-section
-                       :author (a-get-in c (list 'author 'login))
-                       :msg (a-get c 'bodyText)
-                       :id (a-get c 'databaseId)
-                       :reactions reaction-objs)))
-            (magit-insert-section (code-review-comment-section obj)
-              (insert (concat
-                       (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
-                       " - "
-                       (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
-              (magit-insert-heading)
-              (code-review-insert-comment-lines obj)
-
-              (when reactions
-                (code-review-comment-insert-reactions
-                 reaction-objs
-                 "comment"
-                 (a-get c 'databaseId)))
-              (insert ?\n))))))))
+  (when-let (pr (code-review-db-get-pullreq))
+    (magit-insert-section (code-review-comment-header-section)
+      (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
+      (magit-insert-heading)
+      (code-review--insert-conversation-section pr))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
