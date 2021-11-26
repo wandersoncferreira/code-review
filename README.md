@@ -78,12 +78,28 @@ submitting reviews.
 2. Set the `repo` scope as the subscope of repo
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
-### Auth
+#### Auth
 Add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
 ```
+
+### Gitlab
+
+1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
+2. Choose the `api` scope
+
+#### Auth
+
+Unfortunately for Gitlab you need two lines in your `~/.authsource` file: i) for
+REST API and ii) for GraphQL.
+
+``` emacs-lisp
+machine gitlab.com/api/v4 login yourlogin^code-review password MYTOKENGOESHERE
+machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
+```
+
 
 # Keybindings
 
