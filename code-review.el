@@ -36,9 +36,9 @@
 
 (require 'closql)
 (require 'magit-section)
-(require 'code-review-section)
 (require 'code-review-github)
 (require 'code-review-gitlab)
+(require 'code-review-section)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
