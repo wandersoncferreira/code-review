@@ -241,29 +241,33 @@ If you want to provide a MSG for the end of the process."
               ;; 1.3. trigger renders
               (progress-reporter-update progress 6)
               (code-review--trigger-hooks buff-name msg)
-              (progress-reporter-done progress))
+              (progress-reporter-done progress)
 
              ;;; GITHUB
-             ((code-review-github-repo-p obj)
+              ((code-review-github-repo-p obj)
 
-              ;; 2. save raw diff data
-              (progress-reporter-update progress 3)
-              (code-review-db--pullreq-raw-diff-update
-               (code-review-utils--clean-diff-prefixes
-                (a-get (-first-item x) 'message)))
+               (if (string-prefix-p "Required Github token" (-first-item (a-get x 'error)))
+                   (message "Required Github token. Look at the README for how to setup your Personal Access Token")
+                 (progn
 
-              ;; 2.1 save raw info data e.g. data from GraphQL API
-              (progress-reporter-update progress 4)
-              (code-review-db--pullreq-raw-infos-update
-               (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
+                   ;; 2. save raw diff data
+                   (progress-reporter-update progress 3)
+                   (code-review-db--pullreq-raw-diff-update
+                    (code-review-utils--clean-diff-prefixes
+                     (a-get (-first-item x) 'message)))
 
-              ;; 2.2 trigger renders
-              (progress-reporter-update progress 5)
-              (code-review--trigger-hooks buff-name msg)
-              (progress-reporter-done progress))
+                   ;; 2.1 save raw info data e.g. data from GraphQL API
+                   (progress-reporter-update progress 4)
+                   (code-review-db--pullreq-raw-infos-update
+                    (a-get-in (-second-item x) (list 'data 'repository 'pullRequest)))
 
-             (t
-              (message "Forge not supported")))))
+                   ;; 2.2 trigger renders
+                   (progress-reporter-update progress 5)
+                   (code-review--trigger-hooks buff-name msg)
+                   (progress-reporter-done progress))))
+
+              (t
+               (message "Forge not supported"))))))
         (deferred:error it
           (lambda (err)
             (code-review-utils--log
