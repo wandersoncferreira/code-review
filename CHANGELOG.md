@@ -10,3 +10,4 @@
 - [#63](https://github.com/wandersoncferreira/code-review/pull/63): add naive progress reporter
 - [#66](https://github.com/wandersoncferreira/code-review/pull/66): improve error message when personal token is not set
 - [#67](https://github.com/wandersoncferreira/code-review/pull/67): improve error messages and `code-review-set-*` functions with proper callbacks
+- [#50](https://github.com/wandersoncferreira/code-review/pull/50): add basic Gitlab support

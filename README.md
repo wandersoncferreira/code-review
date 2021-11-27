@@ -50,6 +50,8 @@ You can include your own bindings to functions like
 `code-review-request-changes`, and `code-review-comments` to not rely on the
 transient panel. But I think you should see it :]
 
+Take a look at which features are available to each integrated forge [here](./docs/forge_support.md).
+
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
 # Installation
