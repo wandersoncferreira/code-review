@@ -478,5 +478,35 @@ repository:project(fullPath: \"%s\") {
     (sit-for 0.5)
     (funcall callback)))
 
+;;; Core methods not implemented yet.
+
+(cl-defmethod code-review-core-set-labels ((gitlab code-review-gitlab-repo))
+  "Set labels for your pr at GITLAB."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-set-assignee ((gitlab code-review-gitlab-repo))
+  "Set yourself as assignee in GITLAB."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-set-milestone ((gitlab code-review-gitlab-repo))
+  "Set milestone for your pr in GITLAB."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-set-title ((gitlab code-review-gitlab-repo))
+  "Set title for your pr in GITLAB."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-set-description ((gitlab code-review-gitlab-repo))
+  "Set description for your pr in GITLAB."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-merge ((gitlab code-review-gitlab-repo) strategy)
+  "Merge a pr in GITLAB using STRATEGY."
+  (message "Not supported in Gitlab yet."))
+
+(cl-defmethod code-review-core-set-reaction ((gitlab code-review-gitlab-repo))
+  "Set reaction for your pr in GITLAB."
+  (message "Not supported in Gitlab yet."))
+
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
