@@ -4,7 +4,7 @@ Features supported by each integrated forge:
 
 
 | Feature                        | Github       | Gitlab |
-|                                |              |        |
+|--------------------------------|--------------|--------|
 | Add comment                    | x            | x      |
 | Reply to comment               | x            | x      |
 | Send only replies              | x            | x      |
