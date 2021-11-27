@@ -71,13 +71,23 @@
 
 (describe "URL PARSE"
 
-  (it "given a valid URL of a PR returns an PR-ALIST"
+  (it "given a valid Github URL of a PR returns an PR-ALIST"
     (expect (code-review-utils-pr-from-url "https://github.com/eval-all-software/tempo/pull/98")
             :to-equal (a-alist
                        'num "98"
                        'repo "tempo"
                        'owner "eval-all-software"
-                       'url "https://github.com/eval-all-software/tempo/pull/98"))))
+                       'forge 'github
+                       'url "https://github.com/eval-all-software/tempo/pull/98")))
+
+  (it "given a valid Gitlab URL of a PR returns an PR-ALIST"
+    (expect (code-review-utils-pr-from-url "https://gitlab.com/code-review-experiment/default/-/merge_requests/1")
+            :to-equal (a-alist
+                       'num "1"
+                       'repo "default"
+                       'owner "code-review-experiment"
+                       'forge 'gitlab
+                       'url "https://gitlab.com/code-review-experiment/default/-/merge_requests/1"))))
 
 (describe "COLORS")
 

@@ -34,6 +34,8 @@
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)
+(require 'code-review-github)
+(require 'code-review-gitlab)
 (require 'emojify)
 
 (defface code-review-timestamp-face
@@ -56,6 +58,18 @@
      ,@(and (>= emacs-major-version 27) '(:extend t))
      :foreground "LightGrey"))
   "Face for comment sections."
+  :group 'code-review)
+
+(defface code-review-thread-face
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "SlateGrey"
+     :weight bold)
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "SlateGrey"
+     :weight bold))
+  "Face for threads."
   :group 'code-review)
 
 (defface code-review-state-face
@@ -879,6 +893,32 @@ Optionally DELETE? flag must be set if you want to remove it."
              "comment"
              (a-get c 'databaseId)))
           (insert ?\n))))))
+
+(cl-defmethod code-review--insert-conversation-section ((gitlab code-review-gitlab-repo))
+  "Function to insert conversation section for GITLAB PRs."
+  (let-alist (oref gitlab raw-infos)
+    (let ((thread-groups (-group-by
+                          (lambda (it)
+                            (a-get-in it (list 'discussion 'id)))
+                          .comments.nodes)))
+      (dolist (g (a-keys thread-groups))
+        (magit-insert-section (code-review-comment-thread-section)
+          (insert (propertize "New Thread" 'font-lock-face 'code-review-thread-face))
+          (magit-insert-heading)
+          (let ((thread-comments (alist-get g thread-groups nil nil 'equal)))
+            (dolist (c thread-comments)
+              (let* ((obj (code-review-comment-section
+                           :author (a-get-in c (list 'author 'login))
+                           :msg (a-get c 'bodyText)
+                           :id (a-get c 'databaseId))))
+                (magit-insert-section (code-review-comment-section obj)
+                  (insert (concat
+                           (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
+                           " - "
+                           (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
+                  (magit-insert-heading)
+                  (code-review-insert-comment-lines obj)
+                  (insert ?\n))))))))))
 
 (defun code-review-section-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."

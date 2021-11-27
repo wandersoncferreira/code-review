@@ -1,4 +1,4 @@
-;;; code-review.el --- Perform code review from Github -*- lexical-binding: t; -*-
+;;; code-review.el --- Perform code review from Github and Gitlab -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -29,19 +29,24 @@
 ;;; Commentary:
 ;;
 ;; Review Pull Request in Emacs using a modern interface based on Magit Section
-;; and Transient.  Currently supports only Github.
+;; and Transient.  Currently supports Github and Gitlab.
 ;;
 
 ;;; Code:
 
 (require 'closql)
 (require 'magit-section)
-(require 'code-review-section)
 (require 'code-review-github)
+(require 'code-review-gitlab)
+(require 'code-review-section)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
 (require 'code-review-core)
+
+(defgroup code-review nil
+  "Code Review tool for VC forges."
+  :group 'tools)
 
 (defcustom code-review-buffer-name "*Code Review*"
   "Name of the code review main buffer."
@@ -194,47 +199,90 @@ If you want to display a minibuffer MSG in the end."
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
+(cl-defmethod code-review--auth-token-set? ((github code-review-github-repo) res)
+  "Check if the RES has a message for auth token not set for GITHUB."
+  (string-prefix-p "Required Github token" (-first-item (a-get res 'error))))
+
+(cl-defmethod code-review--auth-token-set? ((gitlab code-review-gitlab-repo) res)
+  "Check if the RES has a message for auth token not set for GITLAB."
+  (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
+
+(cl-defmethod code-review--internal-build ((github code-review-github-repo) progress res &optional buff-name msg)
+  "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
+  ;; 2. save raw diff data
+  (progress-reporter-update progress 3)
+  (code-review-db--pullreq-raw-diff-update
+   (code-review-utils--clean-diff-prefixes
+    (a-get (-first-item res) 'message)))
+
+  ;; 2.1 save raw info data e.g. data from GraphQL API
+  (progress-reporter-update progress 4)
+  (code-review-db--pullreq-raw-infos-update
+   (a-get-in (-second-item res) (list 'data 'repository 'pullRequest)))
+
+  ;; 2.2 trigger renders
+  (progress-reporter-update progress 5)
+  (code-review--trigger-hooks buff-name msg)
+  (progress-reporter-done progress))
+
+(cl-defmethod code-review--internal-build ((gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
+  "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
+  ;; 1. save raw diff data
+  (progress-reporter-update progress 3)
+  (code-review-db--pullreq-raw-diff-update
+   (code-review-gitlab-fix-diff
+    (a-get (-first-item res) 'changes)))
+
+  ;; 1.1. compute position line numbers to diff line numbers
+  (progress-reporter-update progress 4)
+  (code-review-gitlab-pos-line-number->diff-line-number
+   (a-get (-first-item res) 'changes))
+
+  ;; 1.2. save raw info data e.g. data from GraphQL API
+  (progress-reporter-update progress 5)
+  (code-review-db--pullreq-raw-infos-update
+   (code-review-gitlab-fix-infos
+    (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
+
+  ;; 1.3. trigger renders
+  (progress-reporter-update progress 6)
+  (code-review--trigger-hooks buff-name msg)
+  (progress-reporter-done progress))
+
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (let ((progress (make-progress-reporter "Fetch diff PR..." 1 4)))
-
-    (progress-reporter-update progress 1)
-
-    (if (not code-review-section-full-refresh?)
-        (code-review--trigger-hooks buff-name commit-focus? msg)
-      (let ((obj (code-review-db-get-pullreq)))
-        (deferred:$
-          (deferred:parallel
-            (lambda () (code-review-core-diff-deferred obj))
-            (lambda () (code-review-core-infos-deferred obj)))
-          (deferred:nextc it
-            (lambda (x)
-
-              (if (string-prefix-p "Required Github token" (-first-item (a-get x 'error)))
-                  (message "Required Github token. Look at the README for how to setup your Personal Access Token")
+  (if (not code-review-section-full-refresh?)
+      (code-review--trigger-hooks buff-name commit-focus? msg)
+    (let ((obj (code-review-db-get-pullreq))
+          (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
+      (progress-reporter-update progress 1)
+      (deferred:$
+        (deferred:parallel
+          (lambda () (code-review-core-diff-deferred obj))
+          (lambda () (code-review-core-infos-deferred obj)))
+        (deferred:nextc it
+          (lambda (x)
+            (progress-reporter-update progress 2)
+            (if (code-review--auth-token-set? obj x)
                 (progn
-                  (progress-reporter-update progress 2)
-
-                  (let-alist (-second-item x)
-                    (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
-
-                    (progress-reporter-update progress 3)
-
-                    (code-review-db--pullreq-raw-diff-update
-                     (code-review-utils--clean-diff-prefixes
-                      (a-get (-first-item x) 'message)))
-
-                    (progress-reporter-update progress 4)
-                    (code-review--trigger-hooks buff-name msg)
-                    (progress-reporter-done progress))))))
-          (deferred:error it
-            (lambda (err)
-              (code-review-utils--log
-               "code-review--build-buffer"
-               (prin1-to-string err))
+                  (progress-reporter-done progress)
+                  (message "Required %s token. Look at the README for how to setup your Personal Access Token"
+                           (cond
+                            ((code-review-github-repo-p obj)
+                             "Github")
+                            ((code-review-gitlab-repo-p obj)
+                             "Gitlab")
+                            (t "Unknown"))))
+              (code-review--internal-build obj progress x buff-name msg))))
+        (deferred:error it
+          (lambda (err)
+            (code-review-utils--log
+             "code-review--build-buffer"
+             (prin1-to-string err))
+            (if (and (sequencep err) (string-prefix-p "BUG: Unknown extended header:" (-second-item err)))
+                (message "Your PR might have diffs too large. Currently not supported.")
               (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
-
 
 ;;; public functions
 
@@ -357,15 +405,20 @@ If you want to provide a MSG for the end of the process."
 If you already have a FEEDBACK string use it.
 If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (interactive)
+  (setq code-review-comment-cursor-pos (point))
   (let* ((pr (code-review-db-get-pullreq))
          (review-obj (cond
                       ((code-review-github-repo-p pr)
                        (code-review-submit-github-review))
+                      ((code-review-gitlab-repo-p pr)
+                       (code-review-submit-gitlab-review))
                       (t
                        (code-review-submit-review))))
          (replies-obj (cond
                        ((code-review-github-repo-p pr)
                         (code-review-submit-github-replies))
+                       ((code-review-gitlab-repo-p pr)
+                        (code-review-submit-gitlab-replies))
                        (t
                         (code-review-submit-replies)))))
 
@@ -506,33 +559,42 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Merge PR with MERGE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "merge")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "merge")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
 (defun code-review-merge-rebase ()
   "Merge PR with REBASE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "rebase")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "rebase")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
 (defun code-review-merge-squash ()
   "Merge PR with SQUASH strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "squash")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "squash")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;; Entrypoint
 
@@ -547,6 +609,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
     (code-review--build-buffer
      code-review-buffer-name))
   (setq code-review-section-full-refresh? nil))
+
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()

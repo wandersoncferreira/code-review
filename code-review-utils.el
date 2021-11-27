@@ -248,20 +248,36 @@ using COMMENTS."
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
-  (save-match-data
-    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
-         (a-alist 'num   (match-string 3 url)
-                  'repo  (match-string 2 url)
-                  'owner (match-string 1 url)
-                  'url url))))
+  (cond
+   ((string-prefix-p "https://gitlab.com" url)
+    (save-match-data
+      (and (string-match ".*/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" url)
+           (a-alist 'num (match-string 3 url)
+                    'repo (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'gitlab
+                    'url url))))
+   ((string-prefix-p "https://github.com" url)
+    (save-match-data
+      (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
+           (a-alist 'num   (match-string 3 url)
+                    'repo  (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'github
+                    'url url))))))
 
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."
   (let-alist  pr-alist
     (cond
-     ((string-match "github" .url)
+     ((equal .forge 'github)
       (code-review-db--pullreq-create
        (code-review-github-repo :owner .owner
+                                :repo .repo
+                                :number .num)))
+     ((equal .forge 'gitlab)
+      (code-review-db--pullreq-create
+       (code-review-gitlab-repo :owner .owner
                                 :repo .repo
                                 :number .num)))
      (t

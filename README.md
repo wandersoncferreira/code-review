@@ -5,7 +5,7 @@
 # Code Review
 
 Package to help you perform code reviews from your VC provider. Currently
-supports only Github.
+supports Github and basic Gitlab workflow.
 
 ![Demo of code review package](./docs/code_review_demo.png)
 
@@ -50,6 +50,8 @@ You can include your own bindings to functions like
 `code-review-request-changes`, and `code-review-comments` to not rely on the
 transient panel. But I think you should see it :]
 
+Take a look at which features are available to each integrated forge [here](./docs/forge_support.md).
+
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
 # Installation
@@ -78,11 +80,25 @@ submitting reviews.
 2. Set the `repo` scope as the subscope of repo
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
-### Auth
+#### Auth
 Add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
+```
+
+### Gitlab
+
+1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
+2. Choose the `api` scope
+
+#### Auth
+
+Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
+and token:
+
+``` emacs-lisp
+machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
 ```
 
 # Keybindings
