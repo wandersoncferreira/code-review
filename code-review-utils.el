@@ -378,26 +378,25 @@ If you already have a FEEDBACK string to submit use it."
          code-review-buffer-name)))))
 
 ;;; Header setters
-
 (defun code-review-utils--set-label-field (obj)
   "Helper function to set header multi value fields given by OP-NAME and OBJ.
 Milestones, labels, projects, and more."
-  (let* ((options (code-review-core-get-labels obj))
-         (choices (completing-read-multiple "Choose: " options))
-         (labels (append
-                  (-map (lambda (x)
-                          `((name . ,x)
-                            (color . "0075ca")))
-                        choices)
-                  (oref obj labels))))
-    (setq code-review-comment-cursor-pos (point))
-    (oset obj labels labels)
-    (code-review-core-set-labels
-     obj
-     (lambda ()
-       (closql-insert (code-review-db) obj t)
-       (code-review--build-buffer
-        (code-review-utils-current-project-buffer-name))))))
+  (when-let (options (code-review-core-get-labels obj))
+    (let* ((choices (completing-read-multiple "Choose: " options))
+           (labels (append
+                    (-map (lambda (x)
+                            `((name . ,x)
+                              (color . "0075ca")))
+                          choices)
+                    (oref obj labels))))
+      (setq code-review-comment-cursor-pos (point))
+      (oset obj labels labels)
+      (code-review-core-set-labels
+       obj
+       (lambda ()
+         (closql-insert (code-review-db) obj t)
+         (code-review--build-buffer
+          (code-review-utils-current-project-buffer-name)))))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
   "Helper function to set assignees header field given an OBJ.
@@ -405,9 +404,9 @@ If a valid ASSIGNEE is provided, use that instead."
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)
-      (let* ((options (code-review-core-get-assignees obj))
-             (choice (completing-read "Choose: " options)))
-        (setq candidate choice)))
+      (when-let (options (code-review-core-get-assignees obj))
+        (let* ((choice (completing-read "Choose: " options)))
+          (setq candidate choice))))
     (oset obj assignees (list `((name) (login . ,candidate))))
     (code-review-core-set-assignee
      obj
@@ -418,19 +417,19 @@ If a valid ASSIGNEE is provided, use that instead."
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
-  (let* ((options (code-review-core-get-milestones obj))
-         (choice (completing-read "Choose: " (a-keys options)))
-         (milestone `((title . ,choice)
-                      (perc . 0)
-                      (number .,(alist-get choice options nil nil 'equal)))))
-    (setq code-review-comment-cursor-pos (point))
-    (oset obj milestones milestone)
-    (code-review-core-set-milestone
-     obj
-     (lambda ()
-       (closql-insert (code-review-db) obj t)
-       (code-review--build-buffer
-        (code-review-utils-current-project-buffer-name))))))
+  (when-let (options (code-review-core-get-milestones obj))
+    (let* ((choice (completing-read "Choose: " (a-keys options)))
+           (milestone `((title . ,choice)
+                        (perc . 0)
+                        (number .,(alist-get choice options nil nil 'equal)))))
+      (setq code-review-comment-cursor-pos (point))
+      (oset obj milestones milestone)
+      (code-review-core-set-milestone
+       obj
+       (lambda ()
+         (closql-insert (code-review-db) obj t)
+         (code-review--build-buffer
+          (code-review-utils-current-project-buffer-name)))))))
 
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
