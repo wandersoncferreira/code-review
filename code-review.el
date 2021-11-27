@@ -211,20 +211,23 @@ If you want to provide a MSG for the end of the process."
           (deferred:nextc it
             (lambda (x)
 
-              (progress-reporter-update progress 2)
+              (if (string-prefix-p "Required Github token" (-first-item (a-get x 'error)))
+                  (message "Required Github token. Look at the README for how to setup your Personal Access Token")
+                (progn
+                  (progress-reporter-update progress 2)
 
-              (let-alist (-second-item x)
-                (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
+                  (let-alist (-second-item x)
+                    (code-review-db--pullreq-raw-infos-update .data.repository.pullRequest)
 
-                (progress-reporter-update progress 3)
+                    (progress-reporter-update progress 3)
 
-                (code-review-db--pullreq-raw-diff-update
-                 (code-review-utils--clean-diff-prefixes
-                  (a-get (-first-item x) 'message)))
+                    (code-review-db--pullreq-raw-diff-update
+                     (code-review-utils--clean-diff-prefixes
+                      (a-get (-first-item x) 'message)))
 
-                (progress-reporter-update progress 4)
-                (code-review--trigger-hooks buff-name msg)
-                (progress-reporter-done progress))))
+                    (progress-reporter-update progress 4)
+                    (code-review--trigger-hooks buff-name msg)
+                    (progress-reporter-done progress))))))
           (deferred:error it
             (lambda (err)
               (code-review-utils--log
