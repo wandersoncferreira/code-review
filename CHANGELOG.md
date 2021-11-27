@@ -8,4 +8,5 @@
 - [#57](https://github.com/wandersoncferreira/code-review/pull/57): fix error when adding a comment after a reply obj
 - [#61](https://github.com/wandersoncferreira/code-review/pull/61): allow approve PR without feedback comment
 - [#63](https://github.com/wandersoncferreira/code-review/pull/63): add naive progress reporter
-- [#50](https://github.com/wandersoncferreira/code-review/pull/50): add Gitlab basic support
+- [#66](https://github.com/wandersoncferreira/code-review/pull/66): improve error message when personal token is not set
+- [#67](https://github.com/wandersoncferreira/code-review/pull/67): improve error messages and `code-review-set-*` functions with proper callbacks
