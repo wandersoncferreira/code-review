@@ -376,10 +376,12 @@ Milestones, labels, projects, and more."
                   (oref obj labels))))
     (setq code-review-comment-cursor-pos (point))
     (oset obj labels labels)
-    (code-review-core-set-labels obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+    (code-review-core-set-labels
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        (code-review-utils-current-project-buffer-name))))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
   "Helper function to set assignees header field given an OBJ.
@@ -391,10 +393,12 @@ If a valid ASSIGNEE is provided, use that instead."
              (choice (completing-read "Choose: " options)))
         (setq candidate choice)))
     (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-core-set-assignee obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+    (code-review-core-set-assignee
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        (code-review-utils-current-project-buffer-name))))))
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
@@ -405,29 +409,35 @@ If a valid ASSIGNEE is provided, use that instead."
                       (number .,(alist-get choice options nil nil 'equal)))))
     (setq code-review-comment-cursor-pos (point))
     (oset obj milestones milestone)
-    (code-review-core-set-milestone obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+    (code-review-core-set-milestone
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        (code-review-utils-current-project-buffer-name))))))
 
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
   (let ((pr (code-review-db-get-pullreq)))
     (setq code-review-comment-cursor-pos (point))
     (oset pr title title)
-    (code-review-core-set-title pr)
-    (closql-insert (code-review-db) pr t)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (code-review-core-set-title
+     pr
+     (lambda ()
+       (closql-insert (code-review-db) pr t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review-utils--set-description-field (description)
   "Helper function to set a DESCRIPTION."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr description description)
-    (code-review-core-set-description pr)
-    (closql-insert (code-review-db) pr t)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (code-review-core-set-description
+     pr
+     (lambda ()
+       (closql-insert (code-review-db) pr t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review-utils--set-feedback-field (feedback)
   "Helper function to set a FEEDBACK."
