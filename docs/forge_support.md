@@ -1,6 +1,6 @@
 # Forge Support
 
-This page aims to provide a table of features supported by each integrated forge:
+Features supported by each integrated forge:
 
 
 | Feature                        | Github       | Gitlab |
