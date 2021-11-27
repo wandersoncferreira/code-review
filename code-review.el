@@ -549,33 +549,42 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Merge PR with MERGE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "merge")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "merge")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
 (defun code-review-merge-rebase ()
   "Merge PR with REBASE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "rebase")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "rebase")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
 (defun code-review-merge-squash ()
   "Merge PR with SQUASH strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-core-merge pr "squash")
-    (oset pr state "MERGED")
-    (code-review-db-update pr)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (code-review-core-merge pr "squash")
+          (oset pr state "MERGED")
+          (code-review-db-update pr)
+          (code-review--build-buffer
+           code-review-buffer-name))
+      (code-review-gitlab-not-supported-message))))
 
 ;;; Entrypoint
 
