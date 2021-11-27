@@ -82,7 +82,9 @@
                        (a-get (-third-item .error) 'errors)
                        " AND "))
               (msg (string-trim (a-get (-third-item .error) 'message))))
-          (message "Errors: %S" (if (string-empty-p errors) msg errors))))
+          (message "Errors: %S" (if (string-empty-p errors)
+                                    msg
+                                  (string-join (list msg errors) ". ")))))
        ((= status 404)
         (message "Provided URL Not Found"))
        ((= status 401)
@@ -281,8 +283,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        (a-get l 'name))
      resp)))
 
-(cl-defmethod code-review-core-set-labels ((github code-review-github-repo))
-  "Set labels for your pr at GITHUB."
+(cl-defmethod code-review-core-set-labels ((github code-review-github-repo) callback)
+  "Set labels for your pr at GITHUB and call CALLBACK."
   (let ((url (format "/repos/%s/%s/issues/%s/labels"
                      (oref github owner)
                      (oref github repo)
@@ -297,7 +299,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                                  (oref github labels))
                                            []))
              :auth 'code-review
-             :errorback #'code-review-github-errback)))
+             :errorback #'code-review-github-errback
+             :callback (lambda (&rest _) (funcall callback)))))
 
 (cl-defmethod code-review-core-get-assignees ((github code-review-github-repo))
   "Get labels from GITHUB."
@@ -312,8 +315,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        (a-get l 'login))
      resp)))
 
-(cl-defmethod code-review-core-set-assignee ((github code-review-github-repo))
-  "Set assignee to your PR in GITHUB."
+(cl-defmethod code-review-core-set-assignee ((github code-review-github-repo) callback)
+  "Set assignee to your PR in GITHUB and call CALLBACK."
   (ghub-post (format "/repos/%s/%s/issues/%s/assignees"
                      (oref github owner)
                      (oref github repo)
@@ -323,7 +326,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              :payload (a-alist 'assignees (-map (lambda (it)
                                                   (a-get it 'login))
                                                 (oref github assignees)))
-             :errorback #'code-review-github-errback))
+             :errorback #'code-review-github-errback
+             :callback (lambda (res &rest _) (funcall callback))))
 
 (cl-defmethod code-review-core-get-milestones ((github code-review-github-repo))
   "Get milestones from GITHUB."
@@ -338,8 +342,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        `(,(a-get l 'title) . ,(a-get l 'number)))
      resp)))
 
-(cl-defmethod code-review-core-set-milestone ((github code-review-github-repo))
-  "Set milestone for a pullreq in GITHUB."
+(cl-defmethod code-review-core-set-milestone ((github code-review-github-repo) callback)
+  "Set milestone for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/issues/%s"
                       (oref github owner)
                       (oref github repo)
@@ -347,10 +351,14 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               nil
               :auth 'code-review
               :payload (a-alist 'milestone (a-get (oref github milestones) 'number))
-              :errorback #'code-review-github-errback))
+              :errorback #'code-review-github-errback
+              :callback (lambda (res &rest _)
+                          (if (a-get res 'milestone)
+                              (funcall callback)
+                            (message "You cannot set this Milestone. Verify if the milestone exist in Github.")))))
 
-(cl-defmethod code-review-core-set-title ((github code-review-github-repo))
-  "Set title for a pullreq in GITHUB."
+(cl-defmethod code-review-core-set-title ((github code-review-github-repo) callback)
+  "Set title for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
                       (oref github repo)
@@ -358,7 +366,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               nil
               :auth 'code-review
               :payload (a-alist 'title (oref github title))
-              :errorback #'code-review-github-errback))
+              :errorback #'code-review-github-errback
+              :callback (lambda (&rest _) (funcall callback))))
 
 (cl-defmethod code-review-core-set-description ((github code-review-github-repo))
   "Set description for a pullreq in GITHUB."
@@ -369,7 +378,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               nil
               :auth 'code-review
               :payload (a-alist 'body (oref github description))
-              :errorback #'code-review-github-errback))
+              :errorback #'code-review-github-errback
+              :callback (lambda (&rest _) (funcall callback))))
 
 (cl-defmethod code-review-core-merge ((github code-review-github-repo) strategy)
   "Merge a PR in GITHUB using a STRATEGY."
