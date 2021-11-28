@@ -928,6 +928,20 @@ Optionally DELETE? flag must be set if you want to remove it."
       (magit-insert-heading)
       (code-review--insert-conversation-section pr))))
 
+
+(defun code-review-section-insert-files-report ()
+  "Insert files changed, added, deleted in the PR."
+  (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
+    (let-alist files
+      (magit-insert-section (code-review-files-report-section)
+        (insert (propertize (format "Files changed (%s files; %s additions, %s deletions)"
+                                    (length .nodes)
+                                    (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
+                                    (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))
+                            'font-lock-face
+                            'magit-section-heading))
+        (magit-insert-heading)))))
+
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
   ;;; hunk groups are necessary because we usually have multiple reviews about

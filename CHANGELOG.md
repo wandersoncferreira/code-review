@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- [#68](https://github.com/wandersoncferreira/code-review/pull/68): add files changed heading before diff
+
 # v0.0.2
 
 - [#52](https://github.com/wandersoncferreira/code-review/pull/52): fix `wrong-type-argument number-or-marker-p nil` error for comments in the buffer's last line

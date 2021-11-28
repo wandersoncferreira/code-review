@@ -9,6 +9,13 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       number
       createdAt
       updatedAt
+      files(first:100) {
+        nodes {
+          path
+          additions
+          deletions
+        }
+      }
       milestone {
         title
         progressPercentage
