@@ -101,7 +101,8 @@
     code-review-section-insert-commits
     code-review-section-insert-pr-description
     code-review-section-insert-feedback-heading
-    code-review-section-insert-general-comments)
+    code-review-section-insert-general-comments
+    code-review-section-insert-files-report)
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
