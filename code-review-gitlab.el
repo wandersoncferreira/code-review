@@ -72,11 +72,12 @@ For internal usage only.")
      (prin1-to-string m))
     (message "Unknown error talking to Gitlab: %s" m)))
 
-(defun code-review-gitlab--graphql (graphql callback)
+(defun code-review-gitlab--graphql (graphql variables callback)
   "Make GRAPHQL call to GITLAB.
 Optionally using VARIABLES. Provide HOST and CALLBACK fn."
-  (glab-request "POST" "/graphql" nil
-                :payload (json-encode `(("query" . ,graphql)))
+  (glab-request "POST" "/graphql" nil :payload (json-encode
+                                                `(("query" . ,graphql)
+                                                  ,@(and variables `(("variables" ,@variables)))))
                 :auth 'code-review
                 :host code-review-gitlab-graphql-host
                 :callback callback))
@@ -289,77 +290,12 @@ The payload is used to send a MR review to Gitlab."
   (let* ((owner (oref gitlab owner))
          (repo (oref gitlab repo))
          (number (oref gitlab number))
-         (query (format "query{
-repository:project(fullPath: \"%s\") {
-    pullRequest:mergeRequest(iid: \"%s\") {
-      id
-      comments:notes(first: 50){
-        nodes {
-          databaseId:id
-          discussion {
-            id
-          }
-          bodyText: body
-          author {
-            login:username
-          }
-          createdAt
-          updatedAt
-          system
-          resolvable
-          position {
-            height
-            newLine
-            newPath
-            oldLine
-            oldPath
-            width
-            x
-            y
-          }
-        }
-      }
-      diffRefs {
-        baseSha
-        headSha
-        startSha
-      }
-      headRefName:sourceBranch
-      baseRefName:targetBranch
-      commitCount
-      commitsWithoutMergeCommits(first: 100) {
-        nodes {
-          abbreviatedOid:shortId
-          message
-        }
-      }
-      number: iid
-      isDraft: draft
-      databaseId: iid
-      createdAt
-      updatedAt
-      milestone {
-        title
-      }
-      labels(first: 10) {
-        nodes{
-          color
-          name: title
-        }
-      }
-      assignees(first: 15) {
-        nodes{
-          name
-          login: username
-        }
-      }
-      title
-      state
-      bodyText: description
-    }
-  }
-}" (format "%s/%s" owner repo) number)))
-    (code-review-gitlab--graphql query callback)))
+         (query (code-review-utils--get-graphql 'gitlab 'get-pull-request)))
+    (code-review-gitlab--graphql
+     query
+     `((repo_fullpath . ,(format "%s/%s" owner repo))
+       (pr_id . ,number))
+     callback)))
 
 (cl-defmethod code-review-core-infos-deferred ((gitlab code-review-gitlab-repo))
   "Get PR infos from GITLAB."

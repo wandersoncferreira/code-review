@@ -534,5 +534,15 @@ Expect the same output as `git diff --no-prefix`"
     (setq code-review--line-number-cache (cons (point) pos))
     pos))
 
+(defvar code-review-utils--bin-dir
+  (file-name-directory (or load-file-name buffer-file-name)))
+
+(defun code-review-utils--get-graphql (forge name)
+  "Get Graphql content for NAME (symbol) for a given FORGE."
+  (with-temp-buffer
+    (insert-file-contents-literally
+     (concat code-review-utils--bin-dir "graphql/" (symbol-name forge) "/" (symbol-name name) ".graphql"))
+    (buffer-substring-no-properties (point-min) (point-max))))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

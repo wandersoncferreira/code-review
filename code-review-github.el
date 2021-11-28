@@ -150,113 +150,14 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   (let* ((repo (oref github repo))
          (owner (oref github owner))
          (num (oref github number))
-         (query (format "query {
-  repository(name: \"%s\", owner: \"%s\") {
-    pullRequest(number: %s){
-      headRef { target{ oid } }
-      baseRefName
-      headRefName
-      isDraft
-      databaseId
-      number
-      createdAt
-      updatedAt
-      milestone {
-        title
-        progressPercentage
-      }
-      labels(first: 10) {
-        nodes {
-          name
-          color
-        }
-      }
-      assignees(first: 15) {
-        nodes {
-          name
-          login
-        }
-      }
-      projectCards(first: 10) {
-        nodes {
-          project {
-            name
-          }
-        }
-      }
-      suggestedReviewers {
-        reviewer {
-          name
-        }
-      }
-      commits(first: 100) {
-        totalCount
-        nodes {
-          commit {
-            abbreviatedOid
-            message
-          }
-        }
-      }
-      title
-      state
-      bodyText
-      reactions(first:50){
-        nodes {
-          id
-          content
-        }
-      }
-      comments(first:50) {
-        nodes {
-          reactions(first:50){
-            nodes {
-              id
-              content
-            }
-          }
-          author {
-            login
-          }
-          databaseId
-          bodyText
-          createdAt
-          updatedAt
-        }
-      }
-      reviews(first: 50) {
-        nodes {
-          author { login }
-          bodyText
-          state
-          createdAt
-          updatedAt
-          comments(first: 50) {
-            nodes {
-              createdAt
-              updatedAt
-              bodyText
-              originalPosition
-              diffHunk
-              position
-              outdated
-              path
-              databaseId
-              reactions(first:50){
-                nodes {
-                  id
-                  content
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}" repo owner num)))
+         (query
+          (code-review-utils--get-graphql 'github 'get-pull-request)))
     (ghub-graphql query
-                  '()
+                  `((repo_owner . ,owner)
+                    (repo_name . ,repo)
+                    (pr_id . ,(if (numberp num)
+                                  num
+                                (string-to-number num))))
                   :auth 'code-review
                   :host code-review-github-host
                   :callback callback

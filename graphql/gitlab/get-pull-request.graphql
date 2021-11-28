@@ -1,0 +1,70 @@
+query($repo_fullpath:ID!, $pr_id:String!){
+  repository:project(fullPath:$repo_fullpath) {
+    pullRequest:mergeRequest(iid:$pr_id) {
+      id
+      comments:notes(first: 50){
+        nodes {
+          databaseId:id
+          discussion {
+            id
+          }
+          bodyText: body
+          author {
+            login:username
+          }
+          createdAt
+          updatedAt
+          system
+          resolvable
+          position {
+            height
+            newLine
+            newPath
+            oldLine
+            oldPath
+            width
+            x
+            y
+          }
+        }
+      }
+      diffRefs {
+        baseSha
+        headSha
+        startSha
+      }
+      headRefName:sourceBranch
+      baseRefName:targetBranch
+      commitCount
+      commitsWithoutMergeCommits(first: 100) {
+        nodes {
+          abbreviatedOid:shortId
+          message
+        }
+      }
+      number: iid
+      isDraft: draft
+      databaseId: iid
+      createdAt
+      updatedAt
+      milestone {
+        title
+      }
+      labels(first: 10) {
+        nodes{
+          color
+          name: title
+        }
+      }
+      assignees(first: 15) {
+        nodes{
+          name
+          login: username
+        }
+      }
+      title
+      state
+      bodyText: description
+    }
+  }
+}
