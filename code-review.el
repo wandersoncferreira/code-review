@@ -90,8 +90,9 @@
     code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
+    code-review-section-insert-is-draft
     code-review-section-insert-suggested-reviewers
-    code-review-section-insert-is-draft)
+    code-review-section-insert-reviewers)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)
@@ -611,6 +612,31 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
      code-review-buffer-name))
   (setq code-review-section-full-refresh? nil))
 
+;;;###autoload
+(defun code-review-request-reviews ()
+  "Request reviewers for current PR using REVIEWER-LOGINS."
+  (interactive)
+  (let* ((pr (code-review-db-get-pullreq))
+         (users (code-review-core-get-assinable-users pr))
+         (choices
+          (completing-read-multiple
+           "Request review: "
+           (mapcar
+            (lambda (u)
+              (format "%s : @%s" (a-get u 'name) (a-get u 'login)))
+            users)))
+         (ids (mapcar
+               (lambda (choice)
+                 (let* ((login (-second-item (split-string choice ": @")))
+                        (usr (seq-find (lambda (el)
+                                         (equal (a-get el 'login) login))
+                                       users)))
+                   (unless usr
+                     (error "User %s not found" login))
+                   (a-get usr 'id)))
+               choices)))
+    (code-review-core-request-review pr ids (lambda ()))))
+
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
@@ -650,6 +676,7 @@ OUTDATED."
    ("p" "Submit Replies" code-review-submit-only-replies)]
   ["Setters"
    ("sf" "Feedback" code-review-comment-set-feedback)
+   ("sr" "Reviewers" code-review-request-reviews)
    ("sy" "Yourself as Assignee" code-review--set-assignee-yourself)
    ("sa" "Assignee" code-review--set-assignee)
    ("sm" "Milestone" code-review--set-milestone)

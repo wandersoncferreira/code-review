@@ -411,5 +411,42 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                :errorback #'code-review-github-errback
                :callback callback)))
 
+(cl-defmethod code-review-core-get-assinable-users ((github code-review-github-repo))
+  "Get a list of assignable users for current PR in GITHUB."
+  (let ((query (code-review-utils--get-graphql 'github 'get-assinable-users))
+        (infos (oref github raw-infos)))
+    (if-let (users (a-get infos 'assignable-users))
+        users
+      (let ((has-next-page t)
+            cursor res)
+        (while has-next-page
+          (let ((graphql-res (ghub-graphql query
+                                           `((repo_owner . ,(oref github owner))
+                                             (repo_name . ,(oref github repo))
+                                             (cursor . ,cursor))
+                                           :auth 'code-review
+                                           :host code-review-github-host)))
+            (let-alist graphql-res
+              (setq has-next-page .data.repository.assignableUsers.pageInfo.hasNextPage
+                    cursor .data.repository.assignableUsers.pageInfo.endCursor
+                    res (append res .data.repository.assignableUsers.nodes)))))
+        (oset github raw-infos (a-assoc infos 'assignable-users res))
+        (code-review-db-update github)
+        res))))
+
+(cl-defmethod code-review-core-request-review ((github code-review-github-repo) user-ids callback)
+  "Request review for your GITHUB PR from USER-IDS and call CALLBACK afterward."
+  (let ((query (code-review-utils--get-graphql 'github 'request-reviews))
+        (pr-id (a-get (oref github raw-infos) 'id)))
+    (ghub-graphql query
+                  `((input . ((pullRequestId . ,pr-id)
+                              (userIds . ,user-ids))))
+                  :auth 'code-review
+                  :host code-review-github-host
+                  :callback (lambda (&rest _)
+                              (message "Review requested successfully!")
+                              (funcall callback))
+                  :errorback #'code-review-github-errback)))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
