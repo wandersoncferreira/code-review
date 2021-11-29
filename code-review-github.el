@@ -151,13 +151,123 @@ https://github.com/wandersoncferreira/code-review#configuration"))
          (owner (oref github owner))
          (num (oref github number))
          (query
-          (code-review-utils--get-graphql 'github 'get-pull-request)))
+          (format "query {
+  repository(name: \"%s\", owner: \"%s\") {
+    pullRequest(number:\"%s\"){
+      headRef { target{ oid } }
+      baseRefName
+      headRefName
+      isDraft
+      databaseId
+      number
+      createdAt
+      updatedAt
+      files(first:100) {
+        nodes {
+          path
+          additions
+          deletions
+        }
+      }
+      milestone {
+        title
+        progressPercentage
+      }
+      labels(first: 10) {
+        nodes {
+          name
+          color
+        }
+      }
+      assignees(first: 15) {
+        nodes {
+          name
+          login
+        }
+      }
+      projectCards(first: 10) {
+        nodes {
+          project {
+            name
+          }
+        }
+      }
+      suggestedReviewers {
+        reviewer {
+          name
+        }
+      }
+      commits(first: 100) {
+        totalCount
+        nodes {
+          commit {
+            abbreviatedOid
+            message
+          }
+        }
+      }
+      title
+      state
+      bodyText
+      reactions(first:50){
+        nodes {
+          id
+          content
+        }
+      }
+      comments(first:50) {
+        nodes {
+          reactions(first:50){
+            nodes {
+              id
+              content
+            }
+          }
+          author {
+            login
+          }
+          databaseId
+          bodyText
+          createdAt
+          updatedAt
+        }
+      }
+      reviews(first: 50) {
+        nodes {
+          author { login }
+          bodyText
+          state
+          createdAt
+          updatedAt
+          comments(first: 50) {
+            nodes {
+              createdAt
+              updatedAt
+              bodyText
+              originalPosition
+              diffHunk
+              position
+              outdated
+              path
+              databaseId
+              reactions(first:50){
+                nodes {
+                  id
+                  content
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+" repo owner (if (numberp num)
+                 num
+               (string-to-number num)))))
     (ghub-graphql query
-                  `((repo_owner . ,owner)
-                    (repo_name . ,repo)
-                    (pr_id . ,(if (numberp num)
-                                  num
-                                (string-to-number num))))
+                  nil
                   :auth 'code-review
                   :host code-review-github-host
                   :callback callback
@@ -272,8 +382,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-core-set-description ((github code-review-github-repo))
-  "Set description for a pullreq in GITHUB."
+(cl-defmethod code-review-core-set-description ((github code-review-github-repo) callback)
+  "Set description for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
                       (oref github repo)
