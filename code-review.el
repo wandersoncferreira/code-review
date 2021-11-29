@@ -208,6 +208,16 @@ If you want to display a minibuffer MSG in the end."
   "Check if the RES has a message for auth token not set for GITLAB."
   (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
 
+(cl-defmethod code-review--auth-token-set? (obj res)
+  "Default catch all unknown values passed to this function as OBJ and RES."
+  (code-review--log
+   "code-review--auth-token-set?"
+   (string-join (list
+                 (prin1-to-string obj)
+                 (prin1-to-string res))
+                " <->"))
+  (error "Unknown backend obj created. Look at `code-review-log-file' and report the bug upstream"))
+
 (cl-defmethod code-review--internal-build ((github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
   ;; 2. save raw diff data
