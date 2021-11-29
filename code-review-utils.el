@@ -364,12 +364,19 @@ If you already have a FEEDBACK string to submit use it."
 (defun code-review-utils--start-from-forge-at-point ()
   "Start from forge at point."
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq)))
+         (repo    (forge-get-repository pullreq))
+         (number (oref pullreq number)))
     (if (not (forge-pullreq-p pullreq))
         (message "We can only review PRs at the moment. You tried on something else.")
       (let* ((pr-alist (a-alist 'owner   (oref repo owner)
                                 'repo    (oref repo name)
-                                'num     (oref pullreq number)
+                                'num     (cond
+                                          ((numberp number)
+                                           (number-to-string number))
+                                          ((stringp number)
+                                           number)
+                                          (t
+                                           (error "Pull Request has unrecognizable number value")))
                                 'forge (cond
                                         ((forge-github-repository-p repo)
                                          'github)
