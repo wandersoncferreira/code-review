@@ -139,7 +139,8 @@ an object then we need to build the diff string ourselves here."
                                 ;; between a Overview comment and a Diff comment
                                 ;; so the heuristic used here might be incomplete.
                                 (if (not (numberp line))
-                                    (throw "Review Comment
+                                    (throw 'gitlab-comment-without-line-number
+                                           "Review Comment
                                     without position line number
                                     found! Possibly a bug in
                                     heuristic to identify Review

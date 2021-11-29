@@ -272,8 +272,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-core-set-description ((github code-review-github-repo))
-  "Set description for a pullreq in GITHUB."
+(cl-defmethod code-review-core-set-description ((github code-review-github-repo) callback)
+  "Set description for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
                       (oref github repo)
