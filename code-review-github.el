@@ -523,17 +523,29 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 
 (cl-defmethod code-review-core-get-assinable-users ((github code-review-github-repo))
   "Get a list of assignable users for current PR in GITHUB."
-  (let ((query (code-review-utils--get-graphql 'github 'get-assinable-users))
-        (infos (oref github raw-infos)))
+  (let ((infos (oref github raw-infos)))
     (if-let (users (a-get infos 'assignable-users))
         users
       (let ((has-next-page t)
             cursor res)
         (while has-next-page
-          (let ((graphql-res (ghub-graphql query
-                                           `((repo_owner . ,(oref github owner))
-                                             (repo_name . ,(oref github repo))
-                                             (cursor . ,cursor))
+          (let ((graphql-res (ghub-graphql (format "query {
+  repository(owner: \"%s\", name: \"%s\") {
+    assignableUsers(first: 100, after: \"%s\") {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        id
+        login
+        name
+      }
+    }
+  }
+}
+" (oref github owner) (oref github repo) cursor)
+                                           nil
                                            :auth 'code-review
                                            :host code-review-github-host)))
             (let-alist graphql-res
@@ -546,7 +558,14 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 
 (cl-defmethod code-review-core-request-review ((github code-review-github-repo) user-ids callback)
   "Request review for your GITHUB PR from USER-IDS and call CALLBACK afterward."
-  (let ((query (code-review-utils--get-graphql 'github 'request-reviews))
+  (let ((query "mutation($input: RequestReviewsInput!) {
+  requestReviews(input: $input) {
+    pullRequest {
+      id
+    }
+  }
+}
+")
         (pr-id (a-get (oref github raw-infos) 'id)))
     (ghub-graphql query
                   `((input . ((pullRequestId . ,pr-id)
