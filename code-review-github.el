@@ -263,7 +263,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
     }
   }
 }
-" owner repo (if (numberp num)
+" repo owner (if (numberp num)
                  num
                (string-to-number num)))))
     (ghub-graphql query
