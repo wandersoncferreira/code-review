@@ -365,14 +365,18 @@ If you already have a FEEDBACK string to submit use it."
   "Start from forge at point."
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo    (forge-get-repository pullreq)))
-
     (if (not (forge-pullreq-p pullreq))
         (message "We can only review PRs at the moment. You tried on something else.")
       (let* ((pr-alist (a-alist 'owner   (oref repo owner)
                                 'repo    (oref repo name)
                                 'num     (oref pullreq number)
-                                'url (when (forge-github-repository-p repo)
-                                       "https://api.github.com"))))
+                                'forge (cond
+                                        ((forge-github-repository-p repo)
+                                         'github)
+                                        ((forge-gitlab-repository-p repo)
+                                         'gitlab)
+                                        (t
+                                         (error "Backend not supported!"))))))
         (code-review-utils-build-obj pr-alist)
         (code-review--build-buffer
          code-review-buffer-name)))))
