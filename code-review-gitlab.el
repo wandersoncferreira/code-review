@@ -291,11 +291,81 @@ The payload is used to send a MR review to Gitlab."
   (let* ((owner (oref gitlab owner))
          (repo (oref gitlab repo))
          (number (oref gitlab number))
-         (query (code-review-utils--get-graphql 'gitlab 'get-pull-request)))
+         (query
+          (format "query{
+repository:project(fullPath: \"%s\") {
+    pullRequest:mergeRequest(iid: \"%s\") {
+      id
+      comments:notes(first: 50){
+        nodes {
+          databaseId:id
+          discussion {
+            id
+          }
+          bodyText: body
+          author {
+            login:username
+          }
+          createdAt
+          updatedAt
+          system
+          resolvable
+          position {
+            height
+            newLine
+            newPath
+            oldLine
+            oldPath
+            width
+            x
+            y
+          }
+        }
+      }
+      diffRefs {
+        baseSha
+        headSha
+        startSha
+      }
+      headRefName:sourceBranch
+      baseRefName:targetBranch
+      commitCount
+      commitsWithoutMergeCommits(first: 100) {
+        nodes {
+          abbreviatedOid:shortId
+          message
+        }
+      }
+      number: iid
+      isDraft: draft
+      databaseId: iid
+      createdAt
+      updatedAt
+      milestone {
+        title
+      }
+      labels(first: 10) {
+        nodes{
+          color
+          name: title
+        }
+      }
+      assignees(first: 15) {
+        nodes{
+          name
+          login: username
+        }
+      }
+      title
+      state
+      bodyText: description
+    }
+  }
+}
+" (format "%s/%s" owner repo) number)))
     (code-review-gitlab--graphql
      query
-     `((repo_fullpath . ,(format "%s/%s" owner repo))
-       (pr_id . ,number))
+     nil
      callback)))
 
 (cl-defmethod code-review-core-infos-deferred ((gitlab code-review-gitlab-repo))
