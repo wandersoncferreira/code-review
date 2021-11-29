@@ -4,6 +4,7 @@
 
 - [#68](https://github.com/wandersoncferreira/code-review/pull/68): add files changed heading before diff
 - [#74](https://github.com/wandersoncferreira/code-review/pull/74): fix `code-review-forge-pr-at-point` command
+- [#75](https://github.com/wandersoncferreira/code-review/pull/75): fix bug related to MELPA not delivering graphql files by default. Special thanks to @mplanchard
 
 # v0.0.2
 
