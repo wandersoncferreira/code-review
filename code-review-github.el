@@ -153,7 +153,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
          (query
           (format "query {
   repository(name: \"%s\", owner: \"%s\") {
-    pullRequest(number:\"%s\"){
+    pullRequest(number:%s){
       headRef { target{ oid } }
       baseRefName
       headRefName
