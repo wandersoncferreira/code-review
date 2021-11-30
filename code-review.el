@@ -201,11 +201,11 @@ If you want to display a minibuffer MSG in the end."
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
-(cl-defmethod code-review--auth-token-set? ((github code-review-github-repo) res)
+(cl-defmethod code-review--auth-token-set? ((_github code-review-github-repo) res)
   "Check if the RES has a message for auth token not set for GITHUB."
   (string-prefix-p "Required Github token" (-first-item (a-get res 'error))))
 
-(cl-defmethod code-review--auth-token-set? ((gitlab code-review-gitlab-repo) res)
+(cl-defmethod code-review--auth-token-set? ((_gitlab code-review-gitlab-repo) res)
   "Check if the RES has a message for auth token not set for GITLAB."
   (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
 
@@ -219,7 +219,7 @@ If you want to display a minibuffer MSG in the end."
                 " <->"))
   (error "Unknown backend obj created. Look at `code-review-log-file' and report the bug upstream"))
 
-(cl-defmethod code-review--internal-build ((github code-review-github-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
   ;; 2. save raw diff data
   (progress-reporter-update progress 3)
@@ -237,7 +237,7 @@ If you want to display a minibuffer MSG in the end."
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
 
-(cl-defmethod code-review--internal-build ((gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
   ;; 1. save raw diff data
   (progress-reporter-update progress 3)
@@ -709,21 +709,21 @@ OUTDATED."
     ("C-c C-s" "Save Unfinished" code-review-save-unfinished-review)
     ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)]
    ["Merge"
-    ("mm" "Merge" code-review-merge-merge)
-    ("mr" "Merge Rebase" code-review-merge-rebase)
-    ("ms" "Merge Squash" code-review-merge-squash)]]
+    ("m m" "Merge" code-review-merge-merge)
+    ("m r" "Merge Rebase" code-review-merge-rebase)
+    ("m s" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
    ("p" "Submit Replies" code-review-submit-only-replies)]
   ["Setters"
-   ("sf" "Feedback" code-review-comment-set-feedback)
-   ("sr" "Reviewers" code-review-request-reviews)
-   ("sy" "Yourself as Assignee" code-review--set-assignee-yourself)
-   ("sa" "Assignee" code-review--set-assignee)
-   ("sm" "Milestone" code-review--set-milestone)
-   ("sl" "Labels" code-review--set-label)
-   ("st" "Title" code-review-comment-set-title)
-   ("sd" "Description" code-review-comment-set-description)]
+   ("s f" "Feedback" code-review-comment-set-feedback)
+   ("s r" "Reviewers" code-review-request-reviews)
+   ("s y" "Yourself as Assignee" code-review--set-assignee-yourself)
+   ("s a" "Assignee" code-review--set-assignee)
+   ("s m" "Milestone" code-review--set-milestone)
+   ("s l" "Labels" code-review--set-label)
+   ("s t" "Title" code-review-comment-set-title)
+   ("s d" "Description" code-review-comment-set-description)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 

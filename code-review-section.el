@@ -868,15 +868,15 @@ Optionally DELETE? flag must be set if you want to remove it."
                                 (a-get-in r (list 'reviewer 'login))))
                              (-filter
                               (lambda (r)
-                                (let* ((res nil)
-                                       (revs (maphash
-                                              (lambda (_status users)
-                                                (setq res (append res
-                                                                  (-map
-                                                                   (lambda (it)
-                                                                     (a-get it 'login))
-                                                                   users))))
-                                              reviewers-group)))
+                                (let* ((res nil))
+                                  (maphash
+                                   (lambda (_status users)
+                                     (setq res (append res
+                                                       (-map
+                                                        (lambda (it)
+                                                          (a-get it 'login))
+                                                        users))))
+                                   reviewers-group)
                                   (and (not (equal r nil))
                                        (not (-contains-p res r))))))))
              (suggested-reviewers (if (not reviewers)
