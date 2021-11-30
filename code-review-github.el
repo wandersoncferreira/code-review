@@ -602,5 +602,15 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               (funcall callback))
                   :errorback #'code-review-github-errback)))
 
+(cl-defmethod code-review-core-new-issue ((github code-review-github-repo) body title)
+  "Create a new issue in GITHUB given a BODY and TITLE."
+  (ghub-post (format "/repos/%s/%s/issues"
+                     (oref github owner)
+                     (oref github repo))
+             nil
+             :auth 'code-review
+             :payload (a-alist 'body body 'title title)
+             :errorback #'code-review-github-errback))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
