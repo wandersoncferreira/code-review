@@ -136,7 +136,7 @@ Optionally define a MSG."
       (code-review-comment-mode))))
 
 (defun code-review-comment-delete-feedback ()
-  "Add review FEEDBACK."
+  "Delete review FEEDBACK."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr feedback nil)
