@@ -261,6 +261,7 @@ For internal usage only.")
 (defvar code-review-feedback-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-set-feedback)
+    (define-key map (kbd "C-c C-k") 'code-review-comment-delete-feedback)
     (define-key map (kbd "k") 'code-review-comment-delete-feedback)
     map)
   "Keymaps for feedback section.")
