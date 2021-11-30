@@ -36,7 +36,6 @@ The Emacs everywhere goal continues. These are the main features of
 - Promote comments to new issues.
 - Save/Resume in-progress Reviews
 
-
 The basic workflow:
 
 - `RET` on a hunk diff line to add a comment
