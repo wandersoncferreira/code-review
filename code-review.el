@@ -90,8 +90,9 @@
     code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
+    code-review-section-insert-is-draft
     code-review-section-insert-suggested-reviewers
-    code-review-section-insert-is-draft)
+    code-review-section-insert-reviewers)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)
@@ -621,6 +622,62 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
      code-review-buffer-name))
   (setq code-review-section-full-refresh? nil))
 
+;;;###autoload
+(defun code-review-request-reviews (&optional login)
+  "Request reviewers for current PR using LOGIN if available."
+  (interactive)
+  (let* ((pr (code-review-db-get-pullreq))
+         (users (code-review-core-get-assinable-users pr))
+         (choices
+          (if login
+              (list (format "@%s :- " login))
+            (completing-read-multiple
+             "Request review: "
+             (mapcar
+              (lambda (u)
+                (format "@%s :- %s" (a-get u 'login) (a-get u 'name)))
+              users))))
+         (logins)
+         (ids (mapcar
+               (lambda (choice)
+                 (let* ((login (-> choice
+                                   (split-string ":-")
+                                   (-first-item)
+                                   (split-string "@")
+                                   (-second-item)
+                                   (string-trim)))
+                        (usr (seq-find (lambda (el)
+                                         (equal (a-get el 'login) login))
+                                       users)))
+                   (unless usr
+                     (error "User %s not found" login))
+                   (setq logins
+                         (append logins
+                                 `(((requestedReviewer (login . ,(a-get usr 'login)))))))
+                   (a-get usr 'id)))
+               choices)))
+    (code-review-core-request-review pr ids
+                                     (lambda ()
+                                       (let* ((infos (oref pr raw-infos))
+                                              (new-infos
+                                               (a-assoc-in infos (list 'reviewRequests 'nodes) logins)))
+                                         (oset pr raw-infos new-infos)
+                                         (code-review-db-update pr)
+                                         (code-review--build-buffer
+                                          code-review-buffer-name))))))
+
+(defun code-review-request-review-at-point ()
+  "Request reviewer at point."
+  (interactive)
+  (setq code-review-comment-cursor-pos (point))
+  (let* ((line (buffer-substring-no-properties
+                (line-beginning-position)
+                (line-end-position)))
+         (login (-> line
+                    (split-string "- @")
+                    (-second-item)
+                    (string-trim))))
+    (code-review-request-reviews login)))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
@@ -660,6 +717,7 @@ OUTDATED."
    ("p" "Submit Replies" code-review-submit-only-replies)]
   ["Setters"
    ("sf" "Feedback" code-review-comment-set-feedback)
+   ("sr" "Reviewers" code-review-request-reviews)
    ("sy" "Yourself as Assignee" code-review--set-assignee-yourself)
    ("sa" "Assignee" code-review--set-assignee)
    ("sm" "Milestone" code-review--set-milestone)

@@ -555,5 +555,26 @@ Expect the same output as `git diff --no-prefix`"
      (concat code-review-utils--bin-dir "graphql/" (symbol-name forge) "/" (symbol-name name) ".graphql"))
     (buffer-substring-no-properties (point-min) (point-max))))
 
+(defun code-review-utils--fmt-reviewers (infos)
+  "Produce group of reviewers and their statuses from INFOS."
+  (let-alist infos
+    (let ((groups (make-hash-table :test 'equal)))
+      (puthash "PENDING" (mapcar
+                          (lambda (r)
+                            (let-alist r
+                              `((code-owner? . ,.asCodeOwner)
+                                (login . ,.requestedReviewer.login)
+                                (at))))
+                          .reviewRequests.nodes)
+               groups)
+      (mapc (lambda (o)
+              (let-alist o
+                (push `((code-owner?)
+                        (login . ,.author.login)
+                        (at . ,.createdAt))
+                      (gethash .state groups))))
+            .latestOpinionatedReviews.nodes)
+      groups)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

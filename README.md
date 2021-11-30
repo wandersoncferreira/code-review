@@ -119,6 +119,7 @@ Review` buffer.
 | C-c C-r | comment                               | Add Reaction                |
 | C-c C-r | pr description                        | Add Reaction                |
 | RET     | reaction (on emoji symbol)            | Endorse or Remove Reaction  |
+| RET     | Request Reviewer                      | Request reviewer at point   |
 
 
 ## Binding suggestions

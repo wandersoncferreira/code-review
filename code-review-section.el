@@ -88,13 +88,42 @@
   :group 'code-review)
 
 (defface code-review-success-state-face
-  '((t :inherit font-lock-constant-face :weight bold))
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "Green")
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "Green"))
   "Face used for success state (e.g. merged)."
   :group 'code-review)
 
 (defface code-review-info-state-face
   '((t :slant italic))
   "Face used for info (unimportant) state (e.g. resolved)."
+  :group 'code-review)
+
+(defface code-review-pending-state-face
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "Yellow")
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "Yellow"))
+  "Face used for pending state."
+  :group 'code-review)
+
+(defface code-review-request-review-face
+  `((((class color) (background light))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "LightYellow"
+     :slant italic
+     :underline t)
+    (((class color) (background  dark))
+     ,@(and (>= emacs-major-version 27) '(:extend t))
+     :foreground "LightYellow"
+     :slant italic
+     :underline t))
+  "Face used for pending state."
   :group 'code-review)
 
 (defun code-review--propertize-keyword (str)
@@ -107,6 +136,8 @@
                 'code-review-error-state-face)
                ((member str '("RESOLVED" "OUTDATED"))
                 'code-review-info-state-face)
+               ((member str '("PENDING"))
+                'code-review-pending-state-face)
                (t
                 'code-review-state-face))))
 
@@ -668,6 +699,26 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (format "%-17s" "Draft: ") draft?)
           (insert ?\n))))))
 
+(defun code-review-section-insert-reviewers ()
+  "Insert the reviewers section."
+  (let* ((infos (code-review-db--pullreq-raw-infos))
+         (groups (code-review-utils--fmt-reviewers infos)))
+    (magit-insert-section (code-review-reviewers-section)
+      (insert "Reviewers:\n")
+      (maphash (lambda (status users-objs)
+                 (dolist (user-o users-objs)
+                   (let-alist user-o
+                     (insert (code-review--propertize-keyword status))
+                     (insert " - ")
+                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
+                     (when .code-owner?
+                       (insert " as CODE OWNER"))
+                     (when .at
+                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
+                   (insert ?\n)))
+               groups)
+      (insert ?\n))))
+
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
   (when-let (title (code-review-db--pullreq-title))
@@ -769,21 +820,49 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (format "%-17s" "Projects: ") projects)
           (insert ?\n))))))
 
+(defclass code-review-suggested-reviewers-section (magit-section)
+  ((keymap :initform 'code-review-suggested-reviewers-section-map)))
+
+(defvar code-review-suggested-reviewers-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-request-review-at-point)
+    map)
+  "Keymaps for suggested reviewers section.")
+
 (defun code-review-section-insert-suggested-reviewers ()
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (let* ((reviewers (string-join
-                         (-map
-                          (lambda (r)
-                            (a-get-in r (list 'reviewer 'name)))
-                          .suggestedReviewers)
-                         ", "))
-             (suggested-reviewers (if (string-empty-p reviewers)
-                                      (propertize "No reviews" 'font-lock-face 'magit-dimmed)
+      (let* ((reviewers-group (code-review-utils--fmt-reviewers infos))
+             (reviewers (->> .suggestedReviewers
+                             (-map
+                              (lambda (r)
+                                (a-get-in r (list 'reviewer 'login))))
+                             (-filter
+                              (lambda (r)
+                                (let* ((res nil)
+                                       (revs (maphash
+                                              (lambda (_status users)
+                                                (setq res (append res
+                                                                  (-map
+                                                                   (lambda (it)
+                                                                     (a-get it 'login))
+                                                                   users))))
+                                              reviewers-group)))
+                                  (and (not (equal r nil))
+                                       (not (-contains-p res r))))))))
+             (suggested-reviewers (if (not reviewers)
+                                      (propertize "No suggestions" 'font-lock-face 'magit-dimmed)
                                     reviewers)))
-        (magit-insert-section (code-review-reviewers-section suggested-reviewers)
-          (insert (format "%-17s" "Suggested-Reviewers: ") suggested-reviewers)
+        (magit-insert-section (code-review-suggested-reviewers-section suggested-reviewers)
+          (insert "Suggested-Reviewers:")
+          (if (not reviewers)
+              (insert " " suggested-reviewers)
+            (dolist (sr suggested-reviewers)
+              (insert ?\n)
+              (insert (propertize "Request Review" 'face 'code-review-request-review-face))
+              (insert " - ")
+              (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
           (insert ?\n))))))
 
 (defun code-review-section-insert-headers ()

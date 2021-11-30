@@ -93,5 +93,11 @@
 (cl-defgeneric code-review-core-delete-reaction (obj context-name comment-id reaction-id)
   "Delete a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
+(cl-defgeneric code-review-core-get-assinable-users (obj)
+  "Get users that can review a PR for OBJ.")
+
+(cl-defgeneric code-review-core-request-review (obj user-ids callback)
+  "Request for OBJ a list of USER-IDS to review a PR and call CALLBACK afterward.")
+
 (provide 'code-review-core)
 ;;; code-review-core.el ends here
