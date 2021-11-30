@@ -203,7 +203,8 @@ Optionally define a MSG."
   (setq code-review-comment-uncommitted obj
         code-review-promote-comment-to-issue? t)
   (code-review-comment-add
-   (format "Title: %s\n\nBody:\n> %s"
+   (format "<!-- Do not remove the Title and Body placeholders.  -->
+<!-- You can add multi-line segments in the body section. -->\n\nTitle: %s\n\nBody:\n> %s"
            (oref obj title)
            (oref obj body))))
 
