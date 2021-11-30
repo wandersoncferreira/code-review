@@ -709,21 +709,21 @@ OUTDATED."
     ("C-c C-s" "Save Unfinished" code-review-save-unfinished-review)
     ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)]
    ["Merge"
-    ("mm" "Merge" code-review-merge-merge)
-    ("mr" "Merge Rebase" code-review-merge-rebase)
-    ("ms" "Merge Squash" code-review-merge-squash)]]
+    ("m m" "Merge" code-review-merge-merge)
+    ("m r" "Merge Rebase" code-review-merge-rebase)
+    ("m s" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
    ("p" "Submit Replies" code-review-submit-only-replies)]
   ["Setters"
-   ("sf" "Feedback" code-review-comment-set-feedback)
-   ("sr" "Reviewers" code-review-request-reviews)
-   ("sy" "Yourself as Assignee" code-review--set-assignee-yourself)
-   ("sa" "Assignee" code-review--set-assignee)
-   ("sm" "Milestone" code-review--set-milestone)
-   ("sl" "Labels" code-review--set-label)
-   ("st" "Title" code-review-comment-set-title)
-   ("sd" "Description" code-review-comment-set-description)]
+   ("s f" "Feedback" code-review-comment-set-feedback)
+   ("s r" "Reviewers" code-review-request-reviews)
+   ("s y" "Yourself as Assignee" code-review--set-assignee-yourself)
+   ("s a" "Assignee" code-review--set-assignee)
+   ("s m" "Milestone" code-review--set-milestone)
+   ("s l" "Labels" code-review--set-label)
+   ("s t" "Title" code-review-comment-set-title)
+   ("s d" "Description" code-review-comment-set-description)]
   ["Quit"
    ("q" "Quit" transient-quit-one)])
 
