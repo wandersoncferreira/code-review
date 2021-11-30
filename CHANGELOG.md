@@ -7,6 +7,7 @@
 - [#75](https://github.com/wandersoncferreira/code-review/pull/75): fix bug related to MELPA not delivering graphql files by default. Special thanks to [@mplanchard](https://github.com/mplanchard)
 - [#73](https://github.com/wandersoncferreira/code-review/pull/73): add reviewers section and `set reviewers` command
 - [#80](https://github.com/wandersoncferreira/code-review/pull/80): make transient keys follow Forge convention of key spacing
+- [#85](https://github.com/wandersoncferreira/code-review/pull/85): remove comment and feedback section with `k`
 
 # v0.0.2
 
