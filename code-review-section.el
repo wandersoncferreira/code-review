@@ -515,7 +515,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
-    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-issue)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-new-issue)
     map)
   "Keymaps for code-comment sections.")
 
