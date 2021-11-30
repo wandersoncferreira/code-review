@@ -201,11 +201,11 @@ If you want to display a minibuffer MSG in the end."
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
-(cl-defmethod code-review--auth-token-set? ((github code-review-github-repo) res)
+(cl-defmethod code-review--auth-token-set? ((_github code-review-github-repo) res)
   "Check if the RES has a message for auth token not set for GITHUB."
   (string-prefix-p "Required Github token" (-first-item (a-get res 'error))))
 
-(cl-defmethod code-review--auth-token-set? ((gitlab code-review-gitlab-repo) res)
+(cl-defmethod code-review--auth-token-set? ((_gitlab code-review-gitlab-repo) res)
   "Check if the RES has a message for auth token not set for GITLAB."
   (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
 
@@ -219,7 +219,7 @@ If you want to display a minibuffer MSG in the end."
                 " <->"))
   (error "Unknown backend obj created. Look at `code-review-log-file' and report the bug upstream"))
 
-(cl-defmethod code-review--internal-build ((github code-review-github-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
   ;; 2. save raw diff data
   (progress-reporter-update progress 3)
@@ -237,7 +237,7 @@ If you want to display a minibuffer MSG in the end."
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
 
-(cl-defmethod code-review--internal-build ((gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
   ;; 1. save raw diff data
   (progress-reporter-update progress 3)

@@ -491,43 +491,43 @@ repository:project(fullPath: \"%s\") {
   (message "Not supported in Gitlab yet.")
   nil)
 
-(cl-defmethod code-review-core-get-labels ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-core-get-labels ((_gitlab code-review-gitlab-repo))
   "Get labels for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-labels ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-labels ((_gitlab code-review-gitlab-repo) callback)
   "Set labels for your pr at GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-get-assignees ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-core-get-assignees ((_gitlab code-review-gitlab-repo))
   "Get assignees for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-assignee ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-assignee ((_gitlab code-review-gitlab-repo) callback)
   "Set yourself as assignee in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-get-milestones ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-core-get-milestones ((_gitlab code-review-gitlab-repo))
   "Get milestones for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-milestone ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-milestone ((_gitlab code-review-gitlab-repo) callback)
   "Set milestone for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-title ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-title ((_gitlab code-review-gitlab-repo) callback)
   "Set title for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-description ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-description ((_gitlab code-review-gitlab-repo) callback)
   "Set description for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-merge ((gitlab code-review-gitlab-repo) strategy)
+(cl-defmethod code-review-core-merge ((_gitlab code-review-gitlab-repo) strategy)
   "Merge a pr in GITLAB using STRATEGY."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-reaction ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-core-set-reaction ((_gitlab code-review-gitlab-repo))
   "Set reaction for your pr in GITLAB."
   (code-review-gitlab-not-supported-message))
 

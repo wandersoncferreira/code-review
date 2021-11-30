@@ -363,7 +363,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                                   (a-get it 'login))
                                                 (oref github assignees)))
              :errorback #'code-review-github-errback
-             :callback (lambda (res &rest _) (funcall callback))))
+             :callback (lambda (&rest _) (funcall callback))))
 
 (cl-defmethod code-review-core-get-milestones ((github code-review-github-repo))
   "Get milestones from GITHUB."
