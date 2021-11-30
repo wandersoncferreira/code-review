@@ -71,6 +71,11 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 Set `code-review-fill-column` to define line wrap comment sections.
 
+If you want to use `code-review` in a full buffer you can change the function
+used to display the buffer at `code-review-new-buffer-window-strategy` e.g. you
+can set `(setq code-review-new-buffer-window-strategy #'switch-to-buffer)` to
+not open a new window.
+
 ### GitHub
 
 `code-review` needs a GitHub token to act on your behalf for fetching PRs and

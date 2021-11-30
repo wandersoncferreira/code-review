@@ -181,7 +181,7 @@ If you want to display a minibuffer MSG in the end."
                   (when code-review-comment-cursor-pos
                     (goto-char code-review-comment-cursor-pos)))
               (progn
-                (switch-to-buffer-other-window buff-name)
+                (funcall code-review-new-buffer-window-strategy buff-name)
                 (goto-char (point-min))))
             (if commit-focus?
                 (progn

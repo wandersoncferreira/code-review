@@ -9,6 +9,7 @@
 - [#80](https://github.com/wandersoncferreira/code-review/pull/80): make transient keys follow Forge convention of key spacing
 - [#49](https://github.com/wandersoncferreira/code-review/pull/46): promote comment to new issue. Github only.
 - [#85](https://github.com/wandersoncferreira/code-review/pull/85): remove comment and feedback section with `k`
+- [#86](https://github.com/wandersoncferreira/code-review/pull/86): allow users to define function to open Code Review buffer.
 
 # v0.0.2
 
