@@ -701,37 +701,23 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review-section-insert-reviewers ()
   "Insert the reviewers section."
-  (let-alist (code-review-db--pullreq-raw-infos)
-    (let ((groups (make-hash-table :test 'equal)))
-      (puthash "PENDING" (mapcar
-                          (lambda (r)
-                            (let-alist r
-                              `((code-owner? . ,.asCodeOwner)
-                                (login . ,.requestedReviewer.login)
-                                (at))))
-                          .reviewRequests.nodes)
+  (let* ((infos (code-review-db--pullreq-raw-infos))
+         (groups (code-review-utils--fmt-reviewers infos)))
+    (magit-insert-section (code-review-reviewers-section)
+      (insert "Reviewers:\n")
+      (maphash (lambda (status users-objs)
+                 (dolist (user-o users-objs)
+                   (let-alist user-o
+                     (insert (code-review--propertize-keyword status))
+                     (insert " - ")
+                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
+                     (when .code-owner?
+                       (insert " as CODE OWNER"))
+                     (when .at
+                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
+                   (insert ?\n)))
                groups)
-      (mapc (lambda (o)
-              (let-alist o
-                (push `((code-owner?)
-                        (login . ,.author.login)
-                        (at . ,.createdAt))
-                      (gethash .state groups))))
-            .latestOpinionatedReviews.nodes)
-      (magit-insert-section (code-review-reviewers-section)
-        (insert "Reviewers:\n")
-        (maphash (lambda (status users-objs)
-                   (dolist (user-o users-objs)
-                     (let-alist user-o
-                       (insert (code-review--propertize-keyword status))
-                       (insert " - ")
-                       (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
-                       (when .code-owner?
-                         (insert " as CODE OWNER"))
-                       (when .at
-                         (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face)))))
-                   (insert ?\n))
-                 groups)))))
+      (insert ?\n))))
 
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
@@ -838,10 +824,24 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
-      (let* ((reviewers (-map
-                         (lambda (r)
-                           (a-get-in r (list 'reviewer 'login)))
-                         .suggestedReviewers))
+      (let* ((reviewers-group (code-review-utils--fmt-reviewers infos))
+             (reviewers (->> .suggestedReviewers
+                             (-map
+                              (lambda (r)
+                                (a-get-in r (list 'reviewer 'login))))
+                             (-filter
+                              (lambda (r)
+                                (let* ((res nil)
+                                       (revs (maphash
+                                              (lambda (_status users)
+                                                (setq res (append res
+                                                                  (-map
+                                                                   (lambda (it)
+                                                                     (a-get it 'login))
+                                                                   users))))
+                                              reviewers-group)))
+                                  (and (not (equal r nil))
+                                       (not (-contains-p res r))))))))
              (suggested-reviewers (if (not reviewers)
                                       (propertize "No suggestions" 'font-lock-face 'magit-dimmed)
                                     reviewers)))

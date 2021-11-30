@@ -154,6 +154,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           (format "query {
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
+      id
       headRef { target{ oid } }
       baseRefName
       headRefName
@@ -162,6 +163,27 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       number
       createdAt
       updatedAt
+      latestOpinionatedReviews(first: 100) {
+         nodes {
+           author {
+             login
+           }
+           createdAt
+           state
+         }
+       }
+      reviewRequests(first:100){
+         nodes {
+           asCodeOwner
+           requestedReviewer {
+             __typename
+             ... on User {
+               login
+               name
+             }
+           }
+         }
+       }
       files(first:100) {
         nodes {
           path
@@ -195,6 +217,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       suggestedReviewers {
         reviewer {
           name
+          login
         }
       }
       commits(first: 100) {
@@ -523,29 +546,31 @@ https://github.com/wandersoncferreira/code-review#configuration"))
 
 (cl-defmethod code-review-core-get-assinable-users ((github code-review-github-repo))
   "Get a list of assignable users for current PR in GITHUB."
-  (let ((infos (oref github raw-infos)))
+  (let ((infos (oref github raw-infos))
+        (query "query($repo_owner:String!, $repo_name:String!, $cursor:String) {
+   repository(owner: $repo_owner, name: $repo_name) {
+     assignableUsers(first: 100, after: $cursor) {
+       pageInfo {
+         endCursor
+         hasNextPage
+       }
+       nodes {
+         id
+         login
+         name
+       }
+     }
+   }
+ }"))
     (if-let (users (a-get infos 'assignable-users))
         users
       (let ((has-next-page t)
             cursor res)
         (while has-next-page
-          (let ((graphql-res (ghub-graphql (format "query {
-  repository(owner: \"%s\", name: \"%s\") {
-    assignableUsers(first: 100, after: \"%s\") {
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-      nodes {
-        id
-        login
-        name
-      }
-    }
-  }
-}
-" (oref github owner) (oref github repo) cursor)
-                                           nil
+          (let ((graphql-res (ghub-graphql query
+                                           `((repo_owner . ,(oref github owner))
+                                             (repo_name . ,(oref github repo))
+                                             (cursor . ,cursor))
                                            :auth 'code-review
                                            :host code-review-github-host)))
             (let-alist graphql-res

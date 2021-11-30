@@ -633,19 +633,36 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
            "Request review: "
            (mapcar
             (lambda (u)
-              (format "%s : @%s" (a-get u 'name) (a-get u 'login)))
+              (format "@%s :- %s" (a-get u 'login) (a-get u 'name)))
             users)))
+         (logins)
          (ids (mapcar
                (lambda (choice)
-                 (let* ((login (-second-item (split-string choice ": @")))
+                 (let* ((login (-> choice
+                                   (split-string ":-")
+                                   (-first-item)
+                                   (split-string "@")
+                                   (-second-item)
+                                   (string-trim)))
                         (usr (seq-find (lambda (el)
                                          (equal (a-get el 'login) login))
                                        users)))
                    (unless usr
                      (error "User %s not found" login))
+                   (setq logins
+                         (append logins
+                                 `(((requestedReviewer (login . ,(a-get usr 'login)))))))
                    (a-get usr 'id)))
                choices)))
-    (code-review-core-request-review pr ids (lambda ()))))
+    (code-review-core-request-review pr ids
+                                     (lambda ()
+                                       (let* ((infos (oref pr raw-infos))
+                                              (new-infos
+                                               (a-assoc-in infos (list 'reviewRequests 'nodes) logins)))
+                                         (oset pr raw-infos new-infos)
+                                         (code-review-db-update pr)
+                                         (code-review--build-buffer
+                                          code-review-buffer-name))))))
 
 
 ;;;###autoload
