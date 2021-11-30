@@ -330,7 +330,8 @@ Optionally define a MSG."
                            (format "_Originally posted by @%s in %s_"
                                    (oref obj author)
                                    (oref obj reference-link)))))
-        (code-review-core-new-issue pr body title)))))
+        (code-review-core-new-issue pr body title (lambda (&rest _)
+                                                    (message "New issue created.")))))))
 
 ;;;###autoload
 (defun code-review-comment-commit ()
