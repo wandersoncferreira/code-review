@@ -86,6 +86,10 @@
    (closql-class-prefix :initform "code-review-")
    (closql-order-by     :initform [(desc number)])
    (id                  :initarg :id)
+   (finished            :initform nil)
+   (finished-at         :initform nil)
+   (saved               :initform nil)
+   (saved-at            :initform nil)
    (raw-infos           :initform nil)
    (raw-diff            :initform nil)
    (raw-comments        :initform nil)
@@ -120,7 +124,6 @@
     (emacsql-sqlite-ensure-binary)
     t))
 
-;; (setq code-review-db-connection nil)
 (defvar code-review-db-connection nil
   "The EmacSQL database connection.")
 
@@ -138,20 +141,24 @@
   '((pullreq
      [(class :not-null)
       (id :not-null :primary-key)
+      finished
+      finished-at
+      saved
+      saved-at
       raw-infos
       raw-diff
       raw-comments
-      host
-      sha
       owner
       repo
       number
       description
       title
+      host
+      sha
       feedback
+      state
       replies
       review
-      state
       labels
       merge
       milestones
@@ -159,8 +166,8 @@
       reviewers
       assignees
       linked-issues
-      callback
-      (buffer :default eieio-unbound)])
+      (buffer :default eieio-unbound)
+      callback])
 
     (buffer
      [(class :not-null)
@@ -210,6 +217,39 @@
 (defun code-review-db-update (obj)
   "Update whole OBJ in datatabase."
   (closql-insert (code-review-db) obj t))
+
+(defun code-review-db-search (owner repo number)
+  "Find eieio obj of PR for OWNER, REPO, and NUMBER."
+  (let ((db (code-review-db))
+        (class 'code-review-db-pullreq))
+    (->> (emacsql db [:select :*
+                      :from 'pullreq
+                      :where (and (= owner $s1)
+                                  (= repo $s2)
+                                  (= number $s3)
+                                  (= saved 't)
+                                  (is finished nil))]
+                  owner
+                  repo
+                  number)
+         (mapcar
+          (lambda (row) (closql--remake-instance class db row)))
+         (-last-item))))
+
+(defun code-review-db-all-unfinished ()
+  "Get a list of all unfinished Reviews."
+  (when (and code-review-db-connection (emacsql-live-p code-review-db-connection))
+    (emacsql-close code-review-db-connection)
+    (setq code-review-db-connection nil))
+  (let ((class 'code-review-db-pullreq)
+        (db (code-review-db)))
+    (->> (emacsql db
+                  [:select :*
+                   :from 'pullreq
+                   :where (and (= saved 't)
+                               (is finished nil))])
+         (mapcar
+          (lambda (row) (closql--remake-instance class db row))))))
 
 ;;; Domain
 

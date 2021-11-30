@@ -63,26 +63,26 @@
 (cl-defgeneric code-review-core-get-labels (obj)
   "Sync call to get a list of labels from OBJ.")
 
-(cl-defgeneric code-review-core-set-labels (obj)
-  "Sync call to set a list of labels for an OBJ.")
+(cl-defgeneric code-review-core-set-labels (obj callback)
+  "Sync call to set a list of labels for an OBJ and call CALLBACK afterward..")
 
 (cl-defgeneric code-review-core-get-assignees (obj)
   "Sync call to get a list of assignees from OBJ.")
 
-(cl-defgeneric code-review-core-set-assignee (obj)
-  "Set an assignee for an OBJ.")
+(cl-defgeneric code-review-core-set-assignee (obj callback)
+  "Set an assignee for an OBJ and call CALLBACK afterward..")
 
 (cl-defgeneric code-review-core-get-milestones (obj)
   "Sync call to get a list of milestones from OBJ.")
 
-(cl-defgeneric code-review-core-set-milestone (obj)
-  "Set a milestone for an OBJ.")
+(cl-defgeneric code-review-core-set-milestone (obj callback)
+  "Set a milestone for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-set-title (obj)
-  "Set a pullrequest title for an OBJ.")
+(cl-defgeneric code-review-core-set-title (obj callback)
+  "Set a pullrequest title for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-set-description (obj)
-  "Set a pullrequest description for an OBJ.")
+(cl-defgeneric code-review-core-set-description (obj callback)
+  "Set a pullrequest description for an OBJ and call CALLBACK afterward.")
 
 (cl-defgeneric code-review-core-merge (obj strategy)
   "Merge a PR for an OBJ using a given STRATEGY.")
@@ -92,6 +92,12 @@
 
 (cl-defgeneric code-review-core-delete-reaction (obj context-name comment-id reaction-id)
   "Delete a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
+
+(cl-defgeneric code-review-core-get-assinable-users (obj)
+  "Get users that can review a PR for OBJ.")
+
+(cl-defgeneric code-review-core-request-review (obj user-ids callback)
+  "Request for OBJ a list of USER-IDS to review a PR and call CALLBACK afterward.")
 
 (provide 'code-review-core)
 ;;; code-review-core.el ends here

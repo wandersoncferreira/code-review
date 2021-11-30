@@ -8,3 +8,8 @@ If you provide an empty candidate, all the current labels will be removed from t
 
 `completing-read-multiple` works by separating each value with a comma. You can
 also see a list of candidates by pressing TAB.
+
+
+## Request Reviewers
+
+The `code-review-request-reviewers` command aldo relies on `completing-read-multiple`.

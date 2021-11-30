@@ -1,10 +1,11 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
+[![MELPA](https://melpa.org/packages/code-review-badge.svg)](https://melpa.org/#/code-review)
 ![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
 
 # Code Review
 
 Package to help you perform code reviews from your VC provider. Currently
-supports only Github.
+supports Github and basic Gitlab workflow.
 
 ![Demo of code review package](./docs/code_review_demo.png)
 
@@ -33,6 +34,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Merge your PR. _(beta feature) See details [merge](./docs/merge.md)_
 - Reactions. See details [react to comments](./docs/reactions.md)
 - Promote comments to new issues.
+- Save/Resume in-progress Reviews
 
 
 The basic workflow:
@@ -49,35 +51,17 @@ You can include your own bindings to functions like
 `code-review-request-changes`, and `code-review-comments` to not rely on the
 transient panel. But I think you should see it :]
 
+Take a look at which features are available to each integrated forge [here](./docs/forge_support.md).
+
 Missing something? Please, [let us know](https://github.com/wandersoncferreira/code-review/issues/new).
 
 # Installation
 
-### With melpa
+I highly recommend installing `code-review` through `package.el`.
 
-TBD
+It's available on `MELPA`.
 
-### Directly from source
-
-Clone and add the package to your `load-path`:
-
-``` emacs-lisp
-(add-to-list 'load-path "~/<path-to-the-place-you-cloned>/code-review")
-(require 'code-review)
-
-```
-
-if you are using `use-package`:
-
-``` emacs-lisp
-
-(use-package code-review
-  :load-path "/path-to-the-place-you-cloned")
-```
-
-You also need to install the dependencies manually for now: `closql`, `uuidgen`,
-`magit`, `markdown-mode`, `forge`, `ghub`. `deferred`.
-
+`M-x package-install code-review`
 
 Then you can either `M-x code-review-start` and provide a PR URL or `M-x
 code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
@@ -97,11 +81,25 @@ submitting reviews.
 2. Set the `repo` scope as the subscope of repo
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
-### Auth
+#### Auth
 Add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
+```
+
+### Gitlab
+
+1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
+2. Choose the `api` scope
+
+#### Auth
+
+Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
+and token:
+
+``` emacs-lisp
+machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
 ```
 
 # Keybindings
@@ -123,6 +121,7 @@ Review` buffer.
 | C-c C-n | comment                               | Promote to new issue        |
 | C-c C-r | pr description                        | Add Reaction                |
 | RET     | reaction (on emoji symbol)            | Endorse or Remove Reaction  |
+| RET     | Request Reviewer                      | Request reviewer at point   |
 
 
 ## Binding suggestions
@@ -130,7 +129,7 @@ Review` buffer.
 You can place `code-review-forge-pr-at-point` to a key binding for your convenience:
 
 ``` emacs-lisp
-(define-key forge-topic-mode-map (kbd "C-c r") 'github-review-forge-pr-at-point)
+(define-key forge-topic-mode-map (kbd "C-c r") 'code-review-forge-pr-at-point)
 ```
 
 # Extension to other forges

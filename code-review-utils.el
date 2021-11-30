@@ -192,7 +192,8 @@ using COMMENTS."
                                :internalId .internal-id
                                :path .path
                                :createdAt .createdAt
-                               :updatedAt .updatedAt))
+                               :updatedAt .updatedAt
+                               :line-type .line-type))
                              (t
                               (code-review-code-comment-section
                                :state state
@@ -247,20 +248,36 @@ using COMMENTS."
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
-  (save-match-data
-    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
-         (a-alist 'num   (match-string 3 url)
-                  'repo  (match-string 2 url)
-                  'owner (match-string 1 url)
-                  'url url))))
+  (cond
+   ((string-prefix-p "https://gitlab.com" url)
+    (save-match-data
+      (and (string-match ".*/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" url)
+           (a-alist 'num (match-string 3 url)
+                    'repo (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'gitlab
+                    'url url))))
+   ((string-prefix-p "https://github.com" url)
+    (save-match-data
+      (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
+           (a-alist 'num   (match-string 3 url)
+                    'repo  (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'github
+                    'url url))))))
 
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."
   (let-alist  pr-alist
     (cond
-     ((string-match "github" .url)
+     ((equal .forge 'github)
       (code-review-db--pullreq-create
        (code-review-github-repo :owner .owner
+                                :repo .repo
+                                :number .num)))
+     ((equal .forge 'gitlab)
+      (code-review-db--pullreq-create
+       (code-review-gitlab-repo :owner .owner
                                 :repo .repo
                                 :number .num)))
      (t
@@ -347,38 +364,50 @@ If you already have a FEEDBACK string to submit use it."
 (defun code-review-utils--start-from-forge-at-point ()
   "Start from forge at point."
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq)))
-
+         (repo    (forge-get-repository pullreq))
+         (number (oref pullreq number)))
     (if (not (forge-pullreq-p pullreq))
         (message "We can only review PRs at the moment. You tried on something else.")
       (let* ((pr-alist (a-alist 'owner   (oref repo owner)
                                 'repo    (oref repo name)
-                                'num     (oref pullreq number)
-                                'url (when (forge-github-repository-p repo)
-                                       "https://api.github.com"))))
+                                'num     (cond
+                                          ((numberp number)
+                                           (number-to-string number))
+                                          ((stringp number)
+                                           number)
+                                          (t
+                                           (error "Pull Request has unrecognizable number value")))
+                                'forge (cond
+                                        ((forge-github-repository-p repo)
+                                         'github)
+                                        ((forge-gitlab-repository-p repo)
+                                         'gitlab)
+                                        (t
+                                         (error "Backend not supported!"))))))
         (code-review-utils-build-obj pr-alist)
         (code-review--build-buffer
          code-review-buffer-name)))))
 
 ;;; Header setters
-
 (defun code-review-utils--set-label-field (obj)
   "Helper function to set header multi value fields given by OP-NAME and OBJ.
 Milestones, labels, projects, and more."
-  (let* ((options (code-review-core-get-labels obj))
-         (choices (completing-read-multiple "Choose: " options))
-         (labels (append
-                  (-map (lambda (x)
-                          `((name . ,x)
-                            (color . "0075ca")))
-                        choices)
-                  (oref obj labels))))
-    (setq code-review-comment-cursor-pos (point))
-    (oset obj labels labels)
-    (code-review-core-set-labels obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+  (when-let (options (code-review-core-get-labels obj))
+    (let* ((choices (completing-read-multiple "Choose: " options))
+           (labels (append
+                    (-map (lambda (x)
+                            `((name . ,x)
+                              (color . "0075ca")))
+                          choices)
+                    (oref obj labels))))
+      (setq code-review-comment-cursor-pos (point))
+      (oset obj labels labels)
+      (code-review-core-set-labels
+       obj
+       (lambda ()
+         (closql-insert (code-review-db) obj t)
+         (code-review--build-buffer
+          (code-review-utils-current-project-buffer-name)))))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
   "Helper function to set assignees header field given an OBJ.
@@ -386,47 +415,55 @@ If a valid ASSIGNEE is provided, use that instead."
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)
-      (let* ((options (code-review-core-get-assignees obj))
-             (choice (completing-read "Choose: " options)))
-        (setq candidate choice)))
+      (when-let (options (code-review-core-get-assignees obj))
+        (let* ((choice (completing-read "Choose: " options)))
+          (setq candidate choice))))
     (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-core-set-assignee obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+    (code-review-core-set-assignee
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        (code-review-utils-current-project-buffer-name))))))
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
-  (let* ((options (code-review-core-get-milestones obj))
-         (choice (completing-read "Choose: " (a-keys options)))
-         (milestone `((title . ,choice)
-                      (perc . 0)
-                      (number .,(alist-get choice options nil nil 'equal)))))
-    (setq code-review-comment-cursor-pos (point))
-    (oset obj milestones milestone)
-    (code-review-core-set-milestone obj)
-    (closql-insert (code-review-db) obj t)
-    (code-review--build-buffer
-     (code-review-utils-current-project-buffer-name))))
+  (when-let (options (code-review-core-get-milestones obj))
+    (let* ((choice (completing-read "Choose: " (a-keys options)))
+           (milestone `((title . ,choice)
+                        (perc . 0)
+                        (number .,(alist-get choice options nil nil 'equal)))))
+      (setq code-review-comment-cursor-pos (point))
+      (oset obj milestones milestone)
+      (code-review-core-set-milestone
+       obj
+       (lambda ()
+         (closql-insert (code-review-db) obj t)
+         (code-review--build-buffer
+          (code-review-utils-current-project-buffer-name)))))))
 
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
   (let ((pr (code-review-db-get-pullreq)))
     (setq code-review-comment-cursor-pos (point))
     (oset pr title title)
-    (code-review-core-set-title pr)
-    (closql-insert (code-review-db) pr t)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (code-review-core-set-title
+     pr
+     (lambda ()
+       (closql-insert (code-review-db) pr t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review-utils--set-description-field (description)
   "Helper function to set a DESCRIPTION."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr description description)
-    (code-review-core-set-description pr)
-    (closql-insert (code-review-db) pr t)
-    (code-review--build-buffer
-     code-review-buffer-name)))
+    (code-review-core-set-description
+     pr
+     (lambda ()
+       (closql-insert (code-review-db) pr t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review-utils--set-feedback-field (feedback)
   "Helper function to set a FEEDBACK."
@@ -507,6 +544,37 @@ Expect the same output as `git diff --no-prefix`"
            (line-number-at-pos))))
     (setq code-review--line-number-cache (cons (point) pos))
     pos))
+
+(defvar code-review-utils--bin-dir
+  (file-name-directory (or load-file-name buffer-file-name)))
+
+(defun code-review-utils--get-graphql (forge name)
+  "Get Graphql content for NAME (symbol) for a given FORGE."
+  (with-temp-buffer
+    (insert-file-contents-literally
+     (concat code-review-utils--bin-dir "graphql/" (symbol-name forge) "/" (symbol-name name) ".graphql"))
+    (buffer-substring-no-properties (point-min) (point-max))))
+
+(defun code-review-utils--fmt-reviewers (infos)
+  "Produce group of reviewers and their statuses from INFOS."
+  (let-alist infos
+    (let ((groups (make-hash-table :test 'equal)))
+      (puthash "PENDING" (mapcar
+                          (lambda (r)
+                            (let-alist r
+                              `((code-owner? . ,.asCodeOwner)
+                                (login . ,.requestedReviewer.login)
+                                (at))))
+                          .reviewRequests.nodes)
+               groups)
+      (mapc (lambda (o)
+              (let-alist o
+                (push `((code-owner?)
+                        (login . ,.author.login)
+                        (at . ,.createdAt))
+                      (gethash .state groups))))
+            .latestOpinionatedReviews.nodes)
+      groups)))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

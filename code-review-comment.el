@@ -206,9 +206,18 @@ Optionally define a MSG."
   (with-slots (type) (magit-current-section)
     (if (not (equal type 'hunk))
         (message "You can't add text over unspecified region.")
-      (let ((current-line (line-number-at-pos))
-            (amount-loc nil))
-        (while (and (not (looking-at "Comment by\\|Reviewed by\\|modified\\|new file\\|deleted"))
+      (let* ((current-line (line-number-at-pos))
+             (line (save-excursion
+                     (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+             (line-type (cond
+                         ((string-prefix-p "-" line)
+                          "REMOVED")
+                         ((string-prefix-p "+" line)
+                          "ADDED")
+                         (t
+                          "UNCHANGED")))
+             (amount-loc nil))
+        (while (and (not (looking-at "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
                     (not (equal (point) (point-min))))
           (forward-line -1))
         (let ((section (magit-current-section)))
@@ -226,7 +235,8 @@ Optionally define a MSG."
                                  :state "LOCAL COMMENT"
                                  :author (code-review-utils--git-get-user)
                                  :path (a-get obj 'path)
-                                 :position diff-pos)))
+                                 :position diff-pos
+                                 :line-type line-type)))
             (setq code-review-comment-uncommitted local-comment)
             (code-review-comment-add)))))))
 
@@ -272,7 +282,7 @@ Optionally define a MSG."
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
-  "Commit the reply OBJ."
+  "Commit the local comment OBJ."
   (let* ((buff-name (if code-review-comment-commit-buffer?
                         code-review-commit-buffer-name
                       code-review-buffer-name))
@@ -289,6 +299,7 @@ Optionally define a MSG."
                                           (diffHunk)
                                           (outdated)
                                           (reply?)
+                                          (line-type . ,(oref obj line-type))
                                           (local? . t)))))))
 
     (when (oref obj edit?)
