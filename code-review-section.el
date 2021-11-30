@@ -302,6 +302,7 @@ For internal usage only.")
            :type string)
    (id     :initarg :id)
    (reactions :initarg :reactions)
+   (typename :initarg :typename)
    (face   :initform 'magit-log-author)))
 
 (defvar code-review-comment-section-map
@@ -332,10 +333,20 @@ For internal usage only.")
   (let* ((pr (code-review-db-get-pullreq))
          (section (magit-current-section)))
     (with-slots (value) section
-      (let* ((reference-link (format "https://github.com/%s/%s/issues/%s#issuecomment-%s"
+      (let* ((orig-identifier (cond
+                               ((code-review-code-comment-section-p section)
+                                "discussion_r")
+                               ((code-review-comment-section-p section)
+                                (pcase (oref value typename)
+                                  ("IssueComment" "issuecomment-")
+                                  ("PullRequestReview" "pullrequestreview-")))
+                               (t
+                                (error "Promote comment to issue not supported for this type of comment."))))
+             (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
                                      (oref pr owner)
                                      (oref pr repo)
                                      (oref pr number)
+                                     orig-identifier
                                      (oref value id)))
              (title (-first-item (split-string (oref value msg) "\n")))
              (obj (code-review-promote-comment-to-issue
@@ -985,6 +996,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                    :author (a-get-in c (list 'author 'login))
                    :msg (a-get c 'bodyText)
                    :id (a-get c 'databaseId)
+                   :typename (a-get c 'typename)
                    :reactions reaction-objs)))
         (magit-insert-section (code-review-comment-section obj)
           (insert (concat

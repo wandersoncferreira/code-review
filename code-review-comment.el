@@ -327,7 +327,7 @@ Optionally define a MSG."
       (let* ((pr (code-review-db-get-pullreq))
              (body (concat (string-trim body)
                            "\n\n"
-                           (format "_Originally posted by %s in %s_"
+                           (format "_Originally posted by @%s in %s_"
                                    (oref obj author)
                                    (oref obj reference-link)))))
         (code-review-core-new-issue pr body title)))))

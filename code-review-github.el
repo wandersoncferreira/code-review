@@ -240,6 +240,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       }
       comments(first:50) {
         nodes {
+          typename:__typename
           reactions(first:50){
             nodes {
               id
@@ -257,10 +258,12 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       }
       reviews(first: 50) {
         nodes {
+          typename:__typename
           author { login }
           bodyText
           state
           createdAt
+          databaseId
           updatedAt
           comments(first: 50) {
             nodes {
