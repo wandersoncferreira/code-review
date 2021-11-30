@@ -45,16 +45,6 @@
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
 
-(defun code-review-utils-current-project-buffer-name ()
-  "Return the name of the buffer we are currently in."
-  (interactive)
-  (let ((name (buffer-name (current-buffer))))
-    (if (-contains-p (list code-review-buffer-name
-                           code-review-commit-buffer-name)
-                     name)
-        name
-      (throw :invalid-usage "You are trying to call this function from an unexpected place."))))
-
 ;;; COMMENTS
 
 (defun code-review-utils--comment-key (path pos)
@@ -407,7 +397,7 @@ Milestones, labels, projects, and more."
        (lambda ()
          (closql-insert (code-review-db) obj t)
          (code-review--build-buffer
-          (code-review-utils-current-project-buffer-name)))))))
+          code-review-buffer-name))))))
 
 (defun code-review-utils--set-assignee-field (obj &optional assignee)
   "Helper function to set assignees header field given an OBJ.
@@ -424,7 +414,7 @@ If a valid ASSIGNEE is provided, use that instead."
      (lambda ()
        (closql-insert (code-review-db) obj t)
        (code-review--build-buffer
-        (code-review-utils-current-project-buffer-name))))))
+        code-review-buffer-name)))))
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
@@ -440,7 +430,7 @@ If a valid ASSIGNEE is provided, use that instead."
        (lambda ()
          (closql-insert (code-review-db) obj t)
          (code-review--build-buffer
-          (code-review-utils-current-project-buffer-name)))))))
+          code-review-buffer-name))))))
 
 (defun code-review-utils--set-title-field (title)
   "Helper function to set a TITLE."
@@ -544,16 +534,6 @@ Expect the same output as `git diff --no-prefix`"
            (line-number-at-pos))))
     (setq code-review--line-number-cache (cons (point) pos))
     pos))
-
-(defvar code-review-utils--bin-dir
-  (file-name-directory (or load-file-name buffer-file-name)))
-
-(defun code-review-utils--get-graphql (forge name)
-  "Get Graphql content for NAME (symbol) for a given FORGE."
-  (with-temp-buffer
-    (insert-file-contents-literally
-     (concat code-review-utils--bin-dir "graphql/" (symbol-name forge) "/" (symbol-name name) ".graphql"))
-    (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun code-review-utils--fmt-reviewers (infos)
   "Produce group of reviewers and their statuses from INFOS."
