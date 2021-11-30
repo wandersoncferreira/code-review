@@ -820,6 +820,15 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (format "%-17s" "Projects: ") projects)
           (insert ?\n))))))
 
+(defclass code-review-suggested-reviewers-section (magit-section)
+  ((keymap :initform 'code-review-suggested-reviewers-section-map)))
+
+(defvar code-review-suggested-reviewers-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-request-review-at-point)
+    map)
+  "Keymaps for suggested reviewers section.")
+
 (defun code-review-section-insert-suggested-reviewers ()
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
@@ -845,7 +854,7 @@ Optionally DELETE? flag must be set if you want to remove it."
              (suggested-reviewers (if (not reviewers)
                                       (propertize "No suggestions" 'font-lock-face 'magit-dimmed)
                                     reviewers)))
-        (magit-insert-section (code-review-reviewers-section suggested-reviewers)
+        (magit-insert-section (code-review-suggested-reviewers-section suggested-reviewers)
           (insert "Suggested-Reviewers:")
           (if (not reviewers)
               (insert " " suggested-reviewers)

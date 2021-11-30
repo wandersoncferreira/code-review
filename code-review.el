@@ -623,18 +623,20 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (setq code-review-section-full-refresh? nil))
 
 ;;;###autoload
-(defun code-review-request-reviews ()
-  "Request reviewers for current PR using REVIEWER-LOGINS."
+(defun code-review-request-reviews (&optional login)
+  "Request reviewers for current PR using LOGIN if available."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
          (users (code-review-core-get-assinable-users pr))
          (choices
-          (completing-read-multiple
-           "Request review: "
-           (mapcar
-            (lambda (u)
-              (format "@%s :- %s" (a-get u 'login) (a-get u 'name)))
-            users)))
+          (if login
+              (list (format "@%s :- " login))
+            (completing-read-multiple
+             "Request review: "
+             (mapcar
+              (lambda (u)
+                (format "@%s :- %s" (a-get u 'login) (a-get u 'name)))
+              users))))
          (logins)
          (ids (mapcar
                (lambda (choice)
@@ -664,6 +666,18 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                                          (code-review--build-buffer
                                           code-review-buffer-name))))))
 
+(defun code-review-request-review-at-point ()
+  "Request reviewer at point."
+  (interactive)
+  (setq code-review-comment-cursor-pos (point))
+  (let* ((line (buffer-substring-no-properties
+                (line-beginning-position)
+                (line-end-position)))
+         (login (-> line
+                    (split-string "- @")
+                    (-second-item)
+                    (string-trim))))
+    (code-review-request-reviews login)))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
