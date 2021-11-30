@@ -608,6 +608,20 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
            code-review-buffer-name))
       (code-review-gitlab-not-supported-message))))
 
+(defun code-review-promote-comment-to-new-issue ()
+  "Promote the comment to a new issue."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (if (code-review-gitlab-repo-p pr)
+        (message "Promote comment to issue not supported in Gitlab yet.")
+      (let-alist (code-review-github-promote-comment-to-new-issue-data pr)
+        (-> (code-review-comment-promote-to-issue
+             :reference-link .reference-link
+             :author .author
+             :title .title
+             :body .body)
+            (code-review-comment-handler-add-or-edit))))))
+
 ;;; Entrypoint
 
 ;;;###autoload

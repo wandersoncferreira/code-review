@@ -191,7 +191,14 @@ Optionally define a MSG."
         code-review-comment-title? t)
   (code-review-comment-add))
 
-(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-promote-comment-to-issue))
+(defclass code-review-comment-promote-to-issue ()
+  ((reference-link :initarg :reference-link)
+   (author :initarg :author)
+   (title :initarg :title)
+   (body :initarg :body)
+   (buffer-text :initform nil)))
+
+(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-comment-promote-to-issue))
   "Edit msg and title before promoting OBJ comment to new issue."
   (setq code-review-comment-uncommitted obj
         code-review-promote-comment-to-issue? t)
@@ -310,7 +317,7 @@ Optionally define a MSG."
     (code-review--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
-(cl-defmethod code-review-comment-handler-commit ((obj code-review-promote-comment-to-issue))
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue))
   "Commit the promotion of comment OBJ to new issue."
   (save-match-data
     (let ((text (oref obj buffer-text))
@@ -330,8 +337,9 @@ Optionally define a MSG."
                            (format "_Originally posted by @%s in %s_"
                                    (oref obj author)
                                    (oref obj reference-link)))))
-        (code-review-core-new-issue pr body title (lambda (&rest _)
-                                                    (message "New issue created.")))))))
+        (setq code-review-promote-comment-to-issue? nil)
+        (code-review-core-new-issue pr body title
+                                    (lambda (&rest _) (message "New issue created.")))))))
 
 ;;;###autoload
 (defun code-review-comment-commit ()

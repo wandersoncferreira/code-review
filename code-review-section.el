@@ -151,6 +151,7 @@
 (defvar code-review-reaction-types)
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
+(declare-function code-review-promote-comment-to-new-issue "code-review")
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -319,42 +320,6 @@ For internal usage only.")
          (comment-id (oref (oref section value) id)))
     (setq code-review-comment-cursor-pos (point))
     (code-review-toggle-reaction-at-point comment-id "comment")))
-
-(defclass code-review-promote-comment-to-issue ()
-  ((reference-link :initarg :reference-link)
-   (author :initarg :author)
-   (title :initarg :title)
-   (body :initarg :body)
-   (buffer-text :initform nil)))
-
-(defun code-review-promote-comment-to-new-issue ()
-  "Promote the comment to a new issue."
-  (interactive)
-  (let* ((pr (code-review-db-get-pullreq))
-         (section (magit-current-section)))
-    (with-slots (value) section
-      (let* ((orig-identifier (cond
-                               ((code-review-code-comment-section-p section)
-                                "discussion_r")
-                               ((code-review-comment-section-p section)
-                                (pcase (oref value typename)
-                                  ("IssueComment" "issuecomment-")
-                                  ("PullRequestReview" "pullrequestreview-")))
-                               (t
-                                (error "Promote comment to issue not supported for this type of comment."))))
-             (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
-                                     (oref pr owner)
-                                     (oref pr repo)
-                                     (oref pr number)
-                                     orig-identifier
-                                     (oref value id)))
-             (title (-first-item (split-string (oref value msg) "\n")))
-             (obj (code-review-promote-comment-to-issue
-                   :reference-link reference-link
-                   :author (oref value author)
-                   :title title
-                   :body (oref value msg))))
-        (code-review-comment-handler-add-or-edit obj)))))
 
 (defun code-review-conversation--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
   "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.

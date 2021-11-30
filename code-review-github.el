@@ -616,5 +616,30 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              :errorback #'code-review-github-errback
              :callback callback))
 
+(cl-defmethod code-review-github-promote-comment-to-new-issue-data ((github code-review-github-repo))
+  "Promote comment to new issue in GITHUB."
+  (let ((section (magit-current-section)))
+    (with-slots (value) section
+      (let* ((orig-identifier (cond
+                               ((code-review-code-comment-section-p section)
+                                "discussion_r")
+                               ((code-review-comment-section-p section)
+                                (pcase (oref value typename)
+                                  ("IssueComment" "issuecomment-")
+                                  ("PullRequestReview" "pullrequestreview-")))
+                               (t
+                                (error "Promote comment to issue not supported for this type of comment."))))
+             (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
+                                     (oref github owner)
+                                     (oref github repo)
+                                     (oref github number)
+                                     orig-identifier
+                                     (oref value id)))
+             (title (-first-item (split-string (oref value msg) "\n"))))
+        `((reference-link . ,reference-link)
+          (author . ,(oref value author))
+          (title . ,title)
+          (body . ,(oref value msg)))))))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
