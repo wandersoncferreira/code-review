@@ -17,4 +17,5 @@ Features supported by each integrated forge:
 | Merge your PR                  | experimental |        |
 | Toggle Reactions               | x            |        |
 | Save/Resume in-progress Review | x            | x      |
+| Request Reviewers              | x            |        |
 
