@@ -641,5 +641,27 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           (title . ,title)
           (body . ,(oref value msg)))))))
 
+(cl-defmethod code-review-core-files ((github code-review-github-repo) callback)
+  "Get files from GITHUB PR and call CALLBACK."
+  (ghub-get (format "/repos/%s/%s/pulls/%s/files"
+                    (oref github owner)
+                    (oref github repo)
+                    (oref github number))
+            nil
+            :auth 'code-review
+            :errorback #'code-review-github-errback
+            :callback callback))
+
+(cl-defmethod code-review-core-files-deferred ((github code-review-github-repo))
+  "Get files from GITHUB PR."
+  (let ((d (deferred:new #'identity)))
+    (code-review-core-files
+     github
+     (apply-partially
+      (lambda (d v &rest _)
+        (deferred:callback-post d v))
+      d))
+    d))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

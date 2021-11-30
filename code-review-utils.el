@@ -556,5 +556,12 @@ Expect the same output as `git diff --no-prefix`"
             .latestOpinionatedReviews.nodes)
       groups)))
 
+(defun code-review-utils--visit-binary-file-at-point ()
+  "Visit binary file at point."
+  (interactive)
+  (let ((section (magit-current-section)))
+    (with-slots (value) section
+      (browse-url (a-get value 'blob_url)))))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
