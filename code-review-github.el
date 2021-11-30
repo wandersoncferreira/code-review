@@ -240,6 +240,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       }
       comments(first:50) {
         nodes {
+          typename:__typename
           reactions(first:50){
             nodes {
               id
@@ -257,10 +258,12 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       }
       reviews(first: 50) {
         nodes {
+          typename:__typename
           author { login }
           bodyText
           state
           createdAt
+          databaseId
           updatedAt
           comments(first: 50) {
             nodes {
@@ -601,6 +604,42 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               (message "Review requested successfully!")
                               (funcall callback))
                   :errorback #'code-review-github-errback)))
+
+(cl-defmethod code-review-core-new-issue ((github code-review-github-repo) body title callback)
+  "Create a new issue in GITHUB given a BODY and TITLE and call CALLBACK."
+  (ghub-post (format "/repos/%s/%s/issues"
+                     (oref github owner)
+                     (oref github repo))
+             nil
+             :auth 'code-review
+             :payload (a-alist 'body body 'title title)
+             :errorback #'code-review-github-errback
+             :callback callback))
+
+(cl-defmethod code-review-github-promote-comment-to-new-issue-data ((github code-review-github-repo))
+  "Promote comment to new issue in GITHUB."
+  (let ((section (magit-current-section)))
+    (with-slots (value) section
+      (let* ((orig-identifier (cond
+                               ((code-review-code-comment-section-p section)
+                                "discussion_r")
+                               ((code-review-comment-section-p section)
+                                (pcase (oref value typename)
+                                  ("IssueComment" "issuecomment-")
+                                  ("PullRequestReview" "pullrequestreview-")))
+                               (t
+                                (error "Promote comment to issue not supported for this type of comment."))))
+             (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
+                                     (oref github owner)
+                                     (oref github repo)
+                                     (oref github number)
+                                     orig-identifier
+                                     (oref value id)))
+             (title (-first-item (split-string (oref value msg) "\n"))))
+        `((reference-link . ,reference-link)
+          (author . ,(oref value author))
+          (title . ,title)
+          (body . ,(oref value msg)))))))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

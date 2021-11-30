@@ -60,6 +60,10 @@ For internal usage only.")
   "Are you writing a title?.
 For internal usage only.")
 
+(defvar code-review-promote-comment-to-issue? nil
+  "Are you promoting a comment to a new issue?.
+For internal usage only.")
+
 (defvar code-review-comment-description? nil
   "Are you writing a description?.
 For internal usage only.")
@@ -91,12 +95,13 @@ For internal usage only.")
 
 ;;; Comment C_UD
 
-(defun code-review-comment-add ()
-  "Add comment."
+(defun code-review-comment-add (&optional msg)
+  "Add comment.
+Optionally define a MSG."
   (let ((buffer (get-buffer-create code-review-comment-buffer-name)))
     (with-current-buffer buffer
       (erase-buffer)
-      (insert code-review-comment-buffer-msg)
+      (insert (if msg msg code-review-comment-buffer-msg))
       (insert ?\n)
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
@@ -174,7 +179,6 @@ For internal usage only.")
     (setq code-review-comment-uncommitted reply-comment)
     (code-review-comment-add)))
 
-
 (cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-local-comment-section))
   "Edit local comment in OBJ."
   (oset obj edit? t)
@@ -186,6 +190,23 @@ For internal usage only.")
   (setq code-review-comment-uncommitted obj
         code-review-comment-title? t)
   (code-review-comment-add))
+
+(defclass code-review-comment-promote-to-issue ()
+  ((reference-link :initarg :reference-link)
+   (author :initarg :author)
+   (title :initarg :title)
+   (body :initarg :body)
+   (buffer-text :initform nil)))
+
+(cl-defmethod code-review-comment-handler-add-or-edit ((obj code-review-comment-promote-to-issue))
+  "Edit msg and title before promoting OBJ comment to new issue."
+  (setq code-review-comment-uncommitted obj
+        code-review-promote-comment-to-issue? t)
+  (code-review-comment-add
+   (format "<!-- Do not remove the Title and Body placeholders.  -->
+<!-- You can add multi-line segments in the body section. -->\n\nTitle: %s\n\nBody:\n> %s"
+           (oref obj title)
+           (oref obj body))))
 
 (cl-defmethod code-review-comment-handler-add-or-edit (obj)
   "Add a comment in the OBJ."
@@ -297,6 +318,30 @@ For internal usage only.")
     (code-review--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue))
+  "Commit the promotion of comment OBJ to new issue."
+  (save-match-data
+    (let ((text (oref obj buffer-text))
+          (regex (rx "Title:"
+                     (group-n 1 (* any) "\n")
+                     (one-or-more "\n")
+                     "Body:"
+                     (group-n 2 (zero-or-more anything))))
+          (title)
+          (body))
+      (and (string-match regex text)
+           (setq title (match-string 1 text))
+           (setq body (match-string 2 text)))
+      (let* ((pr (code-review-db-get-pullreq))
+             (body (concat (string-trim body)
+                           "\n\n"
+                           (format "_Originally posted by @%s in %s_"
+                                   (oref obj author)
+                                   (oref obj reference-link)))))
+        (setq code-review-promote-comment-to-issue? nil)
+        (code-review-core-new-issue pr body title
+                                    (lambda (&rest _) (message "New issue created.")))))))
+
 ;;;###autoload
 (defun code-review-comment-commit ()
   "Commit comment."
@@ -318,6 +363,11 @@ For internal usage only.")
            (code-review-utils--comment-clean-msg
             comment-text
             code-review-comment-feedback-msg)))
+         (code-review-promote-comment-to-issue?
+          (progn
+            (oset code-review-comment-uncommitted buffer-text comment-text)
+            (code-review-comment-handler-commit
+             code-review-comment-uncommitted)))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)

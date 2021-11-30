@@ -151,6 +151,7 @@
 (defvar code-review-reaction-types)
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
+(declare-function code-review-promote-comment-to-new-issue "code-review")
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -302,11 +303,13 @@ For internal usage only.")
            :type string)
    (id     :initarg :id)
    (reactions :initarg :reactions)
+   (typename :initarg :typename)
    (face   :initform 'magit-log-author)))
 
 (defvar code-review-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-new-issue)
     map)
   "Keymaps for comment section.")
 
@@ -488,6 +491,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-to-new-issue)
     map)
   "Keymaps for code-comment sections.")
 
@@ -957,6 +961,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                    :author (a-get-in c (list 'author 'login))
                    :msg (a-get c 'bodyText)
                    :id (a-get c 'databaseId)
+                   :typename (a-get c 'typename)
                    :reactions reaction-objs)))
         (magit-insert-section (code-review-comment-section obj)
           (insert (concat
