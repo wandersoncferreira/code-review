@@ -130,6 +130,15 @@ For internal usage only.")
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
 
+(defun code-review-comment-delete-feedback ()
+  "Add review FEEDBACK."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (oset pr feedback nil)
+    (code-review-db-update pr)
+    (code-review--build-buffer
+     code-review-buffer-name)))
+
 ;;;###autoload
 (defun code-review-comment-set-title ()
   "Add review title."
