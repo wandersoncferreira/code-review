@@ -105,22 +105,22 @@
 (defface code-review-pending-state-face
   `((((class color) (background light))
      ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "Yellow")
+     :foreground "yellow4")
     (((class color) (background  dark))
      ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "Yellow"))
+     :foreground "DarkKhaki"))
   "Face used for pending state."
   :group 'code-review)
 
 (defface code-review-request-review-face
   `((((class color) (background light))
      ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "LightYellow"
+     :foreground "yellow4"
      :slant italic
      :underline t)
     (((class color) (background  dark))
      ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "LightYellow"
+     :foreground "DarkKhaki"
      :slant italic
      :underline t))
   "Face used for pending state."
