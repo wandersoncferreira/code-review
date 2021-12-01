@@ -533,21 +533,28 @@ repository:project(fullPath: \"%s\") {
   "Set reaction for your pr in GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-gitlab-binary-file-url ((gitlab code-review-gitlab-repo) filename)
-  "Make the GITLAB url for the FILENAME."
+(cl-defmethod code-review-binary-file-url ((gitlab code-review-gitlab-repo) filename &optional blob?)
+  "Make the GITLAB url for the FILENAME.
+Return the blob URL if BLOB? is provided."
   (let ((sha (a-get-in (oref gitlab raw-infos) (list 'diffRefs 'headSha))))
-    (format "https://%s/v4/projects/%s/repository/files/%s/raw?ref=%s"
-            code-review-gitlab-host
-            (code-review-gitlab--project-id gitlab)
-            filename
-            sha)))
+    (if blob?
+        (format "https://gitlab.com/%s/%s/-/blob/%s/%s"
+                (oref gitlab owner)
+                (oref gitlab repo)
+                sha
+                filename)
+      (format "https://%s/v4/projects/%s/repository/files/%s/raw?ref=%s"
+              code-review-gitlab-host
+              (code-review-gitlab--project-id gitlab)
+              filename
+              sha))))
 
-(cl-defmethod code-review-gitlab-binary-file ((gitlab code-review-gitlab-repo) filename)
+(cl-defmethod code-review-binary-file ((gitlab code-review-gitlab-repo) filename)
   "Get FILENAME from GITLAB."
   (let* ((pwd (auth-source-pick-first-password :host code-review-gitlab-host))
-         (token (format "PRIVATE-TOKEN: %s" pwd))
-         (url (code-review-gitlab-binary-file-url gitlab filename)))
-    (code-review-utils--fetch-binary-data url filename token)))
+         (headers (format "--header 'PRIVATE-TOKEN: %s'" pwd))
+         (url (code-review-binary-file-url gitlab filename)))
+    (code-review-utils--fetch-binary-data url filename headers)))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
