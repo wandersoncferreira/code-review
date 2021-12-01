@@ -641,5 +641,29 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           (title . ,title)
           (body . ,(oref value msg)))))))
 
+(cl-defmethod code-review-binary-file-url ((github code-review-github-repo) filename &optional blob?)
+  "Make the GITHUB url for the FILENAME.
+Return the blob URL if BLOB? is provided."
+  (if blob?
+      (format "https://github.com/%s/%s/blob/%s/%s"
+              (oref github owner)
+              (oref github repo)
+              (oref github sha)
+              filename)
+    (format "https://%s/repos/%s/%s/contents/%s?ref=%s"
+            code-review-github-host
+            (oref github owner)
+            (oref github repo)
+            filename
+            (oref github sha))))
+
+(cl-defmethod code-review-binary-file ((github code-review-github-repo) filename)
+  "Get FILENAME from GITHUB."
+  (let* ((pwd (auth-source-pick-first-password :host code-review-github-host))
+         (headers (format "--header 'Authorization: token %s' --header 'Accept: application/vnd.github.v3.raw'"
+                          pwd))
+         (url (code-review-binary-file-url github filename)))
+    (code-review-utils--fetch-binary-data url filename headers)))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

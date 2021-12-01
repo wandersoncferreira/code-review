@@ -556,5 +556,37 @@ Expect the same output as `git diff --no-prefix`"
             .latestOpinionatedReviews.nodes)
       groups)))
 
+(defun code-review-utils--visit-binary-file-at-point ()
+  "Visit binary file at point."
+  (interactive)
+  (let ((section (magit-current-section))
+        (pr (code-review-db-get-pullreq)))
+    (with-slots (value) section
+      (let* ((filename (substring-no-properties value))
+             (dired-url (code-review-binary-file pr filename)))
+        (if (not dired-url)
+            (message "Fetch binary file error! Try to view in the Forge using C-c C-v")
+          (dired-at-point dired-url))))))
+
+(defun code-review-utils--visit-binary-file-at-remote ()
+  "Visit binary file in the forge."
+  (interactive)
+  (let ((section (magit-current-section))
+        (pr (code-review-db-get-pullreq)))
+    (with-slots (value) section
+      (let* ((filename (substring-no-properties value))
+             (url (code-review-binary-file-url pr filename t)))
+        (browse-url url)))))
+
+(defun code-review-utils--fetch-binary-data (url filename headers)
+  "Fetch FILENAME from URL using HEADERS."
+  (unless (file-exists-p code-review-download-dir)
+    (make-directory code-review-download-dir))
+  (let ((output (format "%s/%s" code-review-download-dir filename)))
+    (when (equal 0 (shell-command
+                    (format "curl %s '%s' -o %s"
+                            headers url output)))
+      output)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

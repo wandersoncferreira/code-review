@@ -35,6 +35,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Reactions. See details [react to comments](./docs/reactions.md)
 - Promote comments to new issues.
 - Save/Resume in-progress Reviews
+- Visit binary files in Dired or Remote. Example [here](https://github.com/wandersoncferreira/code-review/pull/90)
 
 The basic workflow:
 
@@ -75,6 +76,9 @@ If you want to use `code-review` in a full buffer you can change the function
 used to display the buffer at `code-review-new-buffer-window-strategy` e.g. you
 can set `(setq code-review-new-buffer-window-strategy #'switch-to-buffer)` to
 not open a new window.
+
+Set `code-review-download-dir` to change the place Code Review will download
+binary files in your pull request when you decide to visit them.
 
 ### GitHub
 

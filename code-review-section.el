@@ -152,6 +152,8 @@
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
 (declare-function code-review-promote-comment-to-new-issue "code-review")
+(declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
+(declare-function code-review-utils--visit-binary-file-at-point "code-review-utils")
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -1144,6 +1146,16 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                  amount-loc-incr))
           (code-review-comment-insert-lines c))))))
 
+(defclass code-review-binary-file-section (magit-section)
+  ((keymap :initform 'code-review-binary-file-section-map)))
+
+(defvar code-review-binary-file-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
+    (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
+    map)
+  "Keymaps for binary files sections.")
+
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE.
@@ -1181,6 +1193,9 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
       (magit-insert-section (hunk '(rename))
         (insert rename)
         (magit-insert-heading)))
+    (when (string-match-p "Binary files.*" header)
+      (magit-insert-section (code-review-binary-file-section file)
+        (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n")))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun code-review-section--magit-diff-wash-hunk ()
