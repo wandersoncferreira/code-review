@@ -35,6 +35,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Reactions. See details [react to comments](./docs/reactions.md)
 - Promote comments to new issues.
 - Save/Resume in-progress Reviews
+- Visit binary files in Dired or Remote. Example [here](https://github.com/wandersoncferreira/code-review/pull/90)
 
 The basic workflow:
 

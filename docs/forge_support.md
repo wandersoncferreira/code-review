@@ -19,4 +19,6 @@ Features supported by each integrated forge:
 | Save/Resume in-progress Review | x            | x      |
 | Request Reviewers              | x            |        |
 | Promote comment to issue       | x            |        |
+| Get/Visit binary files         | x            | x      |
+
 
