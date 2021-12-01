@@ -152,6 +152,8 @@
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
 (declare-function code-review-promote-comment-to-new-issue "code-review")
+(declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
+(declare-function code-review-utils--visit-binary-file-at-point "code-review-utils")
 
 (defvar code-review-section-full-refresh? nil
   "Indicate if we want to perform a complete restart.
@@ -1150,6 +1152,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
 (defvar code-review-binary-file-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
+    (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
     map)
   "Keymaps for binary files sections.")
 
@@ -1191,20 +1194,13 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (insert rename)
         (magit-insert-heading)))
     (when (string-match-p "Binary files.*" header)
-      (let* ((pr (code-review-db-get-pullreq))
-             (raw-infos (oref pr raw-infos))
-             (binary-files (a-get raw-infos 'binary-files))
-             (entry (alist-get file binary-files nil nil 'equal)))
-        (magit-insert-section (code-review-binary-file-section entry)
-          (insert (propertize
-                   (format "Visit on %s"
-                           (cond
-                            ((code-review-github-repo-p pr) "Github")
-                            (t
-                             (error "Unsupported"))))
-                   'face
-                   'code-review-request-review-face)
-                  "\n"))))
+      (let* (;; (pr (code-review-db-get-pullreq))
+             ;; (raw-infos (oref pr raw-infos))
+             ;; (binary-files (a-get raw-infos 'binary-files))
+             ;; (entry (alist-get file binary-files nil nil 'equal))
+             )
+        (magit-insert-section (code-review-binary-file-section file)
+          (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n"))))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun code-review-section--magit-diff-wash-hunk ()

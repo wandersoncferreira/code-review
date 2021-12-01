@@ -89,36 +89,38 @@ Optionally using VARIABLES. Provide HOST and CALLBACK fn."
   "Get all PR-CHANGES and produce standard git diff.
 Unfortunately, Gitlab's API returns the elements of the diff in
 an object then we need to build the diff string ourselves here."
-  (-reduce-from
-   (lambda (acc c)
-     (let-alist c
-       (let ((header1 (format "diff --git %s %s\n" .new_path .old_path))
-             (header2 (cond
-                       (.deleted_file
-                        (format "deleted file mode %s\n" .a_mode))
-                       (.new_file
-                        (format "new file mode %s\nindex 0000000000000000000000000000000000000000..1111\n" .b_mode))
-                       (.renamed_file)
-                       (t
-                        (format "index 1111..2222 %s\n" .a_mode))))
-             (header3 (cond
-                       (.deleted_file
-                        (format "--- %s\n+++ /dev/null\n" .old_path))
-                       (.new_file
-                        (format "--- /dev/null\n+++ %s\n" .new_path))
-                       (.renamed_file)
-                       (t
-                        (format "--- %s\n+++ %s\n"
-                                .old_path
-                                .new_path)))))
-         (format "%s%s%s%s%s"
-                 acc
-                 header1
-                 header2
-                 header3
-                 .diff))))
-   ""
-   pr-changes))
+  (string-remove-suffix
+   "\n"
+   (-reduce-from
+    (lambda (acc c)
+      (let-alist c
+        (let ((header1 (format "diff --git %s %s\n" .new_path .old_path))
+              (header2 (cond
+                        (.deleted_file
+                         (format "deleted file mode %s\n" .a_mode))
+                        (.new_file
+                         (format "new file mode %s\nindex 0000000000000000000000000000000000000000..1111\n" .b_mode))
+                        (.renamed_file)
+                        (t
+                         (format "index 1111..2222 %s\n" .a_mode))))
+              (header3 (cond
+                        (.deleted_file
+                         (format "--- %s\n+++ /dev/null\n" .old_path))
+                        (.new_file
+                         (format "--- /dev/null\n+++ %s\n" .new_path))
+                        (.renamed_file)
+                        (t
+                         (format "--- %s\n+++ %s\n"
+                                 .old_path
+                                 .new_path)))))
+          (format "%s%s%s%s%s"
+                  acc
+                  header1
+                  header2
+                  header3
+                  .diff))))
+    ""
+    pr-changes)))
 
 (defun code-review-gitlab-fix-review-comments (raw-comments)
   "Format RAW-COMMENTS to be compatible with established shape in the package."
@@ -530,6 +532,22 @@ repository:project(fullPath: \"%s\") {
 (cl-defmethod code-review-core-set-reaction ((_gitlab code-review-gitlab-repo))
   "Set reaction for your pr in GITLAB."
   (code-review-gitlab-not-supported-message))
+
+(cl-defmethod code-review-gitlab-binary-file-url ((gitlab code-review-gitlab-repo) filename)
+  "Make the GITLAB url for the FILENAME."
+  (let ((sha (a-get-in (oref gitlab raw-infos) (list 'diffRefs 'headSha))))
+    (format "https://%s/v4/projects/%s/repository/files/%s/raw?ref=%s"
+            code-review-gitlab-host
+            (code-review-gitlab--project-id gitlab)
+            filename
+            sha)))
+
+(cl-defmethod code-review-gitlab-binary-file ((gitlab code-review-gitlab-repo) filename)
+  "Get FILENAME from GITLAB."
+  (let* ((pwd (auth-source-pick-first-password :host code-review-gitlab-host))
+         (token (format "PRIVATE-TOKEN: %s" pwd))
+         (url (code-review-gitlab-binary-file-url gitlab filename)))
+    (code-review-utils--fetch-binary-data url filename token)))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here

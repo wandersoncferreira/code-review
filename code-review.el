@@ -74,6 +74,11 @@
   :group 'code-review
   :type 'integer)
 
+(defcustom code-review-download-dir "/tmp/code-review/"
+  "Directory where code review will download binary files."
+  :type 'string
+  :group 'code-review)
+
 (defcustom code-review-log-file (expand-file-name
                                  "code-review-error.log"
                                  user-emacs-directory)
