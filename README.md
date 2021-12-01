@@ -77,6 +77,9 @@ used to display the buffer at `code-review-new-buffer-window-strategy` e.g. you
 can set `(setq code-review-new-buffer-window-strategy #'switch-to-buffer)` to
 not open a new window.
 
+Set `code-review-download-dir` to change the place Code Review will download
+binary files in your pull request when you decide to visit them.
+
 ### GitHub
 
 `code-review` needs a GitHub token to act on your behalf for fetching PRs and
