@@ -46,6 +46,11 @@
   :group 'code-review
   :type 'string)
 
+(defcustom code-review-comment-single-comment-msg ";;; Equivalent to add a simple comment to the PR without a review."
+  "Default text to single comment section e.g. conversation."
+  :group 'code-review
+  :type 'string)
+
 ;;; internal vars
 
 (defvar code-review-comment-cursor-pos nil
@@ -66,6 +71,10 @@ For internal usage only.")
 
 (defvar code-review-comment-description? nil
   "Are you writing a description?.
+For internal usage only.")
+
+(defvar code-review-comment-single-comment? nil
+  "Include a single new comment to the PR without a Review.
 For internal usage only.")
 
 (defvar code-review-comment-uncommitted nil
@@ -91,7 +100,8 @@ For internal usage only.")
         code-review-comment-feedback? nil
         code-review-comment-description? nil
         code-review-comment-title? nil
-        code-review-comment-commit-buffer? nil))
+        code-review-comment-commit-buffer? nil
+        code-review-comment-single-comment? nil))
 
 ;;; Comment C_UD
 
@@ -361,7 +371,7 @@ Optionally define a MSG."
                             (with-current-buffer buffer
                               (save-excursion
                                 (buffer-substring-no-properties (point-min) (point-max)))))))
-        (kill-buffer buffer)
+        (kill-buffer-and-window)
         (cond
          (code-review-comment-description?
           (code-review-utils--set-description-field comment-text))
@@ -377,6 +387,11 @@ Optionally define a MSG."
             (oset code-review-comment-uncommitted buffer-text comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted)))
+         (code-review-comment-single-comment?
+          (code-review-utils--set-conversation-comment
+           (code-review-utils--comment-clean-msg
+            comment-text
+            code-review-comment-single-comment-msg)))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
@@ -387,11 +402,18 @@ Optionally define a MSG."
 ;;; ----
 
 ;;;###autoload
+(defun code-review-add-single-comment ()
+  "Add single comment without a Review."
+  (interactive)
+  (setq code-review-comment-single-comment? t)
+  (code-review-comment-add code-review-comment-single-comment-msg))
+
+;;;###autoload
 (defun code-review-comment-quit ()
   "Quit the comment window."
   (interactive)
   (code-review-comment-reset-global-vars)
-  (kill-buffer code-review-comment-buffer-name))
+  (kill-buffer-and-window))
 
 (defvar code-review-comment-mode-map
   (let ((map (copy-keymap markdown-mode-map)))

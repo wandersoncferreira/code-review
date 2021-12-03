@@ -733,7 +733,8 @@ OUTDATED."
     ("m s" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
-   ("p" "Submit Replies" code-review-submit-only-replies)]
+   ("p" "Submit Replies" code-review-submit-only-replies)
+   ("s c" "Single Comment, immediately sent" code-review-add-single-comment)]
   ["Setters"
    ("s f" "Feedback" code-review-comment-set-feedback)
    ("s r" "Reviewers" code-review-request-reviews)

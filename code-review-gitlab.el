@@ -556,5 +556,17 @@ Return the blob URL if BLOB? is provided."
          (url (code-review-binary-file-url gitlab filename)))
     (code-review-utils--fetch-binary-data url filename headers)))
 
+(cl-defmethod code-review-core-new-issue-comment ((gitlab code-review-gitlab-repo) comment-msg callback)
+  "Create a new comment issue for GITLAB sending the COMMENT-MSG and call CALLBACK."
+  (glab-post (format "/v4/projects/%s/merge_requests/%s/notes"
+                     (code-review-gitlab--project-id gitlab)
+                     (oref gitlab number))
+             nil
+             :auth 'code-review
+             :host code-review-gitlab-host
+             :payload (a-alist 'body comment-msg)
+             :callback callback
+             :errorback #'code-review-gitlab-errback))
+
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here

@@ -588,5 +588,14 @@ Expect the same output as `git diff --no-prefix`"
                             headers url output)))
       output)))
 
+(defun code-review-utils--set-conversation-comment (comment-text)
+  "Include COMMENT-TEXT in the conversation field."
+  (let ((pr (code-review-db-get-pullreq))
+        (callback (lambda (&rest _)
+                    (let ((code-review-section-full-refresh? t))
+                      (code-review--build-buffer
+                       code-review-buffer-name)))))
+    (code-review-core-new-issue-comment pr comment-text callback)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
