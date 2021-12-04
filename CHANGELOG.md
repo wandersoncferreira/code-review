@@ -11,6 +11,7 @@
 - [#85](https://github.com/wandersoncferreira/code-review/pull/85): remove comment and feedback section with `k`
 - [#86](https://github.com/wandersoncferreira/code-review/pull/86): allow users to define function to open Code Review buffer.
 - [#90](https://github.com/wandersoncferreira/code-review/pull/90): support visit binary files on Dired (`RET`) or Remote (`C-c C-v`)
+- [#93](https://github.com/wandersoncferreira/code-review/pull/93/files): add single top level comment in the PR page without a review attached
 
 # v0.0.2
 
