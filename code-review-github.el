@@ -628,7 +628,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                   ("IssueComment" "issuecomment-")
                                   ("PullRequestReview" "pullrequestreview-")))
                                (t
-                                (error "Promote comment to issue not supported for this type of comment."))))
+                                (error "Promote comment to issue not supported for this type of comment"))))
              (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
                                      (oref github owner)
                                      (oref github repo)
@@ -664,6 +664,19 @@ Return the blob URL if BLOB? is provided."
                           pwd))
          (url (code-review-binary-file-url github filename)))
     (code-review-utils--fetch-binary-data url filename headers)))
+
+(cl-defmethod code-review-core-new-issue-comment ((github code-review-github-repo) comment-msg callback)
+  "Create a new comment issue for GITHUB sending the COMMENT-MSG and call CALLBACK."
+  (ghub-post (format "/repos/%s/%s/issues/%s/comments"
+                     (oref github owner)
+                     (oref github repo)
+                     (oref github number))
+             nil
+             :auth 'code-review
+             :host code-review-github-host
+             :payload (a-alist 'body comment-msg)
+             :callback callback
+             :errorback #'code-review-github-errback))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here

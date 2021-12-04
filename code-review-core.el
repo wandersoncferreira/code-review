@@ -100,7 +100,10 @@
   "Request for OBJ a list of USER-IDS to review a PR and call CALLBACK afterward.")
 
 (cl-defgeneric code-review-core-new-issue (obj body title callback)
-  "Create new issue in OBJ with body and title and call CALLBACK.")
+  "Create new issue in OBJ with BODY and TITLE and call CALLBACK.")
+
+(cl-defgeneric code-review-core-new-issue-comment (obj comment-msg callback)
+  "Create a new comment issue for OBJ sending the COMMENT-MSG and call CALLBACK.")
 
 (provide 'code-review-core)
 ;;; code-review-core.el ends here

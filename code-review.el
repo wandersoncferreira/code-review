@@ -222,7 +222,7 @@ If you want to display a minibuffer MSG in the end."
                  (prin1-to-string obj)
                  (prin1-to-string res))
                 " <->"))
-  (error "Unknown backend obj created. Look at `code-review-log-file' and report the bug upstream"))
+  (error "Unknown backend obj created.  Look at `code-review-log-file' and report the bug upstream"))
 
 (cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
@@ -733,7 +733,8 @@ OUTDATED."
     ("m s" "Merge Squash" code-review-merge-squash)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
-   ("p" "Submit Replies" code-review-submit-only-replies)]
+   ("p" "Submit Replies" code-review-submit-only-replies)
+   ("s c" "Single Comment, immediately sent" code-review-add-single-comment)]
   ["Setters"
    ("s f" "Feedback" code-review-comment-set-feedback)
    ("s r" "Reviewers" code-review-request-reviews)
