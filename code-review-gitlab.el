@@ -74,7 +74,7 @@ For internal usage only.")
 
 (defun code-review-gitlab--graphql (graphql variables callback)
   "Make GRAPHQL call to GITLAB.
-Optionally using VARIABLES. Provide HOST and CALLBACK fn."
+Optionally using VARIABLES.  Provide HOST and CALLBACK fn."
   (glab-request "POST" "/graphql" nil :payload (json-encode
                                                 `(("query" . ,graphql)
                                                   ,@(and variables `(("variables" ,@variables)))))
@@ -490,6 +490,7 @@ repository:project(fullPath: \"%s\") {
 ;;; Core methods not implemented yet.
 
 (defun code-review-gitlab-not-supported-message ()
+  "Default warning message."
   (message "Not supported in Gitlab yet.")
   nil)
 
@@ -497,7 +498,7 @@ repository:project(fullPath: \"%s\") {
   "Get labels for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-labels ((_gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-labels ((_gitlab code-review-gitlab-repo) _callback)
   "Set labels for your pr at GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
@@ -505,7 +506,7 @@ repository:project(fullPath: \"%s\") {
   "Get assignees for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-assignee ((_gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-assignee ((_gitlab code-review-gitlab-repo) _callback)
   "Set yourself as assignee in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
@@ -513,19 +514,19 @@ repository:project(fullPath: \"%s\") {
   "Get milestones for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-milestone ((_gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-milestone ((_gitlab code-review-gitlab-repo) _callback)
   "Set milestone for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-title ((_gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-title ((_gitlab code-review-gitlab-repo) _callback)
   "Set title for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-description ((_gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-core-set-description ((_gitlab code-review-gitlab-repo) _callback)
   "Set description for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-merge ((_gitlab code-review-gitlab-repo) strategy)
+(cl-defmethod code-review-core-merge ((_gitlab code-review-gitlab-repo) _strategy)
   "Merge a pr in GITLAB using STRATEGY."
   (code-review-gitlab-not-supported-message))
 

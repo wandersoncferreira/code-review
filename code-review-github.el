@@ -628,7 +628,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                   ("IssueComment" "issuecomment-")
                                   ("PullRequestReview" "pullrequestreview-")))
                                (t
-                                (error "Promote comment to issue not supported for this type of comment."))))
+                                (error "Promote comment to issue not supported for this type of comment"))))
              (reference-link (format "https://github.com/%s/%s/issues/%s#%s%s"
                                      (oref github owner)
                                      (oref github repo)
