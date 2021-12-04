@@ -37,6 +37,8 @@ The Emacs everywhere goal continues. These are the main features of
 - Save/Resume in-progress Reviews
 - Visit binary files in Dired or Remote. Example [here](https://github.com/wandersoncferreira/code-review/pull/90)
 
+Highly recommend using the transient menu in the `*Code Review*` buffer by pressing `r`.
+
 The basic workflow:
 
 - `RET` on a hunk diff line to add a comment

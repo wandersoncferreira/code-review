@@ -98,10 +98,11 @@ For internal usage only.")
   "Reset all stateful vars."
   (setq code-review-comment-cursor-pos nil
         code-review-comment-feedback? nil
-        code-review-comment-description? nil
         code-review-comment-title? nil
-        code-review-comment-commit-buffer? nil
-        code-review-comment-single-comment? nil))
+        code-review-promote-comment-to-issue? nil
+        code-review-comment-description? nil
+        code-review-comment-uncommitted nil
+        code-review-comment-commit-buffer? nil))
 
 ;;; Comment C_UD
 
