@@ -1009,7 +1009,7 @@ Please Report this Bug" path-name))
                 " <->"))
   (error "Unknown backend obj created.  Look at `code-review-log-file' and report the bug upstream"))
 
-(cl-defmethod code-review-render--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review-render--internal-build ((_github code-review-github-repo) progress res)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
   (let* ((raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
     ;; 2. save raw diff data
@@ -1025,7 +1025,7 @@ Please Report this Bug" path-name))
     ;; 2.2 trigger renders
     (progress-reporter-update progress 5)))
 
-(cl-defmethod code-review-render--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
+(cl-defmethod code-review-render--internal-build ((_gitlab code-review-gitlab-repo) progress res)
   "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
   ;; 1. save raw diff data
   (progress-reporter-update progress 3)
@@ -1126,7 +1126,7 @@ If you want to provide a MSG for the end of the process."
                             ((code-review-gitlab-repo-p obj)
                              "Gitlab")
                             (t "Unknown"))))
-              (code-review-render--internal-build obj progress x buff-name msg)
+              (code-review-render--internal-build obj progress x)
               (code-review-render--trigger-hooks buff-name msg)
               (progress-reporter-done progress))))
         (deferred:error it
