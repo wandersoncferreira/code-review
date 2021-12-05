@@ -147,11 +147,11 @@ Optionally define a MSG."
 (defun code-review-comment-delete-feedback ()
   "Delete review FEEDBACK."
   (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
+  (let ((pr (code-review-db-get-pullreq))
+        (buff-name (buffer-name (current-buffer))))
     (oset pr feedback nil)
     (code-review-db-update pr)
-    (code-review-render--build-buffer
-     code-review-buffer-name)))
+    (code-review-render--build-buffer buff-name)))
 
 ;;;###autoload
 (defun code-review-comment-set-title ()

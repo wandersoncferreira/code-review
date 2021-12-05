@@ -79,6 +79,7 @@
 (defvar code-review-comment-cursor-pos)
 
 (declare-function code-review-promote-comment-to-new-issue "code-review")
+(declare-function code-review-comment-delete-feedback "code-review-comment")
 (declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
 (declare-function code-review-utils--visit-binary-file-at-point "code-review-utils")
 
