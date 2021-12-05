@@ -88,23 +88,22 @@
   :type 'file)
 
 (defcustom code-review-headers-hook
-  '(code-review-render-insert-header-title
-    code-review-render-insert-title
-    code-review-render-insert-state
-    code-review-render-insert-ref
-    code-review-render-insert-milestone
-    code-review-render-insert-labels
-    code-review-render-insert-assignee
-    code-review-render-insert-project
-    code-review-render-insert-is-draft
-    code-review-render-insert-suggested-reviewers
-    code-review-render-insert-reviewers)
+  '(code-review-render--header-title
+    code-review-render--header-state
+    code-review-render--header-ref
+    code-review-render--header-milestone
+    code-review-render--header-labels
+    code-review-render--header-assignee
+    code-review-render--header-project
+    code-review-render--header-draft?
+    code-review-render--header-suggested-reviewers
+    code-review-render--header-reviewers)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)
 
 (defcustom code-review-renders-hook
-  '(code-review-render-insert-headers
+  '(code-review-render--headers
     code-review-render-insert-commits
     code-review-render-insert-pr-description
     code-review-render-insert-feedback-heading
@@ -180,7 +179,7 @@ If you want to display a minibuffer MSG in the end."
                   (code-review-mode)
                   (code-review-commit-minor-mode))
               (code-review-mode))
-            (code-review-render-insert-header-title)
+            (code-review-render--header-title)
             (when msg
               (message nil)
               (message msg)))))
