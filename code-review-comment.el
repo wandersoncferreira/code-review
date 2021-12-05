@@ -90,8 +90,6 @@ For internal usage only.")
 (defvar code-review-commit-buffer-name)
 (defvar code-review-buffer-name)
 
-(declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
-
 ;;; general functons
 
 (defun code-review-comment-reset-global-vars ()
@@ -152,7 +150,7 @@ Optionally define a MSG."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr feedback nil)
     (code-review-db-update pr)
-    (code-review--build-buffer
+    (code-review-render--build-buffer
      code-review-buffer-name)))
 
 ;;;###autoload
@@ -306,7 +304,7 @@ Optionally define a MSG."
                                           (local?)
                                           (reply? . t)))))))
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review--build-buffer buff-name)
+    (code-review-render--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
@@ -335,7 +333,7 @@ Optionally define a MSG."
       (code-review-db-delete-raw-comment (oref obj internalId)))
 
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review--build-buffer buff-name)
+    (code-review-render--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue))
@@ -375,14 +373,22 @@ Optionally define a MSG."
         (kill-buffer-and-window)
         (cond
          (code-review-comment-description?
-          (code-review-utils--set-description-field comment-text))
+          (code-review-utils--set-description-field
+           comment-text
+           (lambda ()
+             (code-review-render--build-buffer
+              code-review-buffer-name))))
          (code-review-comment-title?
-          (code-review-utils--set-title-field comment-text))
+          (code-review-utils--set-title-field
+           comment-text
+           (lambda ()
+             (code-review-render--build-buffer
+              code-review-buffer-name))))
          (code-review-comment-feedback?
-          (code-review-utils--set-feedback-field
-           (code-review-utils--comment-clean-msg
-            comment-text
-            code-review-comment-feedback-msg)))
+          (-> comment-text
+              (code-review-utils--comment-clean-msg code-review-comment-feedback-msg)
+              (code-review-db--pullreq-feedback-update))
+          (code-review-render--build-buffer code-review-buffer-name))
          (code-review-promote-comment-to-issue?
           (progn
             (oset code-review-comment-uncommitted buffer-text comment-text)
@@ -392,7 +398,9 @@ Optionally define a MSG."
           (code-review-utils--set-conversation-comment
            (code-review-utils--comment-clean-msg
             comment-text
-            code-review-comment-single-comment-msg)))
+            code-review-comment-single-comment-msg)
+           (lambda (&rest _)
+             (code-review-render--build-buffer code-review-buffer-name t))))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)

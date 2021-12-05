@@ -104,11 +104,11 @@
 
 (defcustom code-review-renders-hook
   '(code-review-render--headers
-    code-review-render-insert-commits
-    code-review-render-insert-pr-description
-    code-review-render-insert-feedback-heading
-    code-review-render-insert-general-comments
-    code-review-render-insert-files-report)
+    code-review-render--commits
+    code-review-render--pr-description
+    code-review-render--feedback
+    code-review-render--general-comments
+    code-review-render--files-report)
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
@@ -132,161 +132,9 @@
     ("EYES" . ":eyes:"))
   "All available reactions.")
 
-;;; build buffer
-
-(defun code-review--trigger-hooks (buff-name &optional commit-focus? msg)
-  "Trigger magit section hooks and draw BUFF-NAME.
-Run code review commit buffer hook when COMMIT-FOCUS? is non-nil.
-If you want to display a minibuffer MSG in the end."
-  (unwind-protect
-      (progn
-        ;; advices
-        (advice-add 'magit-diff-insert-file-section :override #'code-review-render--magit-diff-insert-file-section)
-        (advice-add 'magit-diff-wash-hunk :override #'code-review-render--magit-diff-wash-hunk)
-
-        (setq code-review-render-grouped-comments
-              (code-review-utils-make-group
-               (code-review-db--pullreq-raw-comments))
-              code-review-render-hold-written-comment-count nil
-              code-review-render-hold-written-comment-ids nil)
-
-        (with-current-buffer (get-buffer-create buff-name)
-          (let* ((window (get-buffer-window buff-name))
-                 (ws (window-start window))
-                 (inhibit-read-only t))
-            (save-excursion
-              (erase-buffer)
-              (insert (code-review-db--pullreq-raw-diff))
-              (insert ?\n))
-            (magit-insert-section (review-buffer)
-              (magit-insert-section (code-review)
-                (if commit-focus?
-                    (magit-run-section-hook 'code-review-renders-commit-hook)
-                  (magit-run-section-hook 'code-review-renders-hook)))
-              (magit-wash-sequence
-               (apply-partially #'magit-diff-wash-diff ())))
-            (if window
-                (progn
-                  (pop-to-buffer buff-name)
-                  (set-window-start window ws)
-                  (when code-review-comment-cursor-pos
-                    (goto-char code-review-comment-cursor-pos)))
-              (progn
-                (funcall code-review-new-buffer-window-strategy buff-name)
-                (goto-char (point-min))))
-            (if commit-focus?
-                (progn
-                  (code-review-mode)
-                  (code-review-commit-minor-mode))
-              (code-review-mode))
-            (code-review-render--header-title)
-            (when msg
-              (message nil)
-              (message msg)))))
-
-    ;; remove advices
-    (advice-remove 'magit-diff-insert-file-section #'code-review-render--magit-diff-insert-file-section)
-    (advice-remove 'magit-diff-wash-hunk #'code-review-render--magit-diff-wash-hunk)))
-
 (defun code-review-auth-source-debug ()
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
-
-(cl-defmethod code-review--auth-token-set? ((_github code-review-github-repo) res)
-  "Check if the RES has a message for auth token not set for GITHUB."
-  (string-prefix-p "Required Github token" (-first-item (a-get res 'error))))
-
-(cl-defmethod code-review--auth-token-set? ((_gitlab code-review-gitlab-repo) res)
-  "Check if the RES has a message for auth token not set for GITLAB."
-  (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
-
-(cl-defmethod code-review--auth-token-set? (obj res)
-  "Default catch all unknown values passed to this function as OBJ and RES."
-  (code-review--log
-   "code-review--auth-token-set?"
-   (string-join (list
-                 (prin1-to-string obj)
-                 (prin1-to-string res))
-                " <->"))
-  (error "Unknown backend obj created.  Look at `code-review-log-file' and report the bug upstream"))
-
-(cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
-  "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
-  (let* ((raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
-    ;; 2. save raw diff data
-    (progress-reporter-update progress 3)
-    (code-review-db--pullreq-raw-diff-update
-     (code-review-utils--clean-diff-prefixes
-      (a-get (-first-item res) 'message)))
-
-    ;; 2.1 save raw info data e.g. data from GraphQL API
-    (progress-reporter-update progress 4)
-    (code-review-db--pullreq-raw-infos-update raw-infos)
-
-    ;; 2.2 trigger renders
-    (progress-reporter-update progress 5)
-    (code-review--trigger-hooks buff-name msg)
-    (progress-reporter-done progress)))
-
-(cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
-  "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
-  ;; 1. save raw diff data
-  (progress-reporter-update progress 3)
-  (code-review-db--pullreq-raw-diff-update
-   (code-review-gitlab-fix-diff
-    (a-get (-first-item res) 'changes)))
-
-  ;; 1.1. compute position line numbers to diff line numbers
-  (progress-reporter-update progress 4)
-  (code-review-gitlab-pos-line-number->diff-line-number
-   (a-get (-first-item res) 'changes))
-
-  ;; 1.2. save raw info data e.g. data from GraphQL API
-  (progress-reporter-update progress 5)
-  (code-review-db--pullreq-raw-infos-update
-   (code-review-gitlab-fix-infos
-    (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
-
-  ;; 1.3. trigger renders
-  (progress-reporter-update progress 6)
-  (code-review--trigger-hooks buff-name msg)
-  (progress-reporter-done progress))
-
-(defun code-review--build-buffer (buff-name &optional commit-focus? msg)
-  "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
-If you want to provide a MSG for the end of the process."
-  (if (not code-review-render-full-refresh?)
-      (code-review--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq))
-          (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
-      (progress-reporter-update progress 1)
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-diff-deferred obj))
-          (lambda () (code-review-infos-deferred obj)))
-        (deferred:nextc it
-          (lambda (x)
-            (progress-reporter-update progress 2)
-            (if (code-review--auth-token-set? obj x)
-                (progn
-                  (progress-reporter-done progress)
-                  (message "Required %s token. Look at the README for how to setup your Personal Access Token"
-                           (cond
-                            ((code-review-github-repo-p obj)
-                             "Github")
-                            ((code-review-gitlab-repo-p obj)
-                             "Gitlab")
-                            (t "Unknown"))))
-              (code-review--internal-build obj progress x buff-name msg))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review--build-buffer"
-             (prin1-to-string err))
-            (if (and (sequencep err) (string-prefix-p "BUG: Unknown extended header:" (-second-item err)))
-                (message "Your PR might have diffs too large. Currently not supported.")
-              (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
-
 ;;; public functions
 
 ;;;###autoload
@@ -327,9 +175,8 @@ If you want to provide a MSG for the end of the process."
           (message "No Review found for this URL.")
         (progn
           (setq code-review-db--pullreq-id (oref obj id))
-          (let ((code-review-render-full-refresh? nil))
-            (code-review--build-buffer
-             code-review-buffer-name)))))))
+          (code-review-render--build-buffer
+           code-review-buffer-name))))))
 
 ;;;###autoload
 (defun code-review-choose-unfinished-review ()
@@ -359,9 +206,8 @@ If you want to provide a MSG for the end of the process."
                                            (string-equal (oref o saved-at) saved-at))))))
                            objs))))
     (setq code-review-db--pullreq-id (oref obj-chosen id))
-    (let ((code-review-render-full-refresh? nil))
-      (code-review--build-buffer
-       code-review-buffer-name))))
+    (code-review-render--build-buffer
+     code-review-buffer-name)))
 
 ;;; Submit structure
 
@@ -479,24 +325,24 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
             (code-review-send-review
              review-obj
              (lambda (&rest _)
-               (let ((code-review-render-full-refresh? t))
-                 (oset pr finished t)
-                 (oset pr finished-at (current-time-string))
-                 (code-review-db-update pr)
-                 (code-review--build-buffer
-                  code-review-buffer-name
-                  nil
-                  "Done submitting review")))))
+               (oset pr finished t)
+               (oset pr finished-at (current-time-string))
+               (code-review-db-update pr)
+               (code-review-render--build-buffer
+                code-review-buffer-name
+                t
+                nil
+                "Done submitting review"))))
 
           (when (oref replies-obj replies)
             (code-review-send-replies
              replies-obj
              (lambda (&rest _)
-               (let ((code-review-render-full-refresh? t))
-                 (code-review--build-buffer
-                  code-review-buffer-name
-                  nil
-                  "Done submitting review and replies."))))))))))
+               (code-review-render--build-buffer
+                code-review-buffer-name
+                t
+                nil
+                "Done submitting review and replies.")))))))))
 
 (defun code-review-commit-at-point ()
   "Review the current commit at point in Code Review buffer."
@@ -522,19 +368,51 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set label."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-label-field pr)))
+    (when-let (options (code-review-get-labels pr))
+      (let* ((choices (completing-read-multiple "Choose: " options))
+             (labels (append
+                      (-map (lambda (x)
+                              `((name . ,x)
+                                (color . "0075ca")))
+                            choices)
+                      (oref pr labels))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr labels labels)
+        (code-review-set-labels
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review-render--build-buffer
+            code-review-buffer-name)))))))
+
+(defun code-review--set-assignee-field (obj &optional assignee)
+  "Helper function to set assignees header field given an OBJ.
+If a valid ASSIGNEE is provided, use that instead."
+  (let ((candidate nil))
+    (if assignee
+        (setq candidate assignee)
+      (when-let (options (code-review-get-assignees obj))
+        (let* ((choice (completing-read "Choose: " options)))
+          (setq candidate choice))))
+    (oset obj assignees (list `((name) (login . ,candidate))))
+    (code-review-set-assignee
+     obj
+     (lambda ()
+       (code-review-db-update obj)
+       (code-review-render--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review--set-assignee ()
   "Set assignee."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field pr)))
+    (code-review--set-assignee-field pr)))
 
 (defun code-review--set-assignee-yourself ()
   "Assign yourself to PR."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field
+    (code-review--set-assignee-field
      pr
      (code-review-utils--git-get-user))))
 
@@ -542,7 +420,19 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set milestone."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-milestone-field pr)))
+    (when-let (options (code-review-get-milestones pr))
+      (let* ((choice (completing-read "Choose: " (a-keys options)))
+             (milestone `((title . ,choice)
+                          (perc . 0)
+                          (number .,(alist-get choice options nil nil 'equal)))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr milestones milestone)
+        (code-review-set-milestone
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review-render--build-buffer
+            code-review-buffer-name)))))))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -567,8 +457,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
           (code-review-merge pr "merge")
           (oset pr state "MERGED")
           (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
+          (code-review-render--build-buffer
+           code-review-buffer-name t))
       (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
@@ -581,8 +471,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
           (code-review-merge pr "rebase")
           (oset pr state "MERGED")
           (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
+          (code-review-render--build-buffer
+           code-review-buffer-name t))
       (code-review-gitlab-not-supported-message))))
 
 ;;;###autoload
@@ -595,8 +485,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
           (code-review-merge pr "squash")
           (oset pr state "MERGED")
           (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
+          (code-review-render--build-buffer
+           code-review-buffer-name t))
       (code-review-gitlab-not-supported-message))))
 
 (defun code-review-promote-comment-to-new-issue ()
@@ -619,13 +509,10 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (setq code-review-render-full-refresh? t)
   (code-review-auth-source-debug)
-  (ignore-errors
-    (code-review-utils-build-obj-from-url url)
-    (code-review--build-buffer
-     code-review-buffer-name))
-  (setq code-review-render-full-refresh? nil))
+  (code-review-utils-build-obj-from-url url)
+  (code-review-render--build-buffer
+   code-review-buffer-name t))
 
 ;;;###autoload
 (defun code-review-request-reviews (&optional login)
@@ -662,14 +549,14 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                    (a-get usr 'id)))
                choices)))
     (code-review-request-review pr ids
-                                     (lambda ()
-                                       (let* ((infos (oref pr raw-infos))
-                                              (new-infos
-                                               (a-assoc-in infos (list 'reviewRequests 'nodes) logins)))
-                                         (oset pr raw-infos new-infos)
-                                         (code-review-db-update pr)
-                                         (code-review--build-buffer
-                                          code-review-buffer-name))))))
+                                (lambda ()
+                                  (let* ((infos (oref pr raw-infos))
+                                         (new-infos
+                                          (a-assoc-in infos (list 'reviewRequests 'nodes) logins)))
+                                    (oset pr raw-infos new-infos)
+                                    (code-review-db-update pr)
+                                    (code-review-render--build-buffer
+                                     code-review-buffer-name))))))
 
 (defun code-review-request-review-at-point ()
   "Request reviewer at point."
@@ -689,11 +576,10 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (setq code-review-render-full-refresh? t)
   (code-review-auth-source-debug)
-  (ignore-errors
-    (code-review-utils--start-from-forge-at-point))
-  (setq code-review-render-full-refresh? nil))
+  (code-review-utils--build-obj-forge-at-point)
+  (code-review-render--build-buffer
+   code-review-buffer-name t))
 
 ;;; Commit buffer
 

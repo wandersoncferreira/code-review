@@ -43,8 +43,6 @@
 (defvar code-review-log-file)
 (defvar code-review-comment-cursor-pos)
 
-(declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
-
 ;;; COMMENTS
 
 (defun code-review-utils--comment-key (path pos)
@@ -351,7 +349,7 @@ If you already have a FEEDBACK string to submit use it."
 
 ;;; Forge interface
 
-(defun code-review-utils--start-from-forge-at-point ()
+(defun code-review-utils--build-obj-forge-at-point ()
   "Start from forge at point."
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo    (forge-get-repository pullreq))
@@ -374,92 +372,30 @@ If you already have a FEEDBACK string to submit use it."
                                          'gitlab)
                                         (t
                                          (error "Backend not supported!"))))))
-        (code-review-utils-build-obj pr-alist)
-        (code-review--build-buffer
-         code-review-buffer-name)))))
+        (code-review-utils-build-obj pr-alist)))))
 
 ;;; Header setters
-(defun code-review-utils--set-label-field (obj)
-  "Helper function to set header multi value fields given by OP-NAME and OBJ.
-Milestones, labels, projects, and more."
-  (when-let (options (code-review-get-labels obj))
-    (let* ((choices (completing-read-multiple "Choose: " options))
-           (labels (append
-                    (-map (lambda (x)
-                            `((name . ,x)
-                              (color . "0075ca")))
-                          choices)
-                    (oref obj labels))))
-      (setq code-review-comment-cursor-pos (point))
-      (oset obj labels labels)
-      (code-review-set-labels
-       obj
-       (lambda ()
-         (closql-insert (code-review-db) obj t)
-         (code-review--build-buffer
-          code-review-buffer-name))))))
 
-(defun code-review-utils--set-assignee-field (obj &optional assignee)
-  "Helper function to set assignees header field given an OBJ.
-If a valid ASSIGNEE is provided, use that instead."
-  (let ((candidate nil))
-    (if assignee
-        (setq candidate assignee)
-      (when-let (options (code-review-get-assignees obj))
-        (let* ((choice (completing-read "Choose: " options)))
-          (setq candidate choice))))
-    (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-set-assignee
-     obj
-     (lambda ()
-       (closql-insert (code-review-db) obj t)
-       (code-review--build-buffer
-        code-review-buffer-name)))))
-
-(defun code-review-utils--set-milestone-field (obj)
-  "Helper function to set a milestone given an OBJ."
-  (when-let (options (code-review-get-milestones obj))
-    (let* ((choice (completing-read "Choose: " (a-keys options)))
-           (milestone `((title . ,choice)
-                        (perc . 0)
-                        (number .,(alist-get choice options nil nil 'equal)))))
-      (setq code-review-comment-cursor-pos (point))
-      (oset obj milestones milestone)
-      (code-review-set-milestone
-       obj
-       (lambda ()
-         (closql-insert (code-review-db) obj t)
-         (code-review--build-buffer
-          code-review-buffer-name))))))
-
-(defun code-review-utils--set-title-field (title)
-  "Helper function to set a TITLE."
+(defun code-review-utils--set-title-field (title callback)
+  "Helper function to set a TITLE and call CALLBACK."
   (let ((pr (code-review-db-get-pullreq)))
     (setq code-review-comment-cursor-pos (point))
     (oset pr title title)
     (code-review-set-title
      pr
      (lambda ()
-       (closql-insert (code-review-db) pr t)
-       (code-review--build-buffer
-        code-review-buffer-name)))))
+       (code-review-db-update pr)
+       (funcall callback)))))
 
-(defun code-review-utils--set-description-field (description)
-  "Helper function to set a DESCRIPTION."
+(defun code-review-utils--set-description-field (description callback)
+  "Helper function to set a DESCRIPTION and call CALLBACK."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr description description)
     (code-review-set-description
      pr
      (lambda ()
-       (closql-insert (code-review-db) pr t)
-       (code-review--build-buffer
-        code-review-buffer-name)))))
-
-(defun code-review-utils--set-feedback-field (feedback)
-  "Helper function to set a FEEDBACK."
-  (code-review-db--pullreq-feedback-update feedback)
-  (code-review--build-buffer
-   code-review-buffer-name))
+       (code-review-db-update pr)
+       (funcall callback)))))
 
 ;;; LOG
 
@@ -588,13 +524,9 @@ Expect the same output as `git diff --no-prefix`"
                             headers url output)))
       output)))
 
-(defun code-review-utils--set-conversation-comment (comment-text)
-  "Include COMMENT-TEXT in the conversation field."
-  (let ((pr (code-review-db-get-pullreq))
-        (callback (lambda (&rest _)
-                    (let ((code-review-render-full-refresh? t))
-                      (code-review--build-buffer
-                       code-review-buffer-name)))))
+(defun code-review-utils--set-conversation-comment (comment-text callback)
+  "Include COMMENT-TEXT in the conversation field and call CALLBACK."
+  (let ((pr (code-review-db-get-pullreq)))
     (code-review-new-issue-comment pr comment-text callback)))
 
 (provide 'code-review-utils)

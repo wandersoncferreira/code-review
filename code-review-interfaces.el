@@ -106,7 +106,19 @@
   "Create a new comment issue for OBJ sending the COMMENT-MSG and call CALLBACK.")
 
 (cl-defgeneric code-review-commit-checks (obj commit-sha)
-  "Verify all the checks for in the OBJ for a given COMMIT-SHA.")
+  "Verify all the check for in the OBJ for a given COMMIT-SHA.")
+
+;; * Rendering functions
+
+(cl-defgeneric code-review--insert-general-comment-section (obj)
+  "Render the general comment section for an OBJ.")
+
+(cl-defgeneric code-review-render--auth-token-set? (obj forge-response)
+  "Given an OBJ determine if the auth token was set by the FORGE-RESPONSE.")
+
+(cl-defgeneric code-review-render--internal-build (obj progress-report forge-response &optional buff-name msg)
+  "Given an OBJ update the PROGRESS-REPORT for the parsing FORGE-RESPONSE data.
+Optionally provides the BUFF-NAME that must be rendered and a final MSG.")
 
 (provide 'code-review-interfaces)
 ;;; code-review-interfaces.el ends here
