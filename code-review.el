@@ -36,14 +36,10 @@
 
 (require 'closql)
 (require 'magit-section)
-(require 'code-review-github)
-(require 'code-review-gitlab)
+
 (require 'code-review-render)
 (require 'code-review-comment)
 (require 'code-review-utils)
-(require 'code-review-db)
-(require 'code-review-interfaces)
-(require 'code-review-faces)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
