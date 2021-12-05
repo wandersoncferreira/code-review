@@ -51,9 +51,6 @@
 (defclass code-review-gitlab-repo (code-review-db-pullreq)
   ((callback :initform nil)))
 
-;;; vars
-(defvar code-review-log-file)
-
 (defvar code-review-gitlab-line-diff-mapping nil
   "Hold structure to convert Line number position into diff positions.
 For internal usage only.")

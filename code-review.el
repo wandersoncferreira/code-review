@@ -70,10 +70,6 @@
   :group 'code-review
   :type 'function)
 
-(defcustom code-review-fill-column 80
-  "Column number to wrap comments."
-  :group 'code-review
-  :type 'integer)
 
 (defcustom code-review-download-dir "/tmp/code-review/"
   "Directory where code review will download binary files."
@@ -121,20 +117,10 @@
 
 ;;; vars
 
-(defvar code-review-reaction-types
-  `(("THUMBS_UP" . ":+1:")
-    ("THUMBS_DOWN" . ":-1:")
-    ("LAUGH" . ":laughing:")
-    ("CONFUSED" . ":confused:")
-    ("HEART" . ":heart:")
-    ("HOORAY" . ":tada:")
-    ("ROCKET" . ":rocket:")
-    ("EYES" . ":eyes:"))
-  "All available reactions.")
-
 (defun code-review-auth-source-debug ()
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
+
 ;;; public functions
 
 ;;;###autoload

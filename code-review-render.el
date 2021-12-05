@@ -29,16 +29,35 @@
 ;;
 ;;; Code:
 
+(require 'emojify)
 (require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
-(require 'code-review-interfaces)
+
 (require 'code-review-db)
 (require 'code-review-utils)
+(require 'code-review-faces)
+
+(require 'code-review-interfaces)
 (require 'code-review-github)
 (require 'code-review-gitlab)
-(require 'code-review-faces)
-(require 'emojify)
+
+
+(defcustom code-review-fill-column 80
+  "Column number to wrap comments."
+  :group 'code-review
+  :type 'integer)
+
+(defvar code-review-reaction-types
+  `(("THUMBS_UP" . ":+1:")
+    ("THUMBS_DOWN" . ":-1:")
+    ("LAUGH" . ":laughing:")
+    ("CONFUSED" . ":confused:")
+    ("HEART" . ":heart:")
+    ("HOORAY" . ":tada:")
+    ("ROCKET" . ":rocket:")
+    ("EYES" . ":eyes:"))
+  "All available reactions.")
 
 (defun code-review--propertize-keyword (str)
   "Add property face to STR."
@@ -57,12 +76,7 @@
 
 ;; fix unbound symbols
 (defvar magit-root-section)
-(defvar code-review-buffer-name)
-(defvar code-review-commit-buffer-name)
-(defvar code-review-comment-commit-buffer?)
-(defvar code-review-fill-column)
 (defvar code-review-comment-cursor-pos)
-(defvar code-review-reaction-types)
 
 (declare-function code-review-promote-comment-to-new-issue "code-review")
 (declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
@@ -584,9 +598,13 @@ For internal usage only.")
 (defun code-review-description-reaction-at-point ()
   "Toggle reaction in description sections."
   (interactive)
-  (let* ((section (magit-current-section))
+  (let* ((buff-name (buffer-name (current-buffer)))
+         (section (magit-current-section))
          (comment-id (oref (oref section value) id)))
-    (code-review-toggle-reaction-at-point comment-id "pr-description")))
+    (code-review-toggle-reaction-at-point
+     buff-name
+     comment-id
+     "pr-description")))
 
 (defun code-review-description-add-reaction (node-id content)
   "Add NODE-ID with CONTENT in pr description."
@@ -704,10 +722,14 @@ For internal usage only.")
 (defun code-review-general-comment-reaction-at-point ()
   "Toggle reaction in general-comment sections."
   (interactive)
-  (let* ((section (magit-current-section))
+  (let* ((buff-name (buffer-name (current-buffer)))
+         (section (magit-current-section))
          (comment-id (oref (oref section value) id)))
     (setq code-review-comment-cursor-pos (point))
-    (code-review-toggle-reaction-at-point comment-id "comment")))
+    (code-review-toggle-reaction-at-point
+     buff-name
+     comment-id
+     "comment")))
 
 (defun code-review-general-comment--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
   "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.
@@ -759,8 +781,8 @@ Optionally DELETE? flag must be set if you want to remove it."
         (magit-insert-heading)))))
 ;;; * Reactions
 
-(defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
-  "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
+(defun code-review--toggle-reaction-at-point (buff-name pr context-name comment-id existing-reactions reaction)
+  "Given a BUFF-NAME and PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
   (let* ((res (code-review-set-reaction pr context-name comment-id reaction))
          (reaction-id (a-get res 'id))
          (node-id (a-get res 'node_id))
@@ -780,10 +802,10 @@ Optionally DELETE? flag must be set if you want to remove it."
          (code-review-general-comment-add-reaction comment-id node-id reaction))
         ("code-comment"
          (code-review-code-comment-add-reaction comment-id node-id reaction))))
-    (code-review-render--build-buffer code-review-buffer-name)))
+    (code-review-render--build-buffer buff-name)))
 
-(defun code-review-toggle-reaction-at-point (comment-id context-name)
-  "Add reaction at point given a COMMENT-ID and CONTEXT-NAME."
+(defun code-review-toggle-reaction-at-point (buff-name comment-id context-name)
+  "Add reaction to BUFF-NAME at point given a COMMENT-ID and CONTEXT-NAME."
   (let* ((allowed-reactions (-map
                              (lambda (it)
                                `(,(cdr it) . ,(car it)))
@@ -796,6 +818,7 @@ Optionally DELETE? flag must be set if you want to remove it."
          (reaction (downcase (alist-get choice allowed-reactions nil nil 'equal))))
     (with-slots (value) (magit-current-section)
       (code-review--toggle-reaction-at-point
+       buff-name
        pr
        context-name
        comment-id
@@ -806,7 +829,8 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Endorse or remove your reaction at point."
   (interactive)
   (setq code-review-comment-cursor-pos (point))
-  (let* ((section (magit-current-section))
+  (let* ((buff-name (buffer-name (current-buffer)))
+         (section (magit-current-section))
          (pr (code-review-db-get-pullreq))
          (obj (oref section value))
          (map-rev (-map
@@ -1296,10 +1320,14 @@ We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
 (defun code-review-code-comment-reaction-at-point ()
   "Toggle reaction in code-comment section."
   (interactive)
-  (let* ((section (magit-current-section))
+  (let* ((buff-name (buffer-name (current-buffer)))
+         (section (magit-current-section))
          (comment-id (oref (oref section value) id)))
     (setq code-review-comment-cursor-pos (point))
-    (code-review-toggle-reaction-at-point comment-id "code-comment")))
+    (code-review-toggle-reaction-at-point
+     buff-name
+     comment-id
+     "code-comment")))
 
 (defun code-review-code-comment--add-or-delete-reaction (comment-id reaction-id content &optional delete?)
   "Add or Delete REACTION-ID in COMMENT-ID given a CONTENT.
@@ -1368,9 +1396,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defun code-review-render-delete-comment ()
   "Delete a local comment."
   (interactive)
-  (let ((buff-name (if code-review-comment-commit-buffer?
-                       code-review-commit-buffer-name
-                     code-review-buffer-name)))
+  (let ((buff-name (buffer-name (current-buffer))))
     (with-slots (value start end) (magit-current-section)
       (code-review-db-delete-raw-comment (oref value internalId))
       (code-review-render--build-buffer buff-name))))
