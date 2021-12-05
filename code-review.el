@@ -42,7 +42,7 @@
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
@@ -276,8 +276,8 @@ If you want to provide a MSG for the end of the process."
       (progress-reporter-update progress 1)
       (deferred:$
         (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
+          (lambda () (code-review-diff-deferred obj))
+          (lambda () (code-review-infos-deferred obj)))
         (deferred:nextc it
           (lambda (x)
             (progress-reporter-update progress 2)
@@ -490,7 +490,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
-            (code-review-core-send-review
+            (code-review-send-review
              review-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
@@ -503,7 +503,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                   "Done submitting review")))))
 
           (when (oref replies-obj replies)
-            (code-review-core-send-replies
+            (code-review-send-replies
              replies-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
@@ -578,7 +578,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "merge")
+          (code-review-merge pr "merge")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -592,7 +592,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "rebase")
+          (code-review-merge pr "rebase")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -606,7 +606,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "squash")
+          (code-review-merge pr "squash")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -646,7 +646,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Request reviewers for current PR using LOGIN if available."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
-         (users (code-review-core-get-assinable-users pr))
+         (users (code-review-get-assinable-users pr))
          (choices
           (if login
               (list (format "@%s :- " login))
@@ -675,7 +675,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                                  `(((requestedReviewer (login . ,(a-get usr 'login)))))))
                    (a-get usr 'id)))
                choices)))
-    (code-review-core-request-review pr ids
+    (code-review-request-review pr ids
                                      (lambda ()
                                        (let* ((infos (oref pr raw-infos))
                                               (new-infos

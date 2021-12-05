@@ -31,7 +31,7 @@
 (require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 (require 'code-review-db)
 (require 'code-review-utils)
 (require 'code-review-github)
@@ -383,14 +383,14 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
   "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
-  (let* ((res (code-review-core-set-reaction pr context-name comment-id reaction))
+  (let* ((res (code-review-set-reaction pr context-name comment-id reaction))
          (reaction-id (a-get res 'id))
          (node-id (a-get res 'node_id))
          (existing-reaction-ids (when existing-reactions
                                   (-map (lambda (r) (oref r id)) existing-reactions))))
     (if (-contains-p existing-reaction-ids node-id)
         (progn
-          (code-review-core-delete-reaction pr context-name comment-id reaction-id)
+          (code-review-delete-reaction pr context-name comment-id reaction-id)
           (pcase context-name
             ("pr-description" (code-review-description-delete-reaction node-id))
             ("comment" (code-review-conversation-delete-reaction comment-id node-id))

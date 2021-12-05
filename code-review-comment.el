@@ -359,7 +359,7 @@ Optionally define a MSG."
                                    (oref obj author)
                                    (oref obj reference-link)))))
         (setq code-review-promote-comment-to-issue? nil)
-        (code-review-core-new-issue pr body title
+        (code-review-new-issue pr body title
                                     (lambda (&rest _) (message "New issue created.")))))))
 
 ;;;###autoload
