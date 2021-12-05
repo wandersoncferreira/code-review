@@ -592,7 +592,7 @@ Expect the same output as `git diff --no-prefix`"
   "Include COMMENT-TEXT in the conversation field."
   (let ((pr (code-review-db-get-pullreq))
         (callback (lambda (&rest _)
-                    (let ((code-review-section-full-refresh? t))
+                    (let ((code-review-render-full-refresh? t))
                       (code-review--build-buffer
                        code-review-buffer-name)))))
     (code-review-new-issue-comment pr comment-text callback)))

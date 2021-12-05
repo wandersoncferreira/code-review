@@ -1,4 +1,4 @@
-;;; code-review-section.el --- UI -*- lexical-binding: t; -*-
+;;; code-review-render.el --- UI -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -155,19 +155,19 @@
 (declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
 (declare-function code-review-utils--visit-binary-file-at-point "code-review-utils")
 
-(defvar code-review-section-full-refresh? nil
+(defvar code-review-render-full-refresh? nil
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
-(defvar code-review-section-grouped-comments nil
+(defvar code-review-render-grouped-comments nil
   "Hold grouped comments to avoid computation on every hunk line.
 For internal usage only.")
 
-(defvar code-review-section-hold-written-comment-ids nil
+(defvar code-review-render-hold-written-comment-ids nil
   "List to hold written comments ids.
 For internal usage only.")
 
-(defvar code-review-section-hold-written-comment-count nil
+(defvar code-review-render-hold-written-comment-count nil
   "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
@@ -570,16 +570,16 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defvar code-review-local-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    (define-key map (kbd "k") 'code-review-section-delete-comment)
+    (define-key map (kbd "C-c C-k") 'code-review-render-delete-comment)
+    (define-key map (kbd "k") 'code-review-render-delete-comment)
     map)
   "Keymaps for local-comment sections.")
 
 (defvar code-review-reply-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    (define-key map (kbd "k") 'code-review-section-delete-comment)
+    (define-key map (kbd "C-c C-k") 'code-review-render-delete-comment)
+    (define-key map (kbd "k") 'code-review-render-delete-comment)
     map)
   "Keymaps for reply-comment sections.")
 
@@ -689,7 +689,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 ;;; headers
 
-(defun code-review-section-insert-header-title ()
+(defun code-review-render-insert-header-title ()
   "Insert the title header line."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -700,7 +700,7 @@ Optionally DELETE? flag must be set if you want to remove it."
              'magit-section-heading)))))
 
 ;;; TODO: add some nice face to true and false
-(defun code-review-section-insert-is-draft ()
+(defun code-review-render-insert-is-draft ()
   "Insert the isDraft value of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -709,7 +709,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (format "%-17s" "Draft: ") draft?)
           (insert ?\n))))))
 
-(defun code-review-section-insert-reviewers ()
+(defun code-review-render-insert-reviewers ()
   "Insert the reviewers section."
   (let* ((infos (code-review-db--pullreq-raw-infos))
          (groups (code-review-utils--fmt-reviewers infos)))
@@ -729,14 +729,14 @@ Optionally DELETE? flag must be set if you want to remove it."
                groups)
       (insert ?\n))))
 
-(defun code-review-section-insert-title ()
+(defun code-review-render-insert-title ()
   "Insert the title of the header buffer."
   (when-let (title (code-review-db--pullreq-title))
     (magit-insert-section (code-review-title-section title)
       (insert (format "%-17s" "Title: ") title)
       (insert ?\n))))
 
-(defun code-review-section-insert-state ()
+(defun code-review-render-insert-state ()
   "Insert the state of the header buffer."
   (when-let (state (code-review-db--pullreq-state))
     (let ((value (if state state "none")))
@@ -744,7 +744,7 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert (format "%-17s" "State: ") value)
         (insert ?\n)))))
 
-(defun code-review-section-insert-ref ()
+(defun code-review-render-insert-ref ()
   "Insert the state of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -758,7 +758,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert .headRefName)
           (insert ?\n))))))
 
-(defun code-review-section-insert-milestone ()
+(defun code-review-render-insert-milestone ()
   "Insert the milestone of the header buffer."
   (let ((milestones (code-review-db--pullreq-milestones)))
     (let-alist milestones
@@ -769,7 +769,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (propertize (code-review-pretty-milestone obj) 'font-lock-face 'magit-dimmed))
           (insert ?\n))))))
 
-(defun code-review-section-insert-labels ()
+(defun code-review-render-insert-labels ()
   "Insert the labels of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let* ((labels (-distinct
@@ -798,7 +798,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (propertize "None yet" 'font-lock-face 'magit-dimmed)))
         (insert ?\n)))))
 
-(defun code-review-section-insert-assignee ()
+(defun code-review-render-insert-assignee ()
   "Insert the assignee of the header buffer."
   (when-let (infos (code-review-db--pullreq-assignees))
     (let* ((assignee-names (-map
@@ -815,7 +815,7 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert (format "%-17s" "Assignees: ") assignees)
         (insert ?\n)))))
 
-(defun code-review-section-insert-project ()
+(defun code-review-render-insert-project ()
   "Insert the project of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -839,7 +839,7 @@ Optionally DELETE? flag must be set if you want to remove it."
     map)
   "Keymaps for suggested reviewers section.")
 
-(defun code-review-section-insert-suggested-reviewers ()
+(defun code-review-render-insert-suggested-reviewers ()
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -875,7 +875,7 @@ Optionally DELETE? flag must be set if you want to remove it."
               (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
           (insert ?\n))))))
 
-(defun code-review-section-insert-headers ()
+(defun code-review-render-insert-headers ()
   "Insert all the headers."
   (magit-insert-headers 'code-review-headers-hook))
 
@@ -884,7 +884,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defclass code-review-check-section (magit-section)
   ((details :initarg :details)))
 
-(defun code-review-section-insert-commits ()
+(defun code-review-render-insert-commits ()
   "Insert commits from PULL-REQUEST."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -902,7 +902,7 @@ Optionally DELETE? flag must be set if you want to remove it."
             (insert ?\n)))
         (insert ?\n)))))
 
-(defun code-review-section-insert-pr-description ()
+(defun code-review-render-insert-pr-description ()
   "Insert PULL-REQUEST description."
   (when-let (description (code-review-db--pullreq-description))
     (let-alist (code-review-db--pullreq-raw-infos)
@@ -933,7 +933,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                .databaseId))
             (insert ?\n)))))))
 
-(defun code-review-section-insert-feedback-heading ()
+(defun code-review-render-insert-feedback-heading ()
   "Insert feedback heading."
   (let* ((feedback (code-review-db--pullreq-feedback))
          (obj (code-review-feedback-section :msg feedback)))
@@ -1010,7 +1010,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                   (code-review-insert-comment-lines obj)
                   (insert ?\n))))))))))
 
-(defun code-review-section-insert-general-comments ()
+(defun code-review-render-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
   (when-let (pr (code-review-db-get-pullreq))
     (magit-insert-section (code-review-comment-header-section)
@@ -1019,7 +1019,7 @@ Optionally DELETE? flag must be set if you want to remove it."
       (code-review--insert-conversation-section pr))))
 
 
-(defun code-review-section-insert-files-report ()
+(defun code-review-render-insert-files-report ()
   "Insert files changed, added, deleted in the PR."
   (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
     (let-alist files
@@ -1032,7 +1032,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                             'magit-section-heading))
         (magit-insert-heading)))))
 
-(defun code-review-section-insert-outdated-comment (comments amount-loc)
+(defun code-review-render-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
   ;;; hunk groups are necessary because we usually have multiple reviews about
   ;;; the same original position across different commits snapshots.
@@ -1042,7 +1042,7 @@ Optionally DELETE? flag must be set if you want to remove it."
     (dolist (hunk hunks)
       (when (not hunk)
         (code-review-utils--log
-         "code-review-section-insert-outdated-comment"
+         "code-review-render-insert-outdated-comment"
          (format "Every outdated comment must have a hunk! Error found for %S"
                  (prin1-to-string hunk)))
         (message "Hunk empty found. A empty string will be used instead. Report this bug please."))
@@ -1053,9 +1053,9 @@ Optionally DELETE? flag must be set if you want to remove it."
              (metadata1 `((comment . ,first-hunk-commit)
                           (amount-loc ., (+ amount-loc amount-new-loc)))))
 
-        (setq code-review-section-hold-written-comment-count
+        (setq code-review-render-hold-written-comment-count
               (code-review-utils--comment-update-written-count
-               code-review-section-hold-written-comment-count
+               code-review-render-hold-written-comment-count
                (oref first-hunk-commit path)
                amount-new-loc))
 
@@ -1084,9 +1084,9 @@ Optionally DELETE? flag must be set if you want to remove it."
                                                     (+ 2 amount-new-loc-outdated-partial)
                                                   amount-new-loc-outdated-partial)))
 
-                  (setq code-review-section-hold-written-comment-count
+                  (setq code-review-render-hold-written-comment-count
                         (code-review-utils--comment-update-written-count
-                         code-review-section-hold-written-comment-count
+                         code-review-render-hold-written-comment-count
                          (oref first-hunk-commit path)
                          amount-new-loc-outdated))
 
@@ -1107,25 +1107,25 @@ Optionally DELETE? flag must be set if you want to remove it."
                          (oref c id)))))
                   (insert ?\n))))))))))
 
-(defun code-review-section-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
+(defun code-review-render-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
   "Write missing outdated comments in the end of the current path.
 We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
   (dolist (path-pos missing-paths)
     (let ((comment-written-pos
-           (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal)
+           (or (alist-get path-name code-review-render-hold-written-comment-count nil nil 'equal)
                0)))
-      (code-review-section-insert-outdated-comment
+      (code-review-render-insert-outdated-comment
        (code-review-utils--comment-get
         grouped-comments
         path-pos)
        comment-written-pos)
-      (push path-pos code-review-section-hold-written-comment-ids))))
+      (push path-pos code-review-render-hold-written-comment-ids))))
 
-(defun code-review-section-insert-comment (comments amount-loc)
+(defun code-review-render-insert-comment (comments amount-loc)
   "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
 A quite good assumption: every comment in an outdated hunk will be outdated."
   (if (oref (-first-item comments) outdated?)
-      (code-review-section-insert-outdated-comment
+      (code-review-render-insert-outdated-comment
        comments
        amount-loc)
     (let ((new-amount-loc amount-loc))
@@ -1139,9 +1139,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
           (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
           (oset c amount-loc new-amount-loc)
 
-          (setq code-review-section-hold-written-comment-count
+          (setq code-review-render-hold-written-comment-count
                 (code-review-utils--comment-update-written-count
-                 code-review-section-hold-written-comment-count
+                 code-review-render-hold-written-comment-count
                  (oref c path)
                  amount-loc-incr))
           (code-review-comment-insert-lines c))))))
@@ -1156,7 +1156,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     map)
   "Keymaps for binary files sections.")
 
-(defun code-review-section--magit-diff-insert-file-section
+(defun code-review-render--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE.
 ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the original fn."
@@ -1198,7 +1198,7 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n")))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
-(defun code-review-section--magit-diff-wash-hunk ()
+(defun code-review-render--magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
 Code Review inserts PR comments sections in the diff buffer.
 Argument GROUPED-COMMENTS comments grouped by path and diff position."
@@ -1218,7 +1218,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
       (when (not head-pos)
         (code-review-utils--log
-         "code-review-section--magit-diff-wash-hunk"
+         "code-review-render--magit-diff-wash-hunk"
          (format "Every diff is associated with a PATH (the file). Head pos nil for %S"
                  (prin1-to-string path)))
         (message "ERROR: Head position for path %s was not found.
@@ -1245,19 +1245,19 @@ Please Report this Bug" path-name))
           ;;; code-review specific code.
           ;;; add code comments
             (let* ((comment-written-pos
-                    (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal) 0))
+                    (or (alist-get path-name code-review-render-hold-written-comment-count nil nil 'equal) 0))
                    (diff-pos (+ 1 (- (code-review--line-number-at-pos)
                                      (or head-pos 0)
                                      comment-written-pos)))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
-                   (written? (-contains-p code-review-section-hold-written-comment-ids path-pos))
+                   (written? (-contains-p code-review-render-hold-written-comment-ids path-pos))
                    (grouped-comment (code-review-utils--comment-get
-                                     code-review-section-grouped-comments
+                                     code-review-render-grouped-comments
                                      path-pos)))
               (if (and (not written?) grouped-comment)
                   (progn
-                    (push path-pos code-review-section-hold-written-comment-ids)
-                    (code-review-section-insert-comment
+                    (push path-pos code-review-render-hold-written-comment-ids)
+                    (code-review-render-insert-comment
                      grouped-comment
                      comment-written-pos))
                 (forward-line))))
@@ -1268,13 +1268,13 @@ Please Report this Bug" path-name))
           ;;; important to only consider comments for this path.
           (when-let (missing-paths (code-review-utils--missing-outdated-commments?
                                     path-name
-                                    code-review-section-hold-written-comment-ids
-                                    code-review-section-grouped-comments))
+                                    code-review-render-hold-written-comment-ids
+                                    code-review-render-grouped-comments))
             (when (eobp)
-              (code-review-section-insert-outdated-comment-missing
+              (code-review-render-insert-outdated-comment-missing
                path-name
                missing-paths
-               code-review-section-grouped-comments)))
+               code-review-render-grouped-comments)))
 
         ;;; --- end -- code-review specific code.
           (oset section end (point))
@@ -1287,12 +1287,12 @@ Please Report this Bug" path-name))
           (oset section about about))))
     t))
 
-(defun code-review-section--build-commit-buffer (buff-name)
+(defun code-review-render--build-commit-buffer (buff-name)
   "Build commit buffer review given by BUFF-NAME."
   (code-review--build-buffer buff-name t))
 
 ;;;###autoload
-(defun code-review-section-delete-comment ()
+(defun code-review-render-delete-comment ()
   "Delete a local comment."
   (interactive)
   (let ((buff-name (if code-review-comment-commit-buffer?
@@ -1302,5 +1302,5 @@ Please Report this Bug" path-name))
       (code-review-db-delete-raw-comment (oref value internalId))
       (code-review--build-buffer buff-name))))
 
-(provide 'code-review-section)
-;;; code-review-section.el ends here
+(provide 'code-review-render)
+;;; code-review-render.el ends here

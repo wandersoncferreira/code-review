@@ -1,4 +1,4 @@
-;;; code-review-section-test.el --- Test our section functions
+;;; code-review-render-test.el --- Test our section functions
 ;;; Commentary:
 ;;; Code:
 
@@ -7,7 +7,7 @@
 (require 'code-review-db)
 (require 'code-review-gitlab)
 (require 'code-review-github)
-(require 'code-review-section)
+(require 'code-review-render)
 
 (defconst sample-pr-obj
   (code-review-github-repo
@@ -50,20 +50,20 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (it "available in raw-infos should be added."
       (code-review-db--pullreq-raw-infos-update `((title . "My title")))
       (with-written-section
-       (lambda () (code-review-section-insert-title))
+       (lambda () (code-review-render-insert-title))
        `(((type . code-review-title-section)
           (value . "My title")))))
     (it "missing, should not break and not added to the buffer entirely."
       (code-review-db--pullreq-raw-infos-update nil)
       (with-written-section
-       (lambda () (code-review-section-insert-title))
+       (lambda () (code-review-render-insert-title))
        nil t)))
 
   (describe "STATE"
     (it "available raw-infos and should be added to the buffer."
       (code-review-db--pullreq-raw-infos-update `((state . "OPEN")))
       (with-written-section
-       (lambda () (code-review-section-insert-state))
+       (lambda () (code-review-render-insert-state))
        `(((type . code-review-state-section)
           (value . "OPEN"))))))
 
@@ -72,7 +72,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
       (let ((obj (code-review-milestone-section :title "Milestone Title" :perc "50")))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
                                                                (progressPercentage . "50"))))
-        (with-written-section (lambda () (code-review-section-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "Milestone Title (50%)")))
@@ -80,7 +80,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (it "if title is missing, add default msg"
       (let ((obj (code-review-milestone-section :title nil :perc "50")))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . nil) (progressPercentage . "50"))))
-        (with-written-section (lambda () (code-review-section-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "No milestone")))
@@ -88,7 +88,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (it "if progress is missing, leave it out."
       (let ((obj (code-review-milestone-section :title "My title" :perc nil)))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . "My title"))))
-        (with-written-section (lambda () (code-review-section-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "My title"))))
@@ -105,10 +105,10 @@ Verify if the buffer has anything written using BUFFER-NIL?."
                                                                       (databaseId . 1234)
                                                                       (createdAt . "2021-11-08T00:24:09Z"))))))
         (with-written-section
-         (lambda () (code-review-section-insert-general-comments))
+         (lambda () (code-review-render-insert-general-comments))
          `(((type . code-review-comment-header-section))
            ((type . code-review-comment-section)
             (value . ,obj))))))))
 
-(provide 'code-review-section-test)
-;;; code-review-section-test.el ends here
+(provide 'code-review-render-test)
+;;; code-review-render-test.el ends here

@@ -38,7 +38,7 @@
 (require 'magit-section)
 (require 'code-review-github)
 (require 'code-review-gitlab)
-(require 'code-review-section)
+(require 'code-review-render)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
@@ -87,34 +87,34 @@
   :type 'file)
 
 (defcustom code-review-headers-hook
-  '(code-review-section-insert-header-title
-    code-review-section-insert-title
-    code-review-section-insert-state
-    code-review-section-insert-ref
-    code-review-section-insert-milestone
-    code-review-section-insert-labels
-    code-review-section-insert-assignee
-    code-review-section-insert-project
-    code-review-section-insert-is-draft
-    code-review-section-insert-suggested-reviewers
-    code-review-section-insert-reviewers)
+  '(code-review-render-insert-header-title
+    code-review-render-insert-title
+    code-review-render-insert-state
+    code-review-render-insert-ref
+    code-review-render-insert-milestone
+    code-review-render-insert-labels
+    code-review-render-insert-assignee
+    code-review-render-insert-project
+    code-review-render-insert-is-draft
+    code-review-render-insert-suggested-reviewers
+    code-review-render-insert-reviewers)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-sections-hook
-  '(code-review-section-insert-headers
-    code-review-section-insert-commits
-    code-review-section-insert-pr-description
-    code-review-section-insert-feedback-heading
-    code-review-section-insert-general-comments
-    code-review-section-insert-files-report)
+(defcustom code-review-renders-hook
+  '(code-review-render-insert-headers
+    code-review-render-insert-commits
+    code-review-render-insert-pr-description
+    code-review-render-insert-feedback-heading
+    code-review-render-insert-general-comments
+    code-review-render-insert-files-report)
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-sections-commit-hook
-  '(code-review-section-insert-headers)
+(defcustom code-review-renders-commit-hook
+  '(code-review-render-insert-headers)
   "Hook run to insert sections into a code review commit buffer."
   :group 'code-review
   :type 'hook)
@@ -155,14 +155,14 @@ If you want to display a minibuffer MSG in the end."
   (unwind-protect
       (progn
         ;; advices
-        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+        (advice-add 'magit-diff-insert-file-section :override #'code-review-render--magit-diff-insert-file-section)
+        (advice-add 'magit-diff-wash-hunk :override #'code-review-render--magit-diff-wash-hunk)
 
-        (setq code-review-section-grouped-comments
+        (setq code-review-render-grouped-comments
               (code-review-utils-make-group
                (code-review-db--pullreq-raw-comments))
-              code-review-section-hold-written-comment-count nil
-              code-review-section-hold-written-comment-ids nil)
+              code-review-render-hold-written-comment-count nil
+              code-review-render-hold-written-comment-ids nil)
 
         (with-current-buffer (get-buffer-create buff-name)
           (let* ((window (get-buffer-window buff-name))
@@ -175,8 +175,8 @@ If you want to display a minibuffer MSG in the end."
             (magit-insert-section (review-buffer)
               (magit-insert-section (code-review)
                 (if commit-focus?
-                    (magit-run-section-hook 'code-review-sections-commit-hook)
-                  (magit-run-section-hook 'code-review-sections-hook)))
+                    (magit-run-section-hook 'code-review-renders-commit-hook)
+                  (magit-run-section-hook 'code-review-renders-hook)))
               (magit-wash-sequence
                (apply-partially #'magit-diff-wash-diff ())))
             (if window
@@ -193,14 +193,14 @@ If you want to display a minibuffer MSG in the end."
                   (code-review-mode)
                   (code-review-commit-minor-mode))
               (code-review-mode))
-            (code-review-section-insert-header-title)
+            (code-review-render-insert-header-title)
             (when msg
               (message nil)
               (message msg)))))
 
     ;; remove advices
-    (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
-    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
+    (advice-remove 'magit-diff-insert-file-section #'code-review-render--magit-diff-insert-file-section)
+    (advice-remove 'magit-diff-wash-hunk #'code-review-render--magit-diff-wash-hunk)))
 
 (defun code-review-auth-source-debug ()
   "Do not warn on auth source search because it messes with progress reporter."
@@ -269,7 +269,7 @@ If you want to display a minibuffer MSG in the end."
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
+  (if (not code-review-render-full-refresh?)
       (code-review--trigger-hooks buff-name commit-focus? msg)
     (let ((obj (code-review-db-get-pullreq))
           (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
@@ -341,7 +341,7 @@ If you want to provide a MSG for the end of the process."
           (message "No Review found for this URL.")
         (progn
           (setq code-review-db--pullreq-id (oref obj id))
-          (let ((code-review-section-full-refresh? nil))
+          (let ((code-review-render-full-refresh? nil))
             (code-review--build-buffer
              code-review-buffer-name)))))))
 
@@ -373,7 +373,7 @@ If you want to provide a MSG for the end of the process."
                                            (string-equal (oref o saved-at) saved-at))))))
                            objs))))
     (setq code-review-db--pullreq-id (oref obj-chosen id))
-    (let ((code-review-section-full-refresh? nil))
+    (let ((code-review-render-full-refresh? nil))
       (code-review--build-buffer
        code-review-buffer-name))))
 
@@ -493,7 +493,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
             (code-review-send-review
              review-obj
              (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
+               (let ((code-review-render-full-refresh? t))
                  (oset pr finished t)
                  (oset pr finished-at (current-time-string))
                  (code-review-db-update pr)
@@ -506,7 +506,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
             (code-review-send-replies
              replies-obj
              (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
+               (let ((code-review-render-full-refresh? t))
                  (code-review--build-buffer
                   code-review-buffer-name
                   nil
@@ -516,7 +516,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Review the current commit at point in Code Review buffer."
   (interactive)
   (setq code-review-comment-commit-buffer? t)
-  (code-review-section--build-commit-buffer
+  (code-review-render--build-commit-buffer
    code-review-commit-buffer-name))
 
 (defun code-review-commit-buffer-back ()
@@ -526,7 +526,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
              (get-buffer code-review-commit-buffer-name))
       (progn
         (setq code-review-comment-commit-buffer? nil
-              code-review-section-full-refresh? nil)
+              code-review-render-full-refresh? nil)
         (kill-this-buffer)
         (code-review--trigger-hooks
          code-review-buffer-name))
@@ -633,13 +633,13 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (setq code-review-section-full-refresh? t)
+  (setq code-review-render-full-refresh? t)
   (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer
      code-review-buffer-name))
-  (setq code-review-section-full-refresh? nil))
+  (setq code-review-render-full-refresh? nil))
 
 ;;;###autoload
 (defun code-review-request-reviews (&optional login)
@@ -703,11 +703,11 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (setq code-review-section-full-refresh? t)
+  (setq code-review-render-full-refresh? t)
   (code-review-auth-source-debug)
   (ignore-errors
     (code-review-utils--start-from-forge-at-point))
-  (setq code-review-section-full-refresh? nil))
+  (setq code-review-render-full-refresh? nil))
 
 ;;; Commit buffer
 

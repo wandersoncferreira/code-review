@@ -27,7 +27,7 @@
 ;;
 ;;; Code:
 
-(require 'code-review-section)
+(require 'code-review-render)
 (require 'code-review-utils)
 (require 'markdown-mode)
 
