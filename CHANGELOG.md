@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- [#96](https://github.com/wandersoncferreira/code-review/pull/96/files): render comments using HTML to allow displaying images.
+
 # v0.0.3
 
 - [#68](https://github.com/wandersoncferreira/code-review/pull/68): add files changed heading before diff
@@ -14,6 +16,7 @@
 - [#86](https://github.com/wandersoncferreira/code-review/pull/86): allow users to define function to open Code Review buffer.
 - [#90](https://github.com/wandersoncferreira/code-review/pull/90): support visit binary files on Dired (`RET`) or Remote (`C-c C-v`)
 - [#93](https://github.com/wandersoncferreira/code-review/pull/93/files): add single top level comment in the PR page without a review attached
+
 
 # v0.0.2
 
