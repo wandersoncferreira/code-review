@@ -31,6 +31,7 @@
 (require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
+(require 'shr)
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)
@@ -362,10 +363,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (cl-defmethod code-review-insert-comment-lines ((obj code-review-comment-section))
   "Insert the comment lines given in the OBJ."
-  (let ((body-lines (code-review-utils--split-comment (oref obj msg))))
-    (dolist (l body-lines)
-      (insert l)
-      (insert ?\n))))
+  (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width)))
 
 ;;; Reactions
 
@@ -644,12 +642,13 @@ Optionally DELETE? flag must be set if you want to remove it."
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-code-comment-section obj)
-      (dolist (l (code-review-utils--split-comment
-                  (code-review-utils--wrap-text
-                   (oref obj msg)
-                   code-review-fill-column)))
-        (insert (propertize l 'face 'code-review-comment-face))
-        (insert ?\n))
+      (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
+      ;; (dolist (l (code-review-utils--split-comment
+      ;;             (code-review-utils--wrap-text
+      ;;              (oref obj msg)
+      ;;              code-review-fill-column)))
+      ;;   (insert (propertize l 'face 'code-review-comment-face))
+      ;;   (insert ?\n))
       (when-let (reactions-obj (oref obj reactions))
         (code-review-comment-insert-reactions
          reactions-obj
@@ -902,6 +901,41 @@ Optionally DELETE? flag must be set if you want to remove it."
             (insert ?\n)))
         (insert ?\n)))))
 
+(defun code-review--insert-html (body &optional indent)
+  "Insert html content BODY.
+INDENT is an optional number, if provided,
+INDENT count of spaces are added at the start of every line."
+  (let ((shr-indentation (* (or indent 0) (shr-string-pixel-width "-")))
+        (image-scaling-factor code-review-section-image-scaling)
+        (shr-width code-review-fill-column)
+        (start (point))
+        end
+        dom)
+    (with-temp-buffer
+      (insert body)
+      (setq dom (libxml-parse-html-region (point-min) (point-max))))
+    ;; narrow the buffer and insert dom. otherwise there would be an extra new line at start
+    (save-restriction
+      (insert " ")
+      (narrow-to-region start (1+ start))
+      (goto-char start)
+      (shr-insert-document dom)
+      ;; delete the inserted " "
+      (delete-char 1)
+      (setq end (point)))
+    (when (> shr-indentation 0)
+      ;; shr-indentation does not work for images and code block
+      ;; let's fix it: prepend space for any lines that does not starts with a space
+      ;; (but we still need to use shr-indentation because otherwise the line will be too long)
+      (save-excursion
+        (goto-char start)
+        (while (< (point) end)
+          (unless (or (looking-at-p "\n")
+                      (eq 'space (car-safe (get-text-property (point) 'display))))
+            (beginning-of-line)
+            (insert (propertize " " 'display `(space :width (,shr-indentation)))))
+          (forward-line))))))
+
 (defun code-review-section-insert-pr-description ()
   "Insert PULL-REQUEST description."
   (when-let (description (code-review-db--pullreq-description))
@@ -924,7 +958,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (magit-insert-section (code-review-description-section obj)
             (if (string-empty-p description)
                 (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
-              (insert description-cleaned))
+              (code-review--insert-html description-cleaned (* 2 code-review-section-indent-width)))
             (insert ?\n)
             (when .reactions.nodes
               (code-review-comment-insert-reactions
@@ -953,7 +987,7 @@ Optionally DELETE? flag must be set if you want to remove it."
     (dolist (c (append .comments.nodes (-filter
                                         (lambda (n)
                                           (not
-                                           (string-empty-p (a-get n 'bodyText))))
+                                           (string-empty-p (a-get n 'bodyHTML))))
                                         .reviews.nodes)))
       (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
              (reaction-objs (when reactions
@@ -965,7 +999,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                                reactions)))
              (obj (code-review-comment-section
                    :author (a-get-in c (list 'author 'login))
-                   :msg (a-get c 'bodyText)
+                   :msg (a-get c 'bodyHTML)
                    :id (a-get c 'databaseId)
                    :typename (a-get c 'typename)
                    :reactions reaction-objs)))

@@ -311,7 +311,7 @@
       (oset pullreq raw-infos infos)
       (oset pullreq title .title)
       (oset pullreq state .state)
-      (oset pullreq description .bodyText)
+      (oset pullreq description .bodyHTML)
       (oset pullreq sha .headRef.target.oid)
       (oset pullreq raw-comments .reviews.nodes)
       (oset pullreq assignees .assignees.nodes)

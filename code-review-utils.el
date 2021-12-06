@@ -163,7 +163,7 @@ using COMMENTS."
                               (code-review-outdated-comment-section
                                :state state
                                :author author
-                               :msg .bodyText
+                               :msg .bodyHTML
                                :position handled-pos
                                :reactions reactions
                                :internalId .internal-id
@@ -188,7 +188,7 @@ using COMMENTS."
                               (code-review-code-comment-section
                                :state state
                                :author author
-                               :msg .bodyText
+                               :msg .bodyHTML
                                :position handled-pos
                                :reactions reactions
                                :internalId .internal-id
