@@ -207,7 +207,7 @@ using COMMENTS."
                     (throw :code-review/comment-missing-path
                            "Every comment requires a path in the diff."))
 
-                  (when (not .bodyText)
+                  (when (and (not .bodyHTML) (not .bodyText))
                     (code-review-utils--log
                      "code-review-comment-make-group"
                      (format "Every comment should have a body. Nil value found. %S"

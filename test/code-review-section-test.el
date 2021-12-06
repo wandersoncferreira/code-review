@@ -101,7 +101,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
                   :id 1234
                   :reactions nil)))
         (code-review-db--pullreq-raw-infos-update `((comments (nodes ((author (login . "Code Review"))
-                                                                      (bodyText . "Comment 1")
+                                                                      (bodyHTML . "<p>Comment 1</p>")
                                                                       (databaseId . 1234)
                                                                       (createdAt . "2021-11-08T00:24:09Z"))))))
         (with-written-section
