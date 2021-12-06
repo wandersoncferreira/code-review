@@ -10,14 +10,14 @@
 (defconst sample-raw-comments
   `(;; comment 1
     ((author (login . "wandersoncferreira"))
-     (bodyText . "This PR looks great")
+     (bodyHTML . "<p>This PR looks great</p>")
      (state . "COMMENTED")
      (createdAt . "2021-11-08T00:24:09Z")
      (updatedAt . "2021-11-08T00:24:09Z")
      (comments
       (nodes ((createdAt . "2021-11-08T00:24:09Z")
               (updatedAt . "2021-11-08T00:24:09Z")
-              (bodyText . "Why keep everything in Emacs?")
+              (bodyHTML . "<p>Why keep everything in Emacs?</p>")
               (originalPosition . 3)
               (diffHunk . "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)
@@ -30,14 +30,14 @@
 
     ;; comment 2
     ((author (login . "another_user"))
-     (bodyText . "This can be improved a lot!")
+     (bodyHTML . "<p>This can be improved a lot!</p>")
      (state . "REQUEST_CHANGES")
      (createdAt . "2021-11-08T00:24:09Z")
      (updatedAt . "2021-11-08T00:24:09Z")
      (comments
       (nodes ((createdAt . "2021-11-08T00:24:09Z")
               (updatedAt . "2021-11-08T00:24:09Z")
-              (bodyText . "")
+              (bodyHTML . "")
               (originalPosition . 3)
               (diffHunk . "@@ -5,3 +5,5 @@ All I can save about my current computer setup:
  - [archlinux](https://archlinux.org)
@@ -56,7 +56,7 @@
              :updatedAt "2021-11-08T00:24:09Z"
              :state "COMMENTED"
              :author "wandersoncferreira"
-             :msg "Why keep everything in Emacs?"
+             :msg "<p>Why keep everything in Emacs?</p>"
              :position 3
              :reactions nil
              :path "README.md"

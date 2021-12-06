@@ -231,7 +231,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       }
       title
       state
-      bodyText
+      bodyHTML
       reactions(first:50){
         nodes {
           id
@@ -251,7 +251,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
             login
           }
           databaseId
-          bodyText
+          bodyHTML
           createdAt
           updatedAt
         }
@@ -260,7 +260,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
         nodes {
           typename:__typename
           author { login }
-          bodyText
+          bodyHTML
           state
           createdAt
           databaseId
@@ -269,7 +269,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
             nodes {
               createdAt
               updatedAt
-              bodyText
+              bodyHTML
               originalPosition
               diffHunk
               position

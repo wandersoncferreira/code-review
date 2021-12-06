@@ -86,6 +86,16 @@
   :group 'code-review
   :type 'file)
 
+(defcustom code-review-section-indent-width 1
+  "Indent width for nested sections."
+  :type 'integer
+  :group 'code-review)
+
+(defcustom code-review-section-image-scaling 0.8
+  "Image scaling number used to resize images in buffer."
+  :type 'float
+  :group 'code-review)
+
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title

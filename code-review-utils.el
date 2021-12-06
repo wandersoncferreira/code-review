@@ -163,7 +163,7 @@ using COMMENTS."
                               (code-review-outdated-comment-section
                                :state state
                                :author author
-                               :msg .bodyText
+                               :msg .bodyHTML
                                :position handled-pos
                                :reactions reactions
                                :internalId .internal-id
@@ -188,7 +188,7 @@ using COMMENTS."
                               (code-review-code-comment-section
                                :state state
                                :author author
-                               :msg .bodyText
+                               :msg .bodyHTML
                                :position handled-pos
                                :reactions reactions
                                :internalId .internal-id
@@ -207,7 +207,7 @@ using COMMENTS."
                     (throw :code-review/comment-missing-path
                            "Every comment requires a path in the diff."))
 
-                  (when (not .bodyText)
+                  (when (and (not .bodyHTML) (not .bodyText))
                     (code-review-utils--log
                      "code-review-comment-make-group"
                      (format "Every comment should have a body. Nil value found. %S"
