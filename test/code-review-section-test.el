@@ -40,10 +40,16 @@ Verify if the buffer has anything written using BUFFER-NIL?."
 
 (describe "HEADER"
   :var (code-review-database-file
-        code-review--db-connection)
+        code-review--db-connection
+        code-review-section-indent-width
+        code-review-section-image-scaling
+        code-review-fill-column)
   (before-all
     (setf code-review-database-file random-test-db
-          code-review--db-connection nil)
+          code-review--db-connection nil
+          code-review-section-indent-width 2
+          code-review-section-image-scaling 0.8
+          code-review-fill-column 70)
     (code-review-db--pullreq-create sample-pr-obj))
 
   (describe "TITLE"
