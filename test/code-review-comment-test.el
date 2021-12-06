@@ -56,7 +56,7 @@
              :updatedAt "2021-11-08T00:24:09Z"
              :state "COMMENTED"
              :author "wandersoncferreira"
-             :msg "Why keep everything in Emacs?"
+             :msg "<p>Why keep everything in Emacs?</p>"
              :position 3
              :reactions nil
              :path "README.md"
