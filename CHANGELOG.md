@@ -8,6 +8,7 @@
 - [#102](https://github.com/wandersoncferreira/code-review/pull/102): fix bug with Gitlab sending comments and rendering HTML details.
 - [#103](https://github.com/wandersoncferreira/code-review/pull/103): when PR does not have CI setup do not show any symbol
 - [#104](https://github.com/wandersoncferreira/code-review/pull/104): full reload using `G`
+- [#105](https://github.com/wandersoncferreira/code-review/pull/105): restrict approval to PRs with bad CI state. See docs of `code-review-always-restrict-approval?` too.
 
 # v0.0.3
 
