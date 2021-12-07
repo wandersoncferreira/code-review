@@ -304,7 +304,7 @@ repository:project(fullPath: \"%s\") {
           discussion {
             id
           }
-          bodyText: body
+          bodyHTML: bodyHtml
           author {
             login:username
           }
@@ -360,7 +360,7 @@ repository:project(fullPath: \"%s\") {
       }
       title
       state
-      bodyText: description
+      bodyHTML: descriptionHtml
     }
   }
 }
