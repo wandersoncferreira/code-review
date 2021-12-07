@@ -166,10 +166,10 @@ an object then we need to build the diff string ourselves here."
                                   (a-get-in mapping (list 'new 'beg)))))))
                 `((author (login . ,.author.login))
                   (state . ,"")
-                  (bodyText .,"")
+                  (bodyHTML .,"")
                   (createdAt . ,.createdAt)
                   (updatedAt . ,.updatedAt)
-                  (comments (nodes ((bodyText . ,.bodyText)
+                  (comments (nodes ((bodyHTML . ,.bodyHTML)
                                     (path . ,.position.oldPath)
                                     (position . ,diff-pos)
                                     (databaseId . ,discussion-id)
@@ -304,7 +304,7 @@ repository:project(fullPath: \"%s\") {
           discussion {
             id
           }
-          bodyHTML: bodyHtml
+          bodyHTML:bodyHtml
           author {
             login:username
           }
@@ -360,7 +360,7 @@ repository:project(fullPath: \"%s\") {
       }
       title
       state
-      bodyHTML: descriptionHtml
+      bodyHTML:descriptionHtml
     }
   }
 }
@@ -383,37 +383,39 @@ repository:project(fullPath: \"%s\") {
 
 (defun code-review-gitlab-pos-line-number->diff-line-number (gitlab-diff)
   "Get mapping of pos-line to diff-line given GITLAB-DIFF."
-  (let ((if-zero-null (lambda (n)
-                        (let ((nn (string-to-number n)))
-                          (when (> nn 0)
-                            nn))))
-        (regex
-         (rx "@@ -"
-             (group-n 1 (one-or-more digit))
-             ","
-             (group-n 2 (one-or-more digit))
-             " +"
-             (group-n 3 (one-or-more digit))
-             ","
-             (group-n 4 (one-or-more digit)))))
-    (setq code-review-gitlab-line-diff-mapping
+  (let* ((if-zero-null (lambda (n)
+                         (let ((nn (string-to-number n)))
+                           (when (> nn 0)
+                             nn))))
+         (regex
+          (rx "@@ -"
+              (group-n 1 (one-or-more digit))
+              ","
+              (group-n 2 (one-or-more digit))
+              " +"
+              (group-n 3 (one-or-more digit))
+              ","
+              (group-n 4 (one-or-more digit))))
+         (res
           (-reduce-from
            (lambda (acc it)
              (let ((str (a-get it 'diff)))
                (save-match-data
-                 (and (string-match regex str)
-                      ;;; NOTE: it's possible that using "old_path" blindly here
-                      ;;; might cause issues when this value is null
-                      (a-assoc acc (or (a-get it 'old_path)
-                                       (a-get it 'new_path))
-                               (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 1 str))
-                                                      'end (funcall if-zero-null (match-string 2 str))
-                                                      'path (a-get it 'old_path))
-                                        'new (a-alist 'beg (funcall if-zero-null (match-string 3 str))
-                                                      'end (funcall if-zero-null (match-string 4 str))
-                                                      'path (a-get it 'new_path))))))))
+                 (if (and (string-match regex str))
+                     ;;; NOTE: it's possible that using "old_path" blindly here
+                     ;;; might cause issues when this value is null
+                     (a-assoc acc (or (a-get it 'old_path)
+                                      (a-get it 'new_path))
+                              (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 1 str))
+                                                     'end (funcall if-zero-null (match-string 2 str))
+                                                     'path (a-get it 'old_path))
+                                       'new (a-alist 'beg (funcall if-zero-null (match-string 3 str))
+                                                     'end (funcall if-zero-null (match-string 4 str))
+                                                     'path (a-get it 'new_path))))
+                   acc))))
            nil
-           gitlab-diff))))
+           gitlab-diff)))
+    (setq code-review-gitlab-line-diff-mapping res)))
 
 (cl-defmethod code-review-core-send-replies ((replies code-review-submit-gitlab-replies) callback)
   "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
