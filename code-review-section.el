@@ -946,7 +946,8 @@ Optionally DELETE? flag must be set if you want to remove it."
                               (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .name)
                                                   'font-lock-face 'code-review-checker-name-face))
                               (insert " - ")
-                              (insert (propertize (format "%s  " (format "Successful in %s." "4s"))
+                              (insert (propertize (format "%s  " (format "Successful in %s."
+                                                                         (code-review-utils--elapsed-time .completedAt .startedAt)))
                                                   'font-lock-face 'magit-dimmed))
                               (insert (propertize ":white_check_mark: Details"
                                                   'font-lock-face 'code-review-checker-detail-face)))
