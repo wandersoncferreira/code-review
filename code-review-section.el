@@ -917,8 +917,8 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review-section-insert-commits ()
   "Insert commits from PULL-REQUEST."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
+  (let ((pr (code-review-db-get-pullreq)))
+    (let-alist (oref pr raw-infos)
       (magit-insert-section (code-review-commits-header-section)
         (insert (propertize "Commits:" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
@@ -928,38 +928,43 @@ Optionally DELETE? flag must be set if you want to remove it."
                    (msg (a-get-in c (list 'commit 'message)))
                    (obj (code-review-commit-section :sha sha :msg msg)))
               (magit-insert-section commit-section (code-review-commit-section obj)
-                (insert (format "%s%s %s %s"
-                                (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
-                                (oref obj msg)
-                                (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
-                                    ":white_check_mark:"
-                                  ":x:")
-                                (propertize "Details:" 'font-lock-face 'code-review-checker-detail-face)))
-                (oset commit-section hidden t)
-                (magit-insert-heading)
-                (dolist (check .commit.statusCheckRollup.contexts.nodes)
-                  (let-alist check
-                    (let ((obj (code-review-commit-check-detail-section :check check :details .detailsUrl)))
-                      (magit-insert-section (code-review-commit-check-detail-section obj)
-                        (if (string-equal .conclusion "SUCCESS")
-                            (progn
-                              (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .name)
-                                                  'font-lock-face 'code-review-checker-name-face))
-                              (insert " - ")
-                              (insert (propertize (format "%s  " (format "Successful in %s."
-                                                                         (code-review-utils--elapsed-time .completedAt .startedAt)))
-                                                  'font-lock-face 'magit-dimmed))
-                              (insert (propertize ":white_check_mark: Details"
-                                                  'font-lock-face 'code-review-checker-detail-face)))
-                          (progn
-                            (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .title)
-                                                'font-lock-face 'code-review-checker-name-face))
-                            (insert " - ")
-                            (insert (propertize (format "%s  " .summary)
-                                                'font-lock-face 'magit-dimmed))
-                            (insert (propertize ":x: Details"
-                                                'font-lock-face 'code-review-checker-detail-face))))))
-                    (insert "\n")))))))
+                (if (code-review-github-repo-p pr)
+                    (progn
+                      (insert (format "%s%s %s %s"
+                                      (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
+                                      (oref obj msg)
+                                      (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
+                                          ":white_check_mark:"
+                                        ":x:")
+                                      (propertize "Details:" 'font-lock-face 'code-review-checker-detail-face)))
+                      (oset commit-section hidden t)
+                      (magit-insert-heading)
+                      (dolist (check .commit.statusCheckRollup.contexts.nodes)
+                        (let-alist check
+                          (let ((obj (code-review-commit-check-detail-section :check check :details .detailsUrl)))
+                            (magit-insert-section (code-review-commit-check-detail-section obj)
+                              (if (string-equal .conclusion "SUCCESS")
+                                  (progn
+                                    (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .name)
+                                                        'font-lock-face 'code-review-checker-name-face))
+                                    (insert " - ")
+                                    (insert (propertize (format "%s  " (format "Successful in %s."
+                                                                               (code-review-utils--elapsed-time .completedAt .startedAt)))
+                                                        'font-lock-face 'magit-dimmed))
+                                    (insert (propertize ":white_check_mark: Details"
+                                                        'font-lock-face 'code-review-checker-detail-face)))
+                                (progn
+                                  (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .title)
+                                                      'font-lock-face 'code-review-checker-name-face))
+                                  (insert " - ")
+                                  (insert (propertize (format "%s  " .summary)
+                                                      'font-lock-face 'magit-dimmed))
+                                  (insert (propertize ":x: Details"
+                                                      'font-lock-face 'code-review-checker-detail-face))))))
+                          (insert "\n"))))
+                  (progn
+                    (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
+                    (insert (oref obj msg))))))))
         (insert ?\n)))))
 
 (defun code-review--insert-html (body &optional indent)
