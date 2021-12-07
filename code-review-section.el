@@ -31,7 +31,6 @@
 (require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
-(require 'shr)
 (require 'code-review-core)
 (require 'code-review-db)
 (require 'code-review-utils)

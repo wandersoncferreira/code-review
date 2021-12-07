@@ -4,6 +4,7 @@
 
 - [#96](https://github.com/wandersoncferreira/code-review/pull/96/files): render comments using HTML to allow displaying images.
 - [#98](https://github.com/wandersoncferreira/code-review/pull/98): add CI status on commits section. Github only. Demo [here](https://github.com/wandersoncferreira/code-review/pull/98).
+- [#100](https://github.com/wandersoncferreira/code-review/pull/100): remove `(require 'shr)` produced error on Emacs 27.
 
 # v0.0.3
 
