@@ -675,12 +675,6 @@ Optionally DELETE? flag must be set if you want to remove it."
       (magit-insert-heading heading))
     (magit-insert-section (code-review-code-comment-section obj)
       (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
-      ;; (dolist (l (code-review-utils--split-comment
-      ;;             (code-review-utils--wrap-text
-      ;;              (oref obj msg)
-      ;;              code-review-fill-column)))
-      ;;   (insert (propertize l 'face 'code-review-comment-face))
-      ;;   (insert ?\n))
       (when-let (reactions-obj (oref obj reactions))
         (code-review-comment-insert-reactions
          reactions-obj
@@ -928,7 +922,7 @@ Optionally DELETE? flag must be set if you want to remove it."
                    (msg (a-get-in c (list 'commit 'message)))
                    (obj (code-review-commit-section :sha sha :msg msg)))
               (magit-insert-section commit-section (code-review-commit-section obj)
-                (if (code-review-github-repo-p pr)
+                (if (and (code-review-github-repo-p pr) .commit.statusCheckRollup.contexts.nodes)
                     (progn
                       (insert (format "%s%s %s %s"
                                       (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
@@ -964,7 +958,8 @@ Optionally DELETE? flag must be set if you want to remove it."
                           (insert "\n"))))
                   (progn
                     (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
-                    (insert (oref obj msg))))))))
+                    (insert (oref obj msg))
+                    (insert ?\n)))))))
         (insert ?\n)))))
 
 (defun code-review--insert-html (body &optional indent)
