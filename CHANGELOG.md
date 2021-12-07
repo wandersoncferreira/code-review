@@ -6,6 +6,7 @@
 - [#98](https://github.com/wandersoncferreira/code-review/pull/98): add CI status on commits section. Github only. Demo [here](https://github.com/wandersoncferreira/code-review/pull/98).
 - [#101](https://github.com/wandersoncferreira/code-review/pull/101): fix bug with Gitlab rendering comments with HTML.
 - [#102](https://github.com/wandersoncferreira/code-review/pull/102): fix bug with Gitlab sending comments and rendering HTML details.
+- [#103](https://github.com/wandersoncferreira/code-review/pull/103): when PR does not have CI setup do not show any symbol
 
 # v0.0.3
 
