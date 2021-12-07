@@ -652,6 +652,17 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (setq code-review-section-full-refresh? nil))
 
 ;;;###autoload
+(defun code-review-reload ()
+  "Reload the buffer."
+  (interactive)
+  (let* ((pr (code-review-db-get-pullreq))
+         (code-review-section-full-refresh? t))
+    (if pr
+        (code-review--build-buffer
+         code-review-buffer-name)
+      (message "No PR found."))))
+
+;;;###autoload
 (defun code-review-request-reviews (&optional login)
   "Request reviewers for current PR using LOGIN if available."
   (interactive)
@@ -754,7 +765,8 @@ OUTDATED."
    ("s l" "Labels" code-review--set-label)
    ("s t" "Title" code-review-comment-set-title)
    ("s d" "Description" code-review-comment-set-description)]
-  ["Quit"
+  ["Buffer"
+   ("G" "Full reload" code-review-reload)
    ("q" "Quit" transient-quit-one)])
 
 (defvar code-review-mode-map
@@ -762,6 +774,7 @@ OUTDATED."
     (suppress-keymap map t)
     (define-key map (kbd "r") 'code-review-transient-api)
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "G") 'code-review-reload)
     (set-keymap-parent map magit-section-mode-map)
     map))
 
