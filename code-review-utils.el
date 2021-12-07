@@ -502,6 +502,14 @@ Expect the same output as `git diff --no-prefix`"
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
 
+(defun code-review-utils--elapsed-time (t2 t1)
+  "Compute the elapsed time between T2 and T1."
+  (let ((res (- (time-to-seconds (date-to-time t2))
+                (time-to-seconds (date-to-time t1)))))
+    (if (> res 100)
+        (format "%smin" (/ res 60))
+      (format "%ss" res))))
+
 ;;; line-number-at-pos replacement
 ;; Function taken from https://emacs.stackexchange.com/questions/3821/a-faster-method-to-obtain-line-number-at-pos-in-large-buffers
 ;; nlinum.el

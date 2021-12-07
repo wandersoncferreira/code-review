@@ -20,5 +20,6 @@ Features supported by each integrated forge:
 | Request Reviewers              | x            |        |
 | Promote comment to issue       | x            |        |
 | Get/Visit binary files         | x            | x      |
+| CI status on commit section    | x            |        |
 
 
