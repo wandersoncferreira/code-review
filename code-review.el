@@ -97,7 +97,7 @@
   :group 'code-review)
 
 (defcustom code-review-always-restrict-approval? nil
-  "Set to non-nil if you do not allow to approve a PR without a successful CI state."
+  "Set to non-nil to disallow approving a PR with a bad CI state."
   :type 'boolean
   :group 'code-review)
 
@@ -331,7 +331,7 @@ Optionally set a FEEDBACK message."
        (code-review-always-restrict-approval?
         (message "PR have CI issues. You cannot approve it."))
        (t
-        (let ((res (y-or-n-p "PR have CI issues. Do you want to proceed? ")))
+        (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
           (if res
               (code-review-submit "APPROVE" feedback)
             (message "Approval process canceled."))))))))
