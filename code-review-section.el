@@ -78,6 +78,18 @@
   "Face used for default state keywords."
   :group 'code-review)
 
+(defface code-review-checker-name-face
+  '((t :inherit bold :slant italic))
+  "Face used for commit check name."
+  :group 'code-review)
+
+(defface code-review-checker-detail-face
+  '((t :inherit magit-section-heading
+       :slant italic
+       :weight normal))
+  "Face for details word."
+  :group 'code-review)
+
 (defface code-review-author-face
   '((t :inherit font-lock-keyword-face))
   "Face used for author names."
@@ -291,11 +303,31 @@ For internal usage only.")
    (sha    :initarg :sha)
    (msg    :initarg :msg)))
 
+(defclass code-review-commit-check-detail-section (magit-section)
+  ((keymap :initform 'code-review-commit-check-detail-section-map)
+   (details :initarg :details)
+   (check   :initarg :check)))
+
 (defvar code-review-commit-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-commit-at-point)
     map)
   "Keymaps for commit section.")
+
+(defvar code-review-commit-check-detail-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-commit-goto-check-at-remote)
+    map)
+  "Keymaps for commit check section.")
+
+(defun code-review-commit-goto-check-at-remote ()
+  "Visit the details of the check at point in the remote."
+  (interactive)
+  (let ((section (magit-current-section)))
+    (if (code-review-commit-check-detail-section-p section)
+        (with-slots (value) section
+          (browse-url (oref value details)))
+      (message "Goto check at remote not defined in this section."))))
 
 
 ;;; General Comment - Conversation
@@ -888,17 +920,45 @@ Optionally DELETE? flag must be set if you want to remove it."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
       (magit-insert-section (code-review-commits-header-section)
-        (insert (propertize "Commits" 'font-lock-face 'magit-section-heading))
+        (insert (propertize "Commits:" 'font-lock-face 'magit-section-heading))
         (magit-insert-heading)
-        (magit-insert-section (code-review-commits-body-section)
-          (dolist (c .commits.nodes)
+        (dolist (c .commits.nodes)
+          (let-alist c
             (let* ((sha (a-get-in c (list 'commit 'abbreviatedOid)))
                    (msg (a-get-in c (list 'commit 'message)))
                    (obj (code-review-commit-section :sha sha :msg msg)))
-              (magit-insert-section (code-review-commit-section obj)
-                (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
-                (insert (oref obj msg))))
-            (insert ?\n)))
+              (magit-insert-section commit-section (code-review-commit-section obj)
+                (insert (format "%s%s %s %s"
+                                (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
+                                (oref obj msg)
+                                (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
+                                    ":white_check_mark:"
+                                  ":x:")
+                                (propertize "Details:" 'font-lock-face 'code-review-checker-detail-face)))
+                (oset commit-section hidden t)
+                (magit-insert-heading)
+                (dolist (check .commit.statusCheckRollup.contexts.nodes)
+                  (let-alist check
+                    (let ((obj (code-review-commit-check-detail-section :check check :details .detailsUrl)))
+                      (magit-insert-section (code-review-commit-check-detail-section obj)
+                        (if (string-equal .conclusion "SUCCESS")
+                            (progn
+                              (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .name)
+                                                  'font-lock-face 'code-review-checker-name-face))
+                              (insert " - ")
+                              (insert (propertize (format "%s  " (format "Successful in %s." "4s"))
+                                                  'font-lock-face 'magit-dimmed))
+                              (insert (propertize ":white_check_mark: Details"
+                                                  'font-lock-face 'code-review-checker-detail-face)))
+                          (progn
+                            (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .title)
+                                                'font-lock-face 'code-review-checker-name-face))
+                            (insert " - ")
+                            (insert (propertize (format "%s  " .summary)
+                                                'font-lock-face 'magit-dimmed))
+                            (insert (propertize ":x: Details"
+                                                'font-lock-face 'code-review-checker-detail-face))))))
+                    (insert "\n")))))))
         (insert ?\n)))))
 
 (defun code-review--insert-html (body &optional indent)

@@ -226,6 +226,39 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           commit {
             abbreviatedOid
             message
+            statusCheckRollup {
+              state
+              contexts(first:50){
+                nodes {
+                  ... on CheckRun {
+                    startedAt
+                    completedAt
+                    name
+                    text
+                    title
+                    summary
+                    status
+                    conclusion
+                    detailsUrl
+                    checkSuite {
+                      app {
+                        id
+                        name
+                        description
+                        slug
+                        logoUrl
+                      }
+                      workflowRun {
+                        workflow
+                        {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

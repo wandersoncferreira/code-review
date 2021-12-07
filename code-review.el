@@ -237,17 +237,17 @@ If you want to display a minibuffer MSG in the end."
 (cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
   (let* ((raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
-    ;; 2. save raw diff data
+    ;; 1. save raw diff data
     (progress-reporter-update progress 3)
     (code-review-db--pullreq-raw-diff-update
      (code-review-utils--clean-diff-prefixes
       (a-get (-first-item res) 'message)))
 
-    ;; 2.1 save raw info data e.g. data from GraphQL API
+    ;; 1.1 save raw info data e.g. data from GraphQL API
     (progress-reporter-update progress 4)
     (code-review-db--pullreq-raw-infos-update raw-infos)
 
-    ;; 2.2 trigger renders
+    ;; 1.2 trigger renders
     (progress-reporter-update progress 5)
     (code-review--trigger-hooks buff-name msg)
     (progress-reporter-done progress)))
