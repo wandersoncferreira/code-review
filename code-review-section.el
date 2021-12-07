@@ -1099,7 +1099,7 @@ INDENT count of spaces are added at the start of every line."
             (dolist (c thread-comments)
               (let* ((obj (code-review-comment-section
                            :author (a-get-in c (list 'author 'login))
-                           :msg (a-get c 'bodyText)
+                           :msg (a-get c 'bodyHTML)
                            :id (a-get c 'databaseId))))
                 (magit-insert-section (code-review-comment-section obj)
                   (insert (concat
