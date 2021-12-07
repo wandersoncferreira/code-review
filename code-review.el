@@ -96,6 +96,11 @@
   :type 'float
   :group 'code-review)
 
+(defcustom code-review-always-restrict-approval? nil
+  "Set to non-nil if you do not allow to approve a PR without a successful CI state."
+  :type 'boolean
+  :group 'code-review)
+
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title
@@ -314,10 +319,22 @@ If you want to provide a MSG for the end of the process."
 ;;; public functions
 
 ;;;###autoload
-(defun code-review-approve ()
-  "Approve current PR."
+(defun code-review-approve (&optional feedback)
+  "Approve current PR.
+Optionally set a FEEDBACK message."
   (interactive)
-  (code-review-submit "APPROVE"))
+  (let ((pr (code-review-db-get-pullreq)))
+    (let-alist (oref pr raw-infos)
+      (cond
+       ((string-equal .commit.statusCheckRollup.state "SUCCESS")
+        (code-review-submit "APPROVE" feedback))
+       (code-review-always-restrict-approval?
+        (message "PR have CI issues. You cannot approve it."))
+       (t
+        (let ((res (y-or-n-p "PR have CI issues. Do you want to proceed? ")))
+          (if res
+              (code-review-submit "APPROVE" feedback)
+            (message "Approval process canceled."))))))))
 
 ;;;###autoload
 (defun code-review-comments ()
@@ -572,7 +589,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
 (defun code-review-submit-lgtm ()
   "Submit LGTM review."
   (interactive)
-  (code-review-submit "APPROVE" code-review-lgtm-message))
+  (code-review-approve code-review-lgtm-message))
 
 
 ;;;###autoload
