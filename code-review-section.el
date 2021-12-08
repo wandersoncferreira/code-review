@@ -1045,39 +1045,43 @@ INDENT count of spaces are added at the start of every line."
 (cl-defmethod code-review--insert-conversation-section ((github code-review-github-repo))
   "Function to insert conversation section for GITHUB PRs."
   (let-alist (oref github raw-infos)
-    (dolist (c (append .comments.nodes (-filter
-                                        (lambda (n)
-                                          (not
-                                           (string-empty-p (a-get n 'bodyHTML))))
-                                        .reviews.nodes)))
-      (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
-             (reaction-objs (when reactions
-                              (-map
-                               (lambda (r)
-                                 (code-review-reaction-section
-                                  :id (a-get r 'id)
-                                  :content (a-get r 'content)))
-                               reactions)))
-             (obj (code-review-comment-section
-                   :author (a-get-in c (list 'author 'login))
-                   :msg (a-get c 'bodyHTML)
-                   :id (a-get c 'databaseId)
-                   :typename (a-get c 'typename)
-                   :reactions reaction-objs)))
-        (magit-insert-section (code-review-comment-section obj)
-          (insert (concat
-                   (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
-                   " - "
-                   (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
-          (magit-insert-heading)
-          (code-review-insert-comment-lines obj)
+    (let ((list-of-comments (->> .reviews.nodes
+                                 (-filter
+                                  (lambda (n)
+                                    (not (string-empty-p (a-get n 'bodyHTML)))))
+                                 (append .comments.nodes)
+                                 (--sort
+                                  (< (time-to-seconds (date-to-time (a-get it 'updatedAt)))
+                                     (time-to-seconds (date-to-time (a-get other 'updatedAt))))))))
+      (dolist (c list-of-comments)
+        (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
+               (reaction-objs (when reactions
+                                (-map
+                                 (lambda (r)
+                                   (code-review-reaction-section
+                                    :id (a-get r 'id)
+                                    :content (a-get r 'content)))
+                                 reactions)))
+               (obj (code-review-comment-section
+                     :author (a-get-in c (list 'author 'login))
+                     :msg (a-get c 'bodyHTML)
+                     :id (a-get c 'databaseId)
+                     :typename (a-get c 'typename)
+                     :reactions reaction-objs)))
+          (magit-insert-section (code-review-comment-section obj)
+            (insert (concat
+                     (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
+                     " - "
+                     (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
+            (magit-insert-heading)
+            (code-review-insert-comment-lines obj)
 
-          (when reactions
-            (code-review-comment-insert-reactions
-             reaction-objs
-             "comment"
-             (a-get c 'databaseId)))
-          (insert ?\n))))))
+            (when reactions
+              (code-review-comment-insert-reactions
+               reaction-objs
+               "comment"
+               (a-get c 'databaseId)))
+            (insert ?\n)))))))
 
 (cl-defmethod code-review--insert-conversation-section ((gitlab code-review-gitlab-repo))
   "Function to insert conversation section for GITLAB PRs."
