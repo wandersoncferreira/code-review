@@ -679,7 +679,8 @@ Optionally DELETE? flag must be set if you want to remove it."
         (code-review-comment-insert-reactions
          reactions-obj
          "code-comment"
-         (oref obj id))))))
+         (oref obj id)))
+      (insert ?\n))))
 
 (defclass code-review-outdated-comment-section (code-review-base-comment-section)
   ((keymap       :initform 'code-review-outdated-comment-section-map)
@@ -962,6 +963,30 @@ Optionally DELETE? flag must be set if you want to remove it."
                     (insert ?\n)))))))
         (insert ?\n)))))
 
+(defun code-review--html-written-loc (body &optional indent)
+  "Compute how many lines the HTML BODY will have in the buffer.
+INDENT is an optional."
+  (let ((shr-indentation (* (or indent 0) (shr-string-pixel-width "-")))
+        (image-scaling-factor code-review-section-image-scaling)
+        (shr-width code-review-fill-column)
+        start
+        dom)
+    (with-temp-buffer
+      (insert body)
+      (setq dom (libxml-parse-html-region (point-min) (point-max))))
+    (-> (with-temp-buffer
+          (setq start (point))
+          (insert " ")
+          (narrow-to-region start (1+ start))
+          (goto-char start)
+          (shr-insert-document dom)
+          ;; delete the inserted " "
+          (delete-char 1)
+          (buffer-substring-no-properties (point-min) (point-max)))
+        (split-string "\n")
+        (length)
+        (- 1))))
+
 (defun code-review--insert-html (body &optional indent)
   "Insert html content BODY.
 INDENT is an optional number, if provided,
@@ -1133,7 +1158,8 @@ INDENT count of spaces are added at the start of every line."
   ;;; the same original position across different commits snapshots.
   ;;; as github UI we will add those hunks and its comments
   (let* ((hunk-groups (-group-by (lambda (el) (oref el diffHunk)) comments))
-         (hunks (a-keys hunk-groups)))
+         (hunks (a-keys hunk-groups))
+         (amount-loc-internal amount-loc))
     (dolist (hunk hunks)
       (when (not hunk)
         (code-review-utils--log
@@ -1146,7 +1172,9 @@ INDENT count of spaces are added at the start of every line."
              (amount-new-loc (+ 1 (length diff-hunk-lines)))
              (first-hunk-commit (-first-item (alist-get safe-hunk hunk-groups nil nil 'equal)))
              (metadata1 `((comment . ,first-hunk-commit)
-                          (amount-loc ., (+ amount-loc amount-new-loc)))))
+                          (amount-loc ., (+ amount-loc-internal amount-new-loc)))))
+
+        (setq amount-loc-internal (+ amount-loc-internal amount-new-loc))
 
         (setq code-review-section-hold-written-comment-count
               (code-review-utils--comment-update-written-count
@@ -1165,36 +1193,31 @@ INDENT count of spaces are added at the start of every line."
                 (insert safe-hunk))
               (magit-diff-wash-hunk)
               (insert ?\n)
-              (insert ?\n)
 
               (oset outdated-section hidden t)
 
               (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
-                (let* ((body-lines (code-review-utils--split-comment
-                                    (code-review-utils--wrap-text
-                                     (oref c msg)
-                                     code-review-fill-column)))
-                       (amount-new-loc-outdated-partial (+ 2 (length body-lines)))
+                (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
+                       (amount-new-loc-outdated-partial (+ 2 written-loc))
                        (amount-new-loc-outdated (if (oref c reactions)
                                                     (+ 2 amount-new-loc-outdated-partial)
                                                   amount-new-loc-outdated-partial)))
+
+                  (setq amount-loc-internal (+ amount-loc-internal amount-new-loc-outdated))
 
                   (setq code-review-section-hold-written-comment-count
                         (code-review-utils--comment-update-written-count
                          code-review-section-hold-written-comment-count
                          (oref first-hunk-commit path)
                          amount-new-loc-outdated))
-
-                  (oset c amount-loc (+ amount-loc amount-new-loc amount-new-loc-outdated))
+                  (oset c amount-loc amount-loc-internal)
 
                   (magit-insert-section (code-review-outdated-comment-section c)
                     (magit-insert-heading (format "Reviewed by %s[%s]:"
                                                   (oref c author)
                                                   (oref c state)))
                     (magit-insert-section (code-review-outdated-comment-section c)
-                      (dolist (l body-lines)
-                        (insert l)
-                        (insert ?\n))
+                      (code-review--insert-html (oref c msg) (* 3 code-review-section-indent-width))
                       (when-let (reactions-obj (oref c reactions))
                         (code-review-comment-insert-reactions
                          reactions-obj
@@ -1226,8 +1249,8 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     (let ((new-amount-loc amount-loc))
       (forward-line)
       (dolist (c comments)
-        (let* ((body-lines (code-review-utils--split-comment (oref c msg)))
-               (amount-loc-incr-partial (+ 1 (length body-lines)))
+        (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
+               (amount-loc-incr-partial (+ 2 written-loc))
                (amount-loc-incr (if (oref c reactions)
                                     (+ 2 amount-loc-incr-partial)
                                   amount-loc-incr-partial)))
