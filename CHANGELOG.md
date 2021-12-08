@@ -9,7 +9,7 @@
 - [#103](https://github.com/wandersoncferreira/code-review/pull/103): when PR does not have CI setup do not show any symbol
 - [#104](https://github.com/wandersoncferreira/code-review/pull/104): full reload using `G`
 - [#105](https://github.com/wandersoncferreira/code-review/pull/105): restrict approval to PRs with bad CI state. See docs of `code-review-always-restrict-approval?` too.
-- [#111](https://github.com/wandersoncferreira/code-review/pull/111): fix comments being placed in wrong position. Requires improvement to compute how many lines the HTML dom will take in the buffer.
+- [#111](https://github.com/wandersoncferreira/code-review/pull/111): fix comments placed in wrong position. Needs better solution to compute amount of HTML lines in the buffer.
 - [#113](https://github.com/wandersoncferreira/code-review/pull/113): order conversation comments section by createdAt timestamp.
 
 # v0.0.3
