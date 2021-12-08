@@ -55,8 +55,15 @@
 
 (cl-defmethod code-review-core-pullreq-infos ((bitbucket code-review-bitbucket-repo) callback)
   "Get PR infos from BITBUCKET, run CALLBACK."
-  ;; TODO: implement infos
-  (funcall callback))
+  (ghub-request "GET" (format "/repositories/%s/%s/pullrequests/%s"
+                              (oref bitbucket owner)
+                              (oref bitbucket repo)
+                              (oref bitbucket number))
+                nil
+                :forge 'bitbucket
+                :auth 'code-review
+                :host code-review-bitbucket-host
+                :callback callback))
 
 (cl-defmethod code-review-core-infos-deferred ((bitbucket code-review-bitbucket-repo))
   "GET PR infos from BITBUCKET using deferred lib."
@@ -68,6 +75,34 @@
         (deferred:callback-post d v))
       d))
     d))
+
+(defclass code-review-submit-bitbucket-review ()
+  ((state :initform nil)
+   (pr :initform nil)
+   (local-comments :initform nil
+                   :type (satisfies
+                          (lambda (it)
+                            (-all-p #'code-review-submit-local-coment-p it))))
+   (feedback :initform nil)))
+
+(cl-defmethod code-review-core-send-review ((review code-review-submit-bitbucket-review) callback)
+  "Submit review comments given REVIEW and a CALLBACK."
+  (let* ((pr (oref review pr))
+         (infos (oref pr raw-infos)))
+    ;; 1. send all comments to the PR
+    (dolist (c (oref review local-comments))
+      (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/comments"
+                                   (oref pr owner)
+                                   (oref pr repo)
+                                   (oref pr number))
+                    nil
+                    :forge 'bitbucket
+                    :auth 'code-review
+                    :host code-review-bitbucket-host
+                    :payload `((content (raw . ,(oref c body)))
+                               (inline (path . ,(oref c path))
+                                       (from . 23))) ;;; TODO: compute the correct line number.. use the same strategy used in Gitlab integration
+                    ))))
 
 (provide 'code-review-bitbucket)
 ;;; code-review-bitbucket.el ends here

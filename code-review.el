@@ -287,7 +287,14 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
   "Helper function to build process for BITBUCKET based on the fetched RES informing PROGRESS."
-  (let* ((raw-infos ""))
+  (let* ((raw-infos (let-alist (-second-item res)
+                      `((title . ,.title)
+                        (number . ,.id)
+                        (state . ,.state)
+                        (bodyHTML . ,.rendered.description.html)
+                        (headRef (target (oid . ,.source.commit.hash)))
+                        (baseRefName . ,.destination.branch.name)
+                        (headRefName . ,.source.branch.name)))))
     ;; 1. save raw diff data
     (progress-reporter-update progress 3)
     (code-review-db--pullreq-raw-diff-update
@@ -296,7 +303,7 @@ If you want to display a minibuffer MSG in the end."
 
     ;; 1.1 save raw info data e.g. data from GraphQL API
     (progress-reporter-update progress 4)
-    ;; (code-review-db--pullreq-raw-infos-update raw-infos)
+    (code-review-db--pullreq-raw-infos-update raw-infos)
 
     ;; 1.2 trigger renders
     (progress-reporter-update progress 5)
@@ -481,6 +488,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                        (code-review-submit-github-review))
                       ((code-review-gitlab-repo-p pr)
                        (code-review-submit-gitlab-review))
+                      ((code-review-bitbucket-repo-p pr)
+                       (code-review-submit-bitbucket-review))
                       (t
                        (code-review-submit-review))))
          (replies-obj (cond

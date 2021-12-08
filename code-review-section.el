@@ -772,17 +772,18 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review-section-insert-ref ()
   "Insert the state of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
+  (let ((infos (code-review-db--pullreq-raw-infos)))
     (let-alist infos
-      (let ((obj (code-review-ref-section)))
-        (oset obj base .baseRefName)
-        (oset obj head .headRefName)
-        (magit-insert-section (code-review-ref-section obj)
-          (insert (format "%-17s" "Refs: "))
-          (insert .baseRefName)
-          (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
-          (insert .headRefName)
-          (insert ?\n))))))
+      (when (and .baseRefName .headRefName)
+        (let ((obj (code-review-ref-section)))
+          (oset obj base .baseRefName)
+          (oset obj head .headRefName)
+          (magit-insert-section (code-review-ref-section obj)
+            (insert (format "%-17s" "Refs: "))
+            (insert .baseRefName)
+            (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
+            (insert .headRefName)
+            (insert ?\n)))))))
 
 (defun code-review-section-insert-milestone ()
   "Insert the milestone of the header buffer."
