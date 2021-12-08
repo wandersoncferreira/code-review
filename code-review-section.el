@@ -37,6 +37,7 @@
 (require 'code-review-utils)
 (require 'code-review-github)
 (require 'code-review-gitlab)
+(require 'code-review-bitbucket)
 (require 'emojify)
 
 (defface code-review-timestamp-face
@@ -1104,6 +1105,10 @@ INDENT count of spaces are added at the start of every line."
                   (magit-insert-heading)
                   (code-review-insert-comment-lines obj)
                   (insert ?\n))))))))))
+
+;;; TODO: implement conversation section for bitbucket
+(cl-defmethod code-review--insert-conversation-section ((bitbucket code-review-bitbucket-repo))
+  "Insert conversation section for BITBUCKET.")
 
 (defun code-review-section-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."

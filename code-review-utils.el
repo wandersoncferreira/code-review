@@ -254,6 +254,14 @@ using COMMENTS."
                     'repo  (match-string 2 url)
                     'owner (match-string 1 url)
                     'forge 'github
+                    'url url))))
+   ((string-prefix-p "https://bitbucket.org" url)
+    (save-match-data
+      (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull-requests/\\([0-9]+\\)" url)
+           (a-alist 'num   (match-string 3 url)
+                    'repo  (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'bitbucket
                     'url url))))))
 
 (defun code-review-utils-build-obj (pr-alist)
@@ -270,6 +278,11 @@ using COMMENTS."
        (code-review-gitlab-repo :owner .owner
                                 :repo .repo
                                 :number .num)))
+     ((equal .forge 'bitbucket)
+      (code-review-db--pullreq-create
+       (code-review-bitbucket-repo :owner .owner
+                                   :repo .repo
+                                   :number .num)))
      (t
       (message "Forge not supported")))))
 

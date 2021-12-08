@@ -229,6 +229,10 @@ If you want to display a minibuffer MSG in the end."
   "Check if the RES has a message for auth token not set for GITLAB."
   (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
 
+(cl-defmethod code-review--auth-token-set? ((_bitbucket code-review-bitbucket-repo) res)
+  "Check if the RES has a message for auth token not set for BITBUCKET."
+  (string-prefix-p "Required Bitbucket token" (-first-item (a-get res 'error))))
+
 (cl-defmethod code-review--auth-token-set? (obj res)
   "Default catch all unknown values passed to this function as OBJ and RES."
   (code-review--log
@@ -280,6 +284,24 @@ If you want to display a minibuffer MSG in the end."
   (progress-reporter-update progress 6)
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
+
+(cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
+  "Helper function to build process for BITBUCKET based on the fetched RES informing PROGRESS."
+  (let* ((raw-infos ""))
+    ;; 1. save raw diff data
+    (progress-reporter-update progress 3)
+    (code-review-db--pullreq-raw-diff-update
+     (code-review-utils--clean-diff-prefixes
+      (a-get (-first-item res) 'message)))
+
+    ;; 1.1 save raw info data e.g. data from GraphQL API
+    (progress-reporter-update progress 4)
+    ;; (code-review-db--pullreq-raw-infos-update raw-infos)
+
+    ;; 1.2 trigger renders
+    (progress-reporter-update progress 5)
+    (code-review--trigger-hooks buff-name msg)
+    (progress-reporter-done progress)))
 
 (defun code-review--build-buffer (buff-name &optional commit-focus? msg)
   "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
