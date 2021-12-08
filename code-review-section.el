@@ -1076,8 +1076,8 @@ INDENT count of spaces are added at the start of every line."
                                     (not (string-empty-p (a-get n 'bodyHTML)))))
                                  (append .comments.nodes)
                                  (--sort
-                                  (< (time-to-seconds (date-to-time (a-get it 'updatedAt)))
-                                     (time-to-seconds (date-to-time (a-get other 'updatedAt))))))))
+                                  (< (time-to-seconds (date-to-time (a-get it 'createdAt)))
+                                     (time-to-seconds (date-to-time (a-get other 'createdAt))))))))
       (dolist (c list-of-comments)
         (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
                (reaction-objs (when reactions
