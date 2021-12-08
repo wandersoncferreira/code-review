@@ -323,8 +323,11 @@ If you want to provide a MSG for the end of the process."
   "Approve current PR.
 Optionally set a FEEDBACK message."
   (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (let-alist (oref pr raw-infos)
+  (let* ((pr (code-review-db-get-pullreq))
+         (last-commit (-> (oref pr raw-infos)
+                          (a-get-in (list 'commits 'nodes))
+                          (-last-item))))
+    (let-alist last-commit
       (cond
        ((string-equal .commit.statusCheckRollup.state "SUCCESS")
         (code-review-submit "APPROVE" feedback))
