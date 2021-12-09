@@ -382,7 +382,7 @@ If you already have a FEEDBACK string to submit use it."
 (defun code-review-utils--set-label-field (obj)
   "Helper function to set header multi value fields given by OP-NAME and OBJ.
 Milestones, labels, projects, and more."
-  (when-let (options (code-review-core-get-labels obj))
+  (when-let (options (code-review-get-labels obj))
     (let* ((choices (completing-read-multiple "Choose: " options))
            (labels (append
                     (-map (lambda (x)
@@ -392,7 +392,7 @@ Milestones, labels, projects, and more."
                     (oref obj labels))))
       (setq code-review-comment-cursor-pos (point))
       (oset obj labels labels)
-      (code-review-core-set-labels
+      (code-review-set-labels
        obj
        (lambda ()
          (closql-insert (code-review-db) obj t)
@@ -405,11 +405,11 @@ If a valid ASSIGNEE is provided, use that instead."
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)
-      (when-let (options (code-review-core-get-assignees obj))
+      (when-let (options (code-review-get-assignees obj))
         (let* ((choice (completing-read "Choose: " options)))
           (setq candidate choice))))
     (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-core-set-assignee
+    (code-review-set-assignee
      obj
      (lambda ()
        (closql-insert (code-review-db) obj t)
@@ -418,14 +418,14 @@ If a valid ASSIGNEE is provided, use that instead."
 
 (defun code-review-utils--set-milestone-field (obj)
   "Helper function to set a milestone given an OBJ."
-  (when-let (options (code-review-core-get-milestones obj))
+  (when-let (options (code-review-get-milestones obj))
     (let* ((choice (completing-read "Choose: " (a-keys options)))
            (milestone `((title . ,choice)
                         (perc . 0)
                         (number .,(alist-get choice options nil nil 'equal)))))
       (setq code-review-comment-cursor-pos (point))
       (oset obj milestones milestone)
-      (code-review-core-set-milestone
+      (code-review-set-milestone
        obj
        (lambda ()
          (closql-insert (code-review-db) obj t)
@@ -437,7 +437,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (let ((pr (code-review-db-get-pullreq)))
     (setq code-review-comment-cursor-pos (point))
     (oset pr title title)
-    (code-review-core-set-title
+    (code-review-set-title
      pr
      (lambda ()
        (closql-insert (code-review-db) pr t)
@@ -448,7 +448,7 @@ If a valid ASSIGNEE is provided, use that instead."
   "Helper function to set a DESCRIPTION."
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr description description)
-    (code-review-core-set-description
+    (code-review-set-description
      pr
      (lambda ()
        (closql-insert (code-review-db) pr t)
@@ -603,7 +603,7 @@ Expect the same output as `git diff --no-prefix`"
                     (let ((code-review-section-full-refresh? t))
                       (code-review--build-buffer
                        code-review-buffer-name)))))
-    (code-review-core-new-issue-comment pr comment-text callback)))
+    (code-review-new-issue-comment pr comment-text callback)))
 
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here

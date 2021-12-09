@@ -95,7 +95,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        (t
         (message "Unknown error talking to Github: %s" m))))))
 
-(cl-defmethod code-review-core-pullreq-diff ((github code-review-github-repo) callback)
+(cl-defmethod code-review-pullreq-diff ((github code-review-github-repo) callback)
   "Get PR diff from GITHUB, run CALLBACK after answer."
   (let ((owner (oref github owner))
         (repo (oref github repo))
@@ -109,10 +109,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :callback callback
               :errorback #'code-review-github-errback)))
 
-(cl-defmethod code-review-core-diff-deferred ((github code-review-github-repo))
+(cl-defmethod code-review-diff-deferred ((github code-review-github-repo))
   "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-core-pullreq-diff
+    (code-review-pullreq-diff
      github
      (apply-partially
       (lambda (d v &rest _)
@@ -120,7 +120,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       d))
     d))
 
-(cl-defmethod code-review-core-commit-diff ((github code-review-github-repo) callback)
+(cl-defmethod code-review-commit-diff ((github code-review-github-repo) callback)
   "Get PR diff from GITHUB, run CALLBACK after answer."
   (let ((owner (oref github owner))
         (repo (oref github repo))
@@ -134,10 +134,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :callback callback
               :errorback #'code-review-github-errback)))
 
-(cl-defmethod code-review-core-commit-diff-deferred ((github code-review-github-repo))
+(cl-defmethod code-review-commit-diff-deferred ((github code-review-github-repo))
   "Get PR diff from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-core-commit-diff
+    (code-review-commit-diff
      github
      (apply-partially
       (lambda (d v &rest _)
@@ -145,7 +145,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       d))
     d))
 
-(cl-defmethod code-review-core-pullreq-infos ((github code-review-github-repo) callback)
+(cl-defmethod code-review-pullreq-infos ((github code-review-github-repo) callback)
   "Get PR details from GITHUB and dispatch to CALLBACK."
   (let* ((repo (oref github repo))
          (owner (oref github owner))
@@ -332,17 +332,17 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                   :callback callback
                   :errorback #'code-review-github-errback)))
 
-(cl-defmethod code-review-core-infos-deferred ((github code-review-github-repo))
+(cl-defmethod code-review-infos-deferred ((github code-review-github-repo))
   "Get PR infos from GITHUB using deferred lib."
   (let ((d (deferred:new #'identity)))
-    (code-review-core-pullreq-infos
+    (code-review-pullreq-infos
      github
      (apply-partially (lambda (d v &rest _)
                         (deferred:callback-post d v))
                       d))
     d))
 
-(cl-defmethod code-review-core-get-labels ((github code-review-github-repo))
+(cl-defmethod code-review-get-labels ((github code-review-github-repo))
   "Get labels from GITHUB."
   (let ((resp
          (ghub-get (format "/repos/%s/%s/labels"
@@ -355,7 +355,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        (a-get l 'name))
      resp)))
 
-(cl-defmethod code-review-core-set-labels ((github code-review-github-repo) callback)
+(cl-defmethod code-review-set-labels ((github code-review-github-repo) callback)
   "Set labels for your pr at GITHUB and call CALLBACK."
   (let ((url (format "/repos/%s/%s/issues/%s/labels"
                      (oref github owner)
@@ -374,7 +374,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              :errorback #'code-review-github-errback
              :callback (lambda (&rest _) (funcall callback)))))
 
-(cl-defmethod code-review-core-get-assignees ((github code-review-github-repo))
+(cl-defmethod code-review-get-assignees ((github code-review-github-repo))
   "Get labels from GITHUB."
   (let ((resp
          (ghub-get (format "/repos/%s/%s/assignees"
@@ -387,7 +387,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        (a-get l 'login))
      resp)))
 
-(cl-defmethod code-review-core-set-assignee ((github code-review-github-repo) callback)
+(cl-defmethod code-review-set-assignee ((github code-review-github-repo) callback)
   "Set assignee to your PR in GITHUB and call CALLBACK."
   (ghub-post (format "/repos/%s/%s/issues/%s/assignees"
                      (oref github owner)
@@ -401,7 +401,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              :errorback #'code-review-github-errback
              :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-core-get-milestones ((github code-review-github-repo))
+(cl-defmethod code-review-get-milestones ((github code-review-github-repo))
   "Get milestones from GITHUB."
   (let ((resp
          (ghub-get (format "/repos/%s/%s/milestones"
@@ -414,7 +414,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
        `(,(a-get l 'title) . ,(a-get l 'number)))
      resp)))
 
-(cl-defmethod code-review-core-set-milestone ((github code-review-github-repo) callback)
+(cl-defmethod code-review-set-milestone ((github code-review-github-repo) callback)
   "Set milestone for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/issues/%s"
                       (oref github owner)
@@ -429,7 +429,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               (funcall callback)
                             (message "You cannot set this Milestone. Verify if the milestone exist in Github.")))))
 
-(cl-defmethod code-review-core-set-title ((github code-review-github-repo) callback)
+(cl-defmethod code-review-set-title ((github code-review-github-repo) callback)
   "Set title for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
@@ -441,7 +441,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-core-set-description ((github code-review-github-repo) callback)
+(cl-defmethod code-review-set-description ((github code-review-github-repo) callback)
   "Set description for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
@@ -453,7 +453,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-core-merge ((github code-review-github-repo) strategy)
+(cl-defmethod code-review-merge ((github code-review-github-repo) strategy)
   "Merge a PR in GITHUB using a STRATEGY."
   (ghub-put (format "/repos/%s/%s/pulls/%s/merge"
                     (oref github owner)
@@ -467,7 +467,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               'merge_method strategy)
             :errorback #'code-review-github-errback))
 
-(cl-defmethod code-review-core-set-reaction ((github code-review-github-repo) context-name comment-id reaction)
+(cl-defmethod code-review-set-reaction ((github code-review-github-repo) context-name comment-id reaction)
   "Set REACTION in GITHUB pullreq COMMENT-ID given a CONTEXT-NAME e.g. issue, pr, discussion."
   (let ((path (pcase context-name
                 ("pr-description"
@@ -488,7 +488,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                :auth 'code-review
                :payload (a-alist 'content r))))
 
-(cl-defmethod code-review-core-delete-reaction ((github code-review-github-repo) context-name comment-id reaction-id)
+(cl-defmethod code-review-delete-reaction ((github code-review-github-repo) context-name comment-id reaction-id)
   "Delete REACTION-ID in GITHUB pullreq COMMENT-ID given a CONTEXT-NAME e.g. issue, pr, discussion."
   (let ((path (pcase context-name
                 ("pr-description"
@@ -511,7 +511,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                    (lambda (it)
                      (-all-p #'code-review-submit-reply-p it))))))
 
-(cl-defmethod code-review-core-send-replies ((replies code-review-submit-github-replies) callback)
+(cl-defmethod code-review-send-replies ((replies code-review-submit-github-replies) callback)
   "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
   (let ((pr (oref replies pr)))
     (deferred:$
@@ -550,7 +550,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                             (-all-p #'code-review-submit-local-coment-p it))))
    (feedback :initform nil)))
 
-(cl-defmethod code-review-core-send-review ((review code-review-submit-github-review) callback)
+(cl-defmethod code-review-send-review ((review code-review-submit-github-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
          (payload (a-alist 'event (oref review state)
@@ -580,7 +580,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                :errorback #'code-review-github-errback
                :callback callback)))
 
-(cl-defmethod code-review-core-get-assinable-users ((github code-review-github-repo))
+(cl-defmethod code-review-get-assinable-users ((github code-review-github-repo))
   "Get a list of assignable users for current PR in GITHUB."
   (let ((infos (oref github raw-infos))
         (query "query($repo_owner:String!, $repo_name:String!, $cursor:String) {
@@ -617,7 +617,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
         (code-review-db-update github)
         res))))
 
-(cl-defmethod code-review-core-request-review ((github code-review-github-repo) user-ids callback)
+(cl-defmethod code-review-request-review ((github code-review-github-repo) user-ids callback)
   "Request review for your GITHUB PR from USER-IDS and call CALLBACK afterward."
   (let ((query "mutation($input: RequestReviewsInput!) {
   requestReviews(input: $input) {
@@ -638,7 +638,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               (funcall callback))
                   :errorback #'code-review-github-errback)))
 
-(cl-defmethod code-review-core-new-issue ((github code-review-github-repo) body title callback)
+(cl-defmethod code-review-new-issue ((github code-review-github-repo) body title callback)
   "Create a new issue in GITHUB given a BODY and TITLE and call CALLBACK."
   (ghub-post (format "/repos/%s/%s/issues"
                      (oref github owner)
@@ -698,7 +698,7 @@ Return the blob URL if BLOB? is provided."
          (url (code-review-binary-file-url github filename)))
     (code-review-utils--fetch-binary-data url filename headers)))
 
-(cl-defmethod code-review-core-new-issue-comment ((github code-review-github-repo) comment-msg callback)
+(cl-defmethod code-review-new-issue-comment ((github code-review-github-repo) comment-msg callback)
   "Create a new comment issue for GITHUB sending the COMMENT-MSG and call CALLBACK."
   (ghub-post (format "/repos/%s/%s/issues/%s/comments"
                      (oref github owner)
