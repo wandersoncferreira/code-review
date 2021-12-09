@@ -42,7 +42,8 @@
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
-(require 'code-review-core)
+(require 'code-review-interfaces)
+(require 'code-review-faces)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
@@ -133,33 +134,6 @@
   "Hook run to insert sections into a code review commit buffer."
   :group 'code-review
   :type 'hook)
-
-;;; Faces
-
-(defface code-review-recent-comment-heading
-  '((((supports (:box t))) :inherit magit-branch-remote :box t)
-    (t                     :inherit magit-branch-remote :inverse-video t))
-  "Face for recent comments."
-  :group 'code-review)
-
-(defface code-review-outdated-comment-heading
-  '((((supports (:box t))) :inherit magit-cherry-equivalent :box t)
-    (t                     :inherit magit-cherry-equivalent :inverse-video t))
-  "Face for outdated comments."
-  :group 'code-review)
-
-;;; vars
-
-(defvar code-review-reaction-types
-  `(("THUMBS_UP" . ":+1:")
-    ("THUMBS_DOWN" . ":-1:")
-    ("LAUGH" . ":laughing:")
-    ("CONFUSED" . ":confused:")
-    ("HEART" . ":heart:")
-    ("HOORAY" . ":tada:")
-    ("ROCKET" . ":rocket:")
-    ("EYES" . ":eyes:"))
-  "All available reactions.")
 
 ;;; build buffer
 
@@ -291,8 +265,8 @@ If you want to provide a MSG for the end of the process."
       (progress-reporter-update progress 1)
       (deferred:$
         (deferred:parallel
-          (lambda () (code-review-core-diff-deferred obj))
-          (lambda () (code-review-core-infos-deferred obj)))
+          (lambda () (code-review-diff-deferred obj))
+          (lambda () (code-review-infos-deferred obj)))
         (deferred:nextc it
           (lambda (x)
             (progress-reporter-update progress 2)
@@ -520,7 +494,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
-            (code-review-core-send-review
+            (code-review-send-review
              review-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
@@ -533,7 +507,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                   "Done submitting review")))))
 
           (when (oref replies-obj replies)
-            (code-review-core-send-replies
+            (code-review-send-replies
              replies-obj
              (lambda (&rest _)
                (let ((code-review-section-full-refresh? t))
@@ -566,19 +540,51 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set label."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-label-field pr)))
+    (when-let (options (code-review-get-labels pr))
+      (let* ((choices (completing-read-multiple "Choose: " options))
+             (labels (append
+                      (-map (lambda (x)
+                              `((name . ,x)
+                                (color . "0075ca")))
+                            choices)
+                      (oref pr labels))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr labels labels)
+        (code-review-set-labels
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review--build-buffer
+            code-review-buffer-name)))))))
+
+(defun code-review--set-assignee-field (obj &optional assignee)
+  "Set assignees header field given an OBJ.
+If a valid ASSIGNEE is provided, use that instead."
+  (let ((candidate nil))
+    (if assignee
+        (setq candidate assignee)
+      (when-let (options (code-review-get-assignees obj))
+        (let* ((choice (completing-read "Choose: " options)))
+          (setq candidate choice))))
+    (oset obj assignees (list `((name) (login . ,candidate))))
+    (code-review-set-assignee
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review--set-assignee ()
   "Set assignee."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field pr)))
+    (code-review--set-assignee-field pr)))
 
 (defun code-review--set-assignee-yourself ()
   "Assign yourself to PR."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field
+    (code-review--set-assignee-field
      pr
      (code-review-utils--git-get-user))))
 
@@ -586,7 +592,19 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set milestone."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-milestone-field pr)))
+    (when-let (options (code-review-get-milestones pr))
+      (let* ((choice (completing-read "Choose: " (a-keys options)))
+             (milestone `((title . ,choice)
+                          (perc . 0)
+                          (number .,(alist-get choice options nil nil 'equal)))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr milestones milestone)
+        (code-review-set-milestone
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review--build-buffer
+            code-review-buffer-name)))))))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -608,7 +626,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "merge")
+          (code-review-merge pr "merge")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -622,7 +640,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "rebase")
+          (code-review-merge pr "rebase")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -636,7 +654,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-github-repo-p pr)
         (progn
-          (code-review-core-merge pr "squash")
+          (code-review-merge pr "squash")
           (oset pr state "MERGED")
           (code-review-db-update pr)
           (code-review--build-buffer
@@ -687,7 +705,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Request reviewers for current PR using LOGIN if available."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
-         (users (code-review-core-get-assinable-users pr))
+         (users (code-review-get-assinable-users pr))
          (choices
           (if login
               (list (format "@%s :- " login))
@@ -716,7 +734,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                                  `(((requestedReviewer (login . ,(a-get usr 'login)))))))
                    (a-get usr 'id)))
                choices)))
-    (code-review-core-request-review pr ids
+    (code-review-request-review pr ids
                                      (lambda ()
                                        (let* ((infos (oref pr raw-infos))
                                               (new-infos
@@ -744,11 +762,11 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (setq code-review-section-full-refresh? t)
-  (code-review-auth-source-debug)
-  (ignore-errors
-    (code-review-utils--start-from-forge-at-point))
-  (setq code-review-section-full-refresh? nil))
+  (let ((code-review-section-full-refresh? t)
+        (pr-alist (code-review-utils--alist-forge-at-point)))
+    (code-review-auth-source-debug)
+    (code-review-utils-build-obj pr-alist)
+    (code-review--build-buffer code-review-buffer-name)))
 
 ;;; Commit buffer
 

@@ -29,7 +29,7 @@
 ;;; Code:
 
 (require 'code-review-db)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 (require 'code-review-utils)
 (require 'let-alist)
 
@@ -266,7 +266,7 @@ The payload is used to send a MR review to Gitlab."
 
 ;;; reify
 
-(cl-defmethod code-review-core-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-pullreq-diff ((gitlab code-review-gitlab-repo) callback)
   "Get PR diff from GITLAB, run CALLBACK after answer."
   (glab-get (format "/v4/projects/%s/merge_requests/%s/changes?access_raw_diffs=true"
                     (code-review-gitlab--project-id gitlab)
@@ -277,10 +277,10 @@ The payload is used to send a MR review to Gitlab."
             :auth 'code-review
             :callback callback))
 
-(cl-defmethod code-review-core-diff-deferred ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-diff-deferred ((gitlab code-review-gitlab-repo))
   "Get DIFF from GITLAB."
   (let ((d (deferred:new #'identity)))
-    (code-review-core-pullreq-diff
+    (code-review-pullreq-diff
      gitlab
      (apply-partially
       (lambda (d v &rest _)
@@ -288,7 +288,7 @@ The payload is used to send a MR review to Gitlab."
       d))
     d))
 
-(cl-defmethod code-review-core-pullreq-infos ((gitlab code-review-gitlab-repo) callback)
+(cl-defmethod code-review-pullreq-infos ((gitlab code-review-gitlab-repo) callback)
   "Get PR details from GITLAB and dispatch to CALLBACK."
   (let* ((owner (oref gitlab owner))
          (repo (oref gitlab repo))
@@ -370,10 +370,10 @@ repository:project(fullPath: \"%s\") {
      nil
      callback)))
 
-(cl-defmethod code-review-core-infos-deferred ((gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-infos-deferred ((gitlab code-review-gitlab-repo))
   "Get PR infos from GITLAB."
   (let ((d (deferred:new #'identity)))
-    (code-review-core-pullreq-infos
+    (code-review-pullreq-infos
      gitlab
      (apply-partially
       (lambda (d v &rest _)
@@ -417,7 +417,7 @@ repository:project(fullPath: \"%s\") {
            gitlab-diff)))
     (setq code-review-gitlab-line-diff-mapping res)))
 
-(cl-defmethod code-review-core-send-replies ((replies code-review-submit-gitlab-replies) callback)
+(cl-defmethod code-review-send-replies ((replies code-review-submit-gitlab-replies) callback)
   "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
   (let ((pr (oref replies pr)))
     (deferred:$
@@ -447,7 +447,7 @@ repository:project(fullPath: \"%s\") {
         (lambda (err)
           (message "Got an error from the Gitlab Reply API %S!" err))))))
 
-(cl-defmethod code-review-core-send-review ((review code-review-submit-gitlab-review) callback)
+(cl-defmethod code-review-send-review ((review code-review-submit-gitlab-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
          (infos (oref pr raw-infos)))
@@ -496,43 +496,43 @@ repository:project(fullPath: \"%s\") {
   (message "Not supported in Gitlab yet.")
   nil)
 
-(cl-defmethod code-review-core-get-labels ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-get-labels ((_gitlab code-review-gitlab-repo))
   "Get labels for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-labels ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-set-labels ((_gitlab code-review-gitlab-repo) _callback)
   "Set labels for your pr at GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-get-assignees ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-get-assignees ((_gitlab code-review-gitlab-repo))
   "Get assignees for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-assignee ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-set-assignee ((_gitlab code-review-gitlab-repo) _callback)
   "Set yourself as assignee in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-get-milestones ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-get-milestones ((_gitlab code-review-gitlab-repo))
   "Get milestones for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-milestone ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-set-milestone ((_gitlab code-review-gitlab-repo) _callback)
   "Set milestone for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-title ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-set-title ((_gitlab code-review-gitlab-repo) _callback)
   "Set title for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-description ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-set-description ((_gitlab code-review-gitlab-repo) _callback)
   "Set description for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-merge ((_gitlab code-review-gitlab-repo) _strategy)
+(cl-defmethod code-review-merge ((_gitlab code-review-gitlab-repo) _strategy)
   "Merge a pr in GITLAB using STRATEGY."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-core-set-reaction ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-set-reaction ((_gitlab code-review-gitlab-repo))
   "Set reaction for your pr in GITLAB."
   (code-review-gitlab-not-supported-message))
 
@@ -559,7 +559,7 @@ Return the blob URL if BLOB? is provided."
          (url (code-review-binary-file-url gitlab filename)))
     (code-review-utils--fetch-binary-data url filename headers)))
 
-(cl-defmethod code-review-core-new-issue-comment ((gitlab code-review-gitlab-repo) comment-msg callback)
+(cl-defmethod code-review-new-issue-comment ((gitlab code-review-gitlab-repo) comment-msg callback)
   "Create a new comment issue for GITLAB sending the COMMENT-MSG and call CALLBACK."
   (glab-post (format "/v4/projects/%s/merge_requests/%s/notes"
                      (code-review-gitlab--project-id gitlab)

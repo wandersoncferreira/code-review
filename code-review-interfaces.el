@@ -1,4 +1,4 @@
-;;; code-review-core.el --- Main APIs you need to provide to add a new forge -*- lexical-binding: t; -*-
+;;; code-review-interfaces.el --- Main APIs you need to provide to add a new forge -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -27,83 +27,83 @@
 ;;
 ;;; Code:
 
-(cl-defgeneric code-review-core-pullreq-infos (obj callback)
+(cl-defgeneric code-review-pullreq-infos (obj callback)
   "Return infos Pull Request from a OBJ running CALLBACK with results.")
 
-(cl-defgeneric code-review-core-infos-deferred (obj)
+(cl-defgeneric code-review-infos-deferred (obj)
   "Run OBJ with deferred.")
 
-(cl-defgeneric code-review-core-pullreq-diff (obj callback)
+(cl-defgeneric code-review-pullreq-diff (obj callback)
   "Return diff for OBJ running CALLBACK with results.")
 
-(cl-defgeneric code-review-core-diff-deferred (obj)
+(cl-defgeneric code-review-diff-deferred (obj)
   "Run OBJ with deferred.")
 
-(cl-defgeneric code-review-core-commit-diff (obj callback)
+(cl-defgeneric code-review-commit-diff (obj callback)
   "Return diff for OBJ running CALLBACK with results.")
 
-(cl-defgeneric code-review-core-commit-comments (obj callback)
+(cl-defgeneric code-review-commit-comments (obj callback)
   "Return commit comments for OBJ running CALLBACK with results.")
 
-(cl-defgeneric code-review-core-commit-comments-deferred (obj)
+(cl-defgeneric code-review-commit-comments-deferred (obj)
   "Run OBJ with deferred.")
 
-(cl-defgeneric code-review-core-commit-diff-deferred (obj)
+(cl-defgeneric code-review-commit-diff-deferred (obj)
   "Run OBJ with deferred.")
 
-(cl-defgeneric code-review-core-send-review (obj callback)
+(cl-defgeneric code-review-send-review (obj callback)
   "Send review stored in OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-send-comments (obj callback)
+(cl-defgeneric code-review-send-comments (obj callback)
   "Send comments stored in OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-send-replies (obj callback)
+(cl-defgeneric code-review-send-replies (obj callback)
   "Send review comment replies stored in OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-get-labels (obj)
+(cl-defgeneric code-review-get-labels (obj)
   "Sync call to get a list of labels from OBJ.")
 
-(cl-defgeneric code-review-core-set-labels (obj callback)
+(cl-defgeneric code-review-set-labels (obj callback)
   "Sync call to set a list of labels for an OBJ and call CALLBACK afterward..")
 
-(cl-defgeneric code-review-core-get-assignees (obj)
+(cl-defgeneric code-review-get-assignees (obj)
   "Sync call to get a list of assignees from OBJ.")
 
-(cl-defgeneric code-review-core-set-assignee (obj callback)
+(cl-defgeneric code-review-set-assignee (obj callback)
   "Set an assignee for an OBJ and call CALLBACK afterward..")
 
-(cl-defgeneric code-review-core-get-milestones (obj)
+(cl-defgeneric code-review-get-milestones (obj)
   "Sync call to get a list of milestones from OBJ.")
 
-(cl-defgeneric code-review-core-set-milestone (obj callback)
+(cl-defgeneric code-review-set-milestone (obj callback)
   "Set a milestone for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-set-title (obj callback)
+(cl-defgeneric code-review-set-title (obj callback)
   "Set a pullrequest title for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-set-description (obj callback)
+(cl-defgeneric code-review-set-description (obj callback)
   "Set a pullrequest description for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-merge (obj strategy)
+(cl-defgeneric code-review-merge (obj strategy)
   "Merge a PR for an OBJ using a given STRATEGY.")
 
-(cl-defgeneric code-review-core-set-reaction (obj context-name comment-id reaction)
+(cl-defgeneric code-review-set-reaction (obj context-name comment-id reaction)
   "Set a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
-(cl-defgeneric code-review-core-delete-reaction (obj context-name comment-id reaction-id)
+(cl-defgeneric code-review-delete-reaction (obj context-name comment-id reaction-id)
   "Delete a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
-(cl-defgeneric code-review-core-get-assinable-users (obj)
+(cl-defgeneric code-review-get-assinable-users (obj)
   "Get users that can review a PR for OBJ.")
 
-(cl-defgeneric code-review-core-request-review (obj user-ids callback)
+(cl-defgeneric code-review-request-review (obj user-ids callback)
   "Request for OBJ a list of USER-IDS to review a PR and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-core-new-issue (obj body title callback)
+(cl-defgeneric code-review-new-issue (obj body title callback)
   "Create new issue in OBJ with BODY and TITLE and call CALLBACK.")
 
-(cl-defgeneric code-review-core-new-issue-comment (obj comment-msg callback)
+(cl-defgeneric code-review-new-issue-comment (obj comment-msg callback)
   "Create a new comment issue for OBJ sending the COMMENT-MSG and call CALLBACK.")
 
-(provide 'code-review-core)
-;;; code-review-core.el ends here
+(provide 'code-review-interfaces)
+;;; code-review-interfaces.el ends here

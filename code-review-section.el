@@ -32,112 +32,13 @@
 (require 'magit-section)
 (require 'magit-diff)
 (require 'shr)
-(require 'code-review-core)
+(require 'code-review-faces)
+(require 'code-review-interfaces)
 (require 'code-review-db)
 (require 'code-review-utils)
 (require 'code-review-github)
 (require 'code-review-gitlab)
 (require 'emojify)
-
-(defface code-review-timestamp-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "DimGrey"
-     :slant italic)
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "DimGrey"
-     :slant italic))
-  "Face for timestamps."
-  :group 'code-review)
-
-(defface code-review-comment-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "DimGrey")
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "LightGrey"))
-  "Face for comment sections."
-  :group 'code-review)
-
-(defface code-review-thread-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "SlateGrey"
-     :weight bold)
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "SlateGrey"
-     :weight bold))
-  "Face for threads."
-  :group 'code-review)
-
-(defface code-review-state-face
-  '((t :inherit bold))
-  "Face used for default state keywords."
-  :group 'code-review)
-
-(defface code-review-checker-name-face
-  '((t :inherit bold :slant italic))
-  "Face used for commit check name."
-  :group 'code-review)
-
-(defface code-review-checker-detail-face
-  '((t :inherit magit-section-heading
-       :slant italic
-       :weight normal))
-  "Face for details word."
-  :group 'code-review)
-
-(defface code-review-author-face
-  '((t :inherit font-lock-keyword-face))
-  "Face used for author names."
-  :group 'code-review)
-
-(defface code-review-error-state-face
-  '((t :inherit font-lock-warning-face :weight bold))
-  "Face used for error state (e.g. changes requested)."
-  :group 'code-review)
-
-(defface code-review-success-state-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "Green")
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "Green"))
-  "Face used for success state (e.g. merged)."
-  :group 'code-review)
-
-(defface code-review-info-state-face
-  '((t :slant italic))
-  "Face used for info (unimportant) state (e.g. resolved)."
-  :group 'code-review)
-
-(defface code-review-pending-state-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "yellow4")
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "DarkKhaki"))
-  "Face used for pending state."
-  :group 'code-review)
-
-(defface code-review-request-review-face
-  `((((class color) (background light))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "yellow4"
-     :slant italic
-     :underline t)
-    (((class color) (background  dark))
-     ,@(and (>= emacs-major-version 27) '(:extend t))
-     :foreground "DarkKhaki"
-     :slant italic
-     :underline t))
-  "Face used for pending state."
-  :group 'code-review)
 
 (defun code-review--propertize-keyword (str)
   "Add property face to STR."
@@ -161,7 +62,17 @@
 (defvar code-review-comment-commit-buffer?)
 (defvar code-review-fill-column)
 (defvar code-review-comment-cursor-pos)
-(defvar code-review-reaction-types)
+
+(defvar code-review-reaction-types
+  `(("THUMBS_UP" . ":+1:")
+    ("THUMBS_DOWN" . ":-1:")
+    ("LAUGH" . ":laughing:")
+    ("CONFUSED" . ":confused:")
+    ("HEART" . ":heart:")
+    ("HOORAY" . ":tada:")
+    ("ROCKET" . ":rocket:")
+    ("EYES" . ":eyes:"))
+  "All available reactions.")
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
 (declare-function code-review-promote-comment-to-new-issue "code-review")
@@ -413,14 +324,14 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
   "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
-  (let* ((res (code-review-core-set-reaction pr context-name comment-id reaction))
+  (let* ((res (code-review-set-reaction pr context-name comment-id reaction))
          (reaction-id (a-get res 'id))
          (node-id (a-get res 'node_id))
          (existing-reaction-ids (when existing-reactions
                                   (-map (lambda (r) (oref r id)) existing-reactions))))
     (if (-contains-p existing-reaction-ids node-id)
         (progn
-          (code-review-core-delete-reaction pr context-name comment-id reaction-id)
+          (code-review-delete-reaction pr context-name comment-id reaction-id)
           (pcase context-name
             ("pr-description" (code-review-description-delete-reaction node-id))
             ("comment" (code-review-conversation-delete-reaction comment-id node-id))

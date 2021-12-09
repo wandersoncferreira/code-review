@@ -145,7 +145,7 @@ You can place `code-review-forge-pr-at-point` to a key binding for your convenie
 # Extension to other forges
 
 The package allows you to write integration with other forges to leverage these
-functionalities. Take a look at `code-review-core.el` to see which functions
+functionalities. Take a look at `code-review-interfaces.el` to see which functions
 need to be implemented.
 
 
