@@ -43,6 +43,7 @@
 (require 'code-review-utils)
 (require 'code-review-db)
 (require 'code-review-interfaces)
+(require 'code-review-faces)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
@@ -133,20 +134,6 @@
   "Hook run to insert sections into a code review commit buffer."
   :group 'code-review
   :type 'hook)
-
-;;; Faces
-
-(defface code-review-recent-comment-heading
-  '((((supports (:box t))) :inherit magit-branch-remote :box t)
-    (t                     :inherit magit-branch-remote :inverse-video t))
-  "Face for recent comments."
-  :group 'code-review)
-
-(defface code-review-outdated-comment-heading
-  '((((supports (:box t))) :inherit magit-cherry-equivalent :box t)
-    (t                     :inherit magit-cherry-equivalent :inverse-video t))
-  "Face for outdated comments."
-  :group 'code-review)
 
 ;;; vars
 
