@@ -62,7 +62,17 @@
 (defvar code-review-comment-commit-buffer?)
 (defvar code-review-fill-column)
 (defvar code-review-comment-cursor-pos)
-(defvar code-review-reaction-types)
+
+(defvar code-review-reaction-types
+  `(("THUMBS_UP" . ":+1:")
+    ("THUMBS_DOWN" . ":-1:")
+    ("LAUGH" . ":laughing:")
+    ("CONFUSED" . ":confused:")
+    ("HEART" . ":heart:")
+    ("HOORAY" . ":tada:")
+    ("ROCKET" . ":rocket:")
+    ("EYES" . ":eyes:"))
+  "All available reactions.")
 
 (declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
 (declare-function code-review-promote-comment-to-new-issue "code-review")
