@@ -42,7 +42,7 @@
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."

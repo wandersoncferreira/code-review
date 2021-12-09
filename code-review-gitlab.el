@@ -29,7 +29,7 @@
 ;;; Code:
 
 (require 'code-review-db)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 (require 'code-review-utils)
 (require 'let-alist)
 

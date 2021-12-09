@@ -1,4 +1,4 @@
-;;; code-review-core.el --- Main APIs you need to provide to add a new forge -*- lexical-binding: t; -*-
+;;; code-review-interfaces.el --- Main APIs you need to provide to add a new forge -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -105,5 +105,5 @@
 (cl-defgeneric code-review-new-issue-comment (obj comment-msg callback)
   "Create a new comment issue for OBJ sending the COMMENT-MSG and call CALLBACK.")
 
-(provide 'code-review-core)
-;;; code-review-core.el ends here
+(provide 'code-review-interfaces)
+;;; code-review-interfaces.el ends here

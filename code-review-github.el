@@ -30,7 +30,7 @@
 
 (require 'ghub)
 (require 'deferred)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 (require 'code-review-db)
 (require 'a)
 

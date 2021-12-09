@@ -32,7 +32,7 @@
 (require 'magit-section)
 (require 'magit-diff)
 (require 'shr)
-(require 'code-review-core)
+(require 'code-review-interfaces)
 (require 'code-review-db)
 (require 'code-review-utils)
 (require 'code-review-github)
