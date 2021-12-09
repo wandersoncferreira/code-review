@@ -371,28 +371,46 @@ Optionally define a MSG."
              (comment-text (string-trim
                             (with-current-buffer buffer
                               (save-excursion
-                                (buffer-substring-no-properties (point-min) (point-max)))))))
+                                (buffer-substring-no-properties (point-min) (point-max))))))
+             (pr (code-review-db-get-pullreq)))
         (kill-buffer-and-window)
         (cond
          (code-review-comment-description?
-          (code-review-utils--set-description-field comment-text))
+          (oset pr description comment-text)
+          (code-review-set-description
+           pr
+           (lambda ()
+             (code-review-db-update pr)
+             (code-review--build-buffer code-review-buffer-name))))
          (code-review-comment-title?
-          (code-review-utils--set-title-field comment-text))
+          (setq code-review-comment-cursor-pos (point))
+          (oset pr title comment-text)
+          (code-review-set-title
+           pr
+           (lambda ()
+             (code-review-db-update pr)
+             (code-review--build-buffer code-review-buffer-name))))
          (code-review-comment-feedback?
-          (code-review-utils--set-feedback-field
-           (code-review-utils--comment-clean-msg
-            comment-text
-            code-review-comment-feedback-msg)))
+          (let ((msg
+                 (code-review-utils--comment-clean-msg
+                  comment-text
+                  code-review-comment-feedback-msg)))
+            (code-review-db--pullreq-feedback-update msg)
+            (code-review--build-buffer code-review-buffer-name)))
          (code-review-promote-comment-to-issue?
           (progn
             (oset code-review-comment-uncommitted buffer-text comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted)))
          (code-review-comment-single-comment?
-          (code-review-utils--set-conversation-comment
-           (code-review-utils--comment-clean-msg
-            comment-text
-            code-review-comment-single-comment-msg)))
+          (let ((msg
+                 (code-review-utils--comment-clean-msg
+                  comment-text
+                  code-review-comment-single-comment-msg))
+                (callback (lambda (&rest _)
+                            (let ((code-review-section-full-refresh? t))
+                              (code-review--build-buffer code-review-buffer-name)))))
+            (code-review-new-issue-comment pr msg callback)))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)

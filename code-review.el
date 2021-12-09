@@ -540,19 +540,51 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set label."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-label-field pr)))
+    (when-let (options (code-review-get-labels pr))
+      (let* ((choices (completing-read-multiple "Choose: " options))
+             (labels (append
+                      (-map (lambda (x)
+                              `((name . ,x)
+                                (color . "0075ca")))
+                            choices)
+                      (oref pr labels))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr labels labels)
+        (code-review-set-labels
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review--build-buffer
+            code-review-buffer-name)))))))
+
+(defun code-review--set-assignee-field (obj &optional assignee)
+  "Set assignees header field given an OBJ.
+If a valid ASSIGNEE is provided, use that instead."
+  (let ((candidate nil))
+    (if assignee
+        (setq candidate assignee)
+      (when-let (options (code-review-get-assignees obj))
+        (let* ((choice (completing-read "Choose: " options)))
+          (setq candidate choice))))
+    (oset obj assignees (list `((name) (login . ,candidate))))
+    (code-review-set-assignee
+     obj
+     (lambda ()
+       (closql-insert (code-review-db) obj t)
+       (code-review--build-buffer
+        code-review-buffer-name)))))
 
 (defun code-review--set-assignee ()
   "Set assignee."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field pr)))
+    (code-review--set-assignee-field pr)))
 
 (defun code-review--set-assignee-yourself ()
   "Assign yourself to PR."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-assignee-field
+    (code-review--set-assignee-field
      pr
      (code-review-utils--git-get-user))))
 
@@ -560,7 +592,19 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Set milestone."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (code-review-utils--set-milestone-field pr)))
+    (when-let (options (code-review-get-milestones pr))
+      (let* ((choice (completing-read "Choose: " (a-keys options)))
+             (milestone `((title . ,choice)
+                          (perc . 0)
+                          (number .,(alist-get choice options nil nil 'equal)))))
+        (setq code-review-comment-cursor-pos (point))
+        (oset pr milestones milestone)
+        (code-review-set-milestone
+         pr
+         (lambda ()
+           (code-review-db-update pr)
+           (code-review--build-buffer
+            code-review-buffer-name)))))))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
@@ -718,11 +762,11 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (setq code-review-section-full-refresh? t)
-  (code-review-auth-source-debug)
-  (ignore-errors
-    (code-review-utils--start-from-forge-at-point))
-  (setq code-review-section-full-refresh? nil))
+  (let ((code-review-section-full-refresh? t)
+        (pr-alist (code-review-utils--alist-forge-at-point)))
+    (code-review-auth-source-debug)
+    (code-review-utils-build-obj pr-alist)
+    (code-review--build-buffer code-review-buffer-name)))
 
 ;;; Commit buffer
 
