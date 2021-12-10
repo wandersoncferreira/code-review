@@ -84,7 +84,7 @@ binary files in your pull request when you decide to visit them.
 
 ### Setup
 
-If you have trouble with the authinfo process below there are this nice
+If you have trouble with the authinfo process below there is this nice
 [Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
 explaining a bit the setup!
 
