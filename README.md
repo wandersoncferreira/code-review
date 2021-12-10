@@ -82,7 +82,13 @@ not open a new window.
 Set `code-review-download-dir` to change the place Code Review will download
 binary files in your pull request when you decide to visit them.
 
-### GitHub
+### Setup
+
+If you have trouble with the authinfo process below there are this nice
+[Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
+explaining a bit the setup!
+
+#### GitHub
 
 `code-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
@@ -91,11 +97,7 @@ submitting reviews.
 2. Set the `repo` scope as the subscope of repo
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
-#### Auth
-
-If you have trouble with the authinfo process below there are this nice
-[Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
-explaining a bit the setup!
+##### Auth
 
 Add a line to your auth source files, usually `~/.authinfo.gpg`, with your login
 and token:
@@ -104,12 +106,12 @@ and token:
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
 ```
 
-### Gitlab
+#### Gitlab
 
 1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 2. Choose the `api` scope
 
-#### Auth
+##### Auth
 
 Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
 and token:
