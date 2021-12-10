@@ -92,7 +92,13 @@ submitting reviews.
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
 #### Auth
-Add a line to your auth source files with your login and token:
+
+If you have trouble with the authinfo process below there are this nice
+[Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
+explaining a bit the setup!
+
+Add a line to your auth source files, usually `~/.authinfo.gpg`, with your login
+and token:
 
 ```
 machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
