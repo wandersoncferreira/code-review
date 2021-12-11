@@ -2,6 +2,8 @@
 
 # Unreleased
 
+# v0.0.4
+
 - [#96](https://github.com/wandersoncferreira/code-review/pull/96/files): render comments using HTML to allow displaying images.
 - [#98](https://github.com/wandersoncferreira/code-review/pull/98): add CI status on commits section. Github only. Demo [here](https://github.com/wandersoncferreira/code-review/pull/98).
 - [#101](https://github.com/wandersoncferreira/code-review/pull/101): fix bug with Gitlab rendering comments with HTML.
