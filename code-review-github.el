@@ -265,6 +265,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       title
       state
       bodyHTML
+      bodyText
       reactions(first:50){
         nodes {
           id
@@ -449,7 +450,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                       (oref github number))
               nil
               :auth 'code-review
-              :payload (a-alist 'body (oref github description))
+              :payload (a-alist 'body (a-get (oref github raw-infos) 'bodyText))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 

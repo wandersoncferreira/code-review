@@ -180,7 +180,8 @@ Optionally define a MSG."
     (setq code-review-comment-cursor-pos (point-min))
     (with-current-buffer buffer
       (erase-buffer)
-      (insert (oref pr description))
+      (insert (-> (oref pr raw-infos)
+                  (a-get 'bodyText)))
       (insert ?\n)
       (switch-to-buffer-other-window buffer)
       (code-review-comment-mode))))
@@ -376,7 +377,9 @@ Optionally define a MSG."
         (kill-buffer-and-window)
         (cond
          (code-review-comment-description?
-          (oset pr description comment-text)
+          (oset pr raw-infos (-> (oref pr raw-infos)
+                                 (a-assoc 'bodyText comment-text)
+                                 (a-assoc 'bodyHTML nil)))
           (code-review-set-description
            pr
            (lambda ()
