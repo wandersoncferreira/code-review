@@ -14,6 +14,7 @@
 - [#114](https://github.com/wandersoncferreira/code-review/pull/114): improve code structure.
 - [#118](https://github.com/wandersoncferreira/code-review/pull/118): add documentation to enterprise users
 - [#119](https://github.com/wandersoncferreira/code-review/pull/119): add feedback msg if no milestone is found
+- [#120](https://github.com/wandersoncferreira/code-review/pull/120): set description field using text not html
 
 # v0.0.3
 

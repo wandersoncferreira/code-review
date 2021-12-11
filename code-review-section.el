@@ -935,11 +935,14 @@ INDENT count of spaces are added at the start of every line."
 
 (defun code-review-section-insert-pr-description ()
   "Insert PULL-REQUEST description."
-  (when-let (description (code-review-db--pullreq-description))
-    (let-alist (code-review-db--pullreq-raw-infos)
-      (let* ((description-cleaned (if (string-empty-p description)
+  (when-let (infos (code-review-db--pullreq-raw-infos))
+    (let-alist infos
+      (let* ((is-html? (when .bodyHTML t))
+             (is-empty? (and (string-empty-p .bodyHTML)
+                             (string-empty-p .bodyText)))
+             (description-cleaned (if is-empty?
                                       "No description provided."
-                                    description))
+                                    (or .bodyHTML .bodyText)))
              (reaction-objs (-map
                              (lambda (r)
                                (code-review-reaction-section
@@ -953,9 +956,11 @@ INDENT count of spaces are added at the start of every line."
           (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
           (magit-insert-heading)
           (magit-insert-section (code-review-description-section obj)
-            (if (string-empty-p description)
+            (if is-empty?
                 (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
-              (code-review--insert-html description-cleaned (* 2 code-review-section-indent-width)))
+              (if is-html?
+                  (code-review--insert-html description-cleaned (* 2 code-review-section-indent-width))
+                (insert description-cleaned)))
             (insert ?\n)
             (when .reactions.nodes
               (code-review-comment-insert-reactions
