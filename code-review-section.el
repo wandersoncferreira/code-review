@@ -189,7 +189,6 @@ For internal usage only.")
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-set-feedback)
     (define-key map (kbd "C-c C-k") 'code-review-comment-delete-feedback)
-    (define-key map (kbd "k") 'code-review-comment-delete-feedback)
     map)
   "Keymaps for feedback section.")
 
@@ -512,7 +511,6 @@ Optionally DELETE? flag must be set if you want to remove it."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    (define-key map (kbd "k") 'code-review-section-delete-comment)
     map)
   "Keymaps for local-comment sections.")
 
@@ -520,7 +518,6 @@ Optionally DELETE? flag must be set if you want to remove it."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
     (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    (define-key map (kbd "k") 'code-review-section-delete-comment)
     map)
   "Keymaps for reply-comment sections.")
 
