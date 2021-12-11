@@ -12,6 +12,7 @@
 - [#111](https://github.com/wandersoncferreira/code-review/pull/111): fix comments placed in wrong position. Needs better solution to compute amount of HTML lines in the buffer.
 - [#113](https://github.com/wandersoncferreira/code-review/pull/113): order conversation comments section by createdAt timestamp.
 - [#114](https://github.com/wandersoncferreira/code-review/pull/114): improve code structure.
+- [#118](https://github.com/wandersoncferreira/code-review/pull/118): add documentation to enterprise users
 
 # v0.0.3
 
