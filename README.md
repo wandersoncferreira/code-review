@@ -97,6 +97,11 @@ submitting reviews.
 2. Set the `repo` scope as the subscope of repo
 3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
 
+For enterprise users do not forget to change the value of
+`code-review-github-host` to match the host of your private instance. The
+current recommended way to use the package with enterprise solution is through
+`code-review-forge-pr-at-point` we have a bug identifying enterprise URLs in `code-review-start` yet.
+
 ##### Auth
 
 Add a line to your auth source files, usually `~/.authinfo.gpg`, with your login
@@ -110,6 +115,12 @@ machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
 
 1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 2. Choose the `api` scope
+
+For enterprise users do not forget to change the value of
+`code-review-gitlab-host` and `code-review-gitlab-graphql-host` to match the
+ones of your private instance. The current recommended way to use the package
+with enterprise solution is through `code-review-forge-pr-at-point` we have a
+bug identifying enterprise URLs in `code-review-start` yet.
 
 ##### Auth
 
