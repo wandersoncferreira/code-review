@@ -592,19 +592,20 @@ If a valid ASSIGNEE is provided, use that instead."
   "Set milestone."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (when-let (options (code-review-get-milestones pr))
-      (let* ((choice (completing-read "Choose: " (a-keys options)))
-             (milestone `((title . ,choice)
-                          (perc . 0)
-                          (number .,(alist-get choice options nil nil 'equal)))))
-        (setq code-review-comment-cursor-pos (point))
-        (oset pr milestones milestone)
-        (code-review-set-milestone
-         pr
-         (lambda ()
-           (code-review-db-update pr)
-           (code-review--build-buffer
-            code-review-buffer-name)))))))
+    (if-let (options (code-review-get-milestones pr))
+        (let* ((choice (completing-read "Choose: " (a-keys options)))
+               (milestone `((title . ,choice)
+                            (perc . 0)
+                            (number .,(alist-get choice options nil nil 'equal)))))
+          (setq code-review-comment-cursor-pos (point))
+          (oset pr milestones milestone)
+          (code-review-set-milestone
+           pr
+           (lambda ()
+             (code-review-db-update pr)
+             (code-review--build-buffer
+              code-review-buffer-name))))
+      (message "No milestone found."))))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
