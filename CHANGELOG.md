@@ -13,6 +13,7 @@
 - [#113](https://github.com/wandersoncferreira/code-review/pull/113): order conversation comments section by createdAt timestamp.
 - [#114](https://github.com/wandersoncferreira/code-review/pull/114): improve code structure.
 - [#118](https://github.com/wandersoncferreira/code-review/pull/118): add documentation to enterprise users
+- [#119](https://github.com/wandersoncferreira/code-review/pull/119): add feedback msg if no milestone is found
 
 # v0.0.3
 
