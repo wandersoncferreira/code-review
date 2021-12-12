@@ -466,6 +466,8 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                               'commit_message (oref github description)
                               'sha (oref github sha)
                               'merge_method strategy)
+            :callback (lambda (&rest _)
+                        (message "Merge %s PR #%s succeeded." strategy (oref github number)))
             :errorback #'code-review-github-errback))
 
 (cl-defmethod code-review-set-reaction ((github code-review-github-repo) context-name comment-id reaction)
