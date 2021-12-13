@@ -130,10 +130,15 @@ using COMMENTS."
   (-reduce-from
    (lambda (acc node)
      (let ((author (a-get-in node (list 'author 'login)))
-           (state (a-get node 'state)))
+           (state (a-get node 'state))
+           (resolved? (a-get node 'isResolved))
+           (outdated? (a-get node 'isOutdated))
+           (collapsed? (a-get node 'isCollapsed))
+           (resolved-by (a-get-in node (list 'resolvedBy 'login))))
        (if-let (comments (a-get-in node (list 'comments 'nodes)))
            (-reduce-from
             (lambda (grouped-comments comment)
+              (prin1 (format "STATE: %s\n" (a-keys node)))
               (let-alist comment
                 (let* ((handled-pos (or .position .originalPosition))
                        (path-pos (code-review-utils--comment-key .path handled-pos))
@@ -184,8 +189,14 @@ using COMMENTS."
                                :line-type .line-type))
                              (t
                               (code-review-code-comment-section
-                               :state state
-                               :author author
+                               :state .pullRequestReview.state
+                               :thread-state (cond
+                                              (resolved? "RESOLVED")
+                                              (outdated? "OUTDATED")
+                                              (t "UNRESOLVED"))
+                               :thread-collapsed? collapsed?
+                               :thread-resolver resolved-by
+                               :author .author.login
                                :msg .bodyHTML
                                :position handled-pos
                                :reactions reactions

@@ -426,6 +426,9 @@ Optionally DELETE? flag must be set if you want to remove it."
    (amount-loc :initform nil)
    (outdated?  :initform nil
                :type boolean)
+   (thread-collapsed? :initarg :thread-collapsed?)
+   (thread-state :initarg :thread-state)
+   (thread-resolver :initarg :thread-resolver)
    (reply?     :initform nil
                :type boolean)
    (local?     :initform nil
@@ -569,26 +572,50 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert ?\n)
         (insert ?\n)))))
 
+(defun teste (arg)
+  (interactive)
+  (message "CLICKED! %s" arg))
+
 (cl-defmethod code-review-comment-insert-lines (obj)
   "Default insert comment lines in the OBJ."
-  (magit-insert-section (code-review-code-comment-section obj)
-    (let ((heading (concat
-                    (propertize "Reviewed by " 'face 'magit-section-heading)
-                    (propertize (concat "@" (oref obj author)) 'face 'code-review-author-face)
-                    " - "
-                    (code-review--propertize-keyword (oref obj state))
-                    " - "
-                    (propertize (code-review-utils--format-timestamp (oref obj createdAt)) 'face 'code-review-timestamp-face))))
-      (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
-      (magit-insert-heading heading))
+  (let ((resolved? (string-equal (oref obj thread-state) "RESOLVED")))
     (magit-insert-section (code-review-code-comment-section obj)
-      (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
-      (when-let (reactions-obj (oref obj reactions))
-        (code-review-comment-insert-reactions
-         reactions-obj
-         "code-comment"
-         (oref obj id)))
-      (insert ?\n))))
+      (let ((heading (concat
+                      (propertize "Reviewed by " 'face 'magit-section-heading)
+                      (propertize (concat "@" (oref obj author)) 'face 'code-review-author-face)
+                      " - "
+                      (if resolved?
+                          (format "%s and RESOLVED"
+                                  (code-review--propertize-keyword (oref obj state)))
+                          (code-review--propertize-keyword (oref obj state)))
+                      " - "
+                      (propertize (code-review-utils--format-timestamp (oref obj createdAt)) 'face 'code-review-timestamp-face))))
+        (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
+        (magit-insert-heading heading))
+      (magit-insert-section section (code-review-code-comment-section obj)
+        (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
+        (insert (make-string (* 3 code-review-section-indent-width) ?\s))
+        (insert-button "Reply to thread"
+                       'face 'code-review-button-face
+                       'action 'teste)
+        (insert "   ")
+        (insert-button (if resolved?
+                           "Unresolve conversation"
+                         "Resolve conversation")
+                       'face 'code-review-button-face
+                       'action 'teste)
+        (when resolved?
+          (insert "   ")
+          (insert (format "%s marked this conversation as resolved." (oref obj thread-resolver))))
+        (when-let (reactions-obj (oref obj reactions))
+          (code-review-comment-insert-reactions
+           reactions-obj
+           "code-comment"
+           (oref obj id)))
+        (oset section hidden (when (string-equal (oref obj thread-state) "RESOLVED")
+                               t))
+        (insert ?\n)
+        (insert ?\n)))))
 
 (defclass code-review-outdated-comment-section (code-review-base-comment-section)
   ((keymap       :initform 'code-review-outdated-comment-section-map)
@@ -986,7 +1013,8 @@ INDENT count of spaces are added at the start of every line."
     (let ((list-of-comments (->> .reviews.nodes
                                  (-filter
                                   (lambda (n)
-                                    (not (string-empty-p (a-get n 'bodyHTML)))))
+                                    (and (not (string-empty-p (a-get n 'bodyHTML)))
+                                         (a-get n 'bodyHTML))))
                                  (append .comments.nodes)
                                  (--sort
                                   (< (time-to-seconds (date-to-time (a-get it 'createdAt)))
@@ -1167,7 +1195,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
       (forward-line)
       (dolist (c comments)
         (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
-               (amount-loc-incr-partial (+ 2 written-loc))
+               (amount-loc-incr-partial (if (code-review-code-comment-section-p c)
+                                            (+ 3 written-loc)
+                                          (+ 2 written-loc)))
                (amount-loc-incr (if (oref c reactions)
                                     (+ 2 amount-loc-incr-partial)
                                   amount-loc-incr-partial)))
