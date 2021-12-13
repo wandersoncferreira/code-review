@@ -140,5 +140,10 @@
   "Face for outdated comments."
   :group 'code-review)
 
+(defface code-review-button-face
+  '((t :underline t :slant italic))
+  "Face used for buttons."
+  :group 'code-review)
+
 (provide 'code-review-faces)
 ;;; code-review-faces.el ends here

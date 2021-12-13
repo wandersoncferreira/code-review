@@ -290,17 +290,23 @@ https://github.com/wandersoncferreira/code-review#configuration"))
           updatedAt
         }
       }
-      reviews(first: 50) {
+      reviews:reviewThreads(first: 50) {
         nodes {
           typename:__typename
-          author { login }
-          bodyHTML
-          state
-          createdAt
-          databaseId
-          updatedAt
+          isResolved
+          isOutdated
+          isCollapsed
+          resolvedBy {
+            login
+          }
           comments(first: 50) {
             nodes {
+              author {
+                login
+              }
+              pullRequestReview {
+                state
+              }
               createdAt
               updatedAt
               bodyHTML
@@ -713,6 +719,23 @@ Return the blob URL if BLOB? is provided."
              :payload (a-alist 'body comment-msg)
              :callback callback
              :errorback #'code-review-github-errback))
+
+(cl-defmethod code-review-resolve-thread ((github code-review-github-repo) thread-id)
+  "Resolve thread in GITHUB using THREAD-ID."
+  (let ((query "mutation($input: ResolveReviewThreadInput!) {
+  resolveReviewThread(input: $input) {
+    thread {
+      id
+    }
+  }
+}"))
+    (ghub-graphql query
+                  `((input . ((threadId . ,thread-id))))
+                  :auth 'code-review
+                  :host code-review-github-host
+                  :callback (lambda (&rest _)
+                              (message "Thread RESOLVED"))
+                  :errorback #'code-review-github-errback)))
 
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
