@@ -36,7 +36,6 @@
 (require 'forge-core)
 (require 'forge-github)
 (require 'code-review-github)
-(require 'code-review-gitlab)
 
 ;;;
 (defvar code-review-buffer-name)
