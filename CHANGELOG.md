@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
+
 # v0.0.4
 
 - [#96](https://github.com/wandersoncferreira/code-review/pull/96/files): render comments using HTML to allow displaying images.

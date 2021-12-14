@@ -682,14 +682,12 @@ If a valid ASSIGNEE is provided, use that instead."
 ;;;###autoload
 (defun code-review-start (url)
   "Start review given PR URL."
-  (interactive "sPR URL: ")
-  (setq code-review-section-full-refresh? t)
-  (code-review-auth-source-debug)
-  (ignore-errors
+  (interactive "sURL to review: ")
+  (let ((code-review-section-full-refresh? t))
+    (code-review-auth-source-debug)
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer
-     code-review-buffer-name))
-  (setq code-review-section-full-refresh? nil))
+     code-review-buffer-name)))
 
 ;;;###autoload
 (defun code-review-reload ()
