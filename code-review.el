@@ -46,7 +46,9 @@
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
-  :group 'tools)
+  :group 'tools
+  :link '(custom-group-link 'code-review-github)
+  :link '(custom-group-link 'code-review-gitlab))
 
 (defcustom code-review-buffer-name "*Code Review*"
   "Name of the code review main buffer."

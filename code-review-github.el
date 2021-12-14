@@ -39,11 +39,15 @@
 
 (defgroup code-review-github nil
   "Interact with GitHub REST and GraphQL APIs."
-  :group 'code-review
-  :link '(custom-group-link 'code-review-gitlab))
+  :group 'code-review)
 
 (defcustom code-review-github-host "api.github.com"
   "Host for the GitHub api if you use the hosted version of GitHub."
+  :group 'code-review-github
+  :type 'string)
+
+(defcustom code-review-github-graphql-host "api.github.com"
+  "GraphQL host if you use the hosted version of GitHub."
   :group 'code-review-github
   :type 'string)
 
@@ -329,7 +333,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
     (ghub-graphql query
                   nil
                   :auth 'code-review
-                  :host code-review-github-host
+                  :host code-review-github-graphql-host
                   :callback callback
                   :errorback #'code-review-github-errback)))
 
@@ -611,7 +615,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                                              (repo_name . ,(oref github repo))
                                              (cursor . ,cursor))
                                            :auth 'code-review
-                                           :host code-review-github-host)))
+                                           :host code-review-github-graphql-host)))
             (let-alist graphql-res
               (setq has-next-page .data.repository.assignableUsers.pageInfo.hasNextPage
                     cursor .data.repository.assignableUsers.pageInfo.endCursor
@@ -635,7 +639,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                   `((input . ((pullRequestId . ,pr-id)
                               (userIds . ,user-ids))))
                   :auth 'code-review
-                  :host code-review-github-host
+                  :host code-review-github-graphql-host
                   :callback (lambda (&rest _)
                               (message "Review requested successfully!")
                               (funcall callback))
