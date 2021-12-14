@@ -36,6 +36,7 @@
 (require 'forge-core)
 (require 'forge-github)
 (require 'code-review-github)
+(require 'code-review-gitlab)
 
 ;;;
 (defvar code-review-buffer-name)
@@ -236,23 +237,36 @@ using COMMENTS."
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
-  (cond
-   ((string-prefix-p "https://gitlab.com" url)
-    (save-match-data
-      (and (string-match ".*/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" url)
-           (a-alist 'num (match-string 3 url)
-                    'repo (match-string 2 url)
-                    'owner (match-string 1 url)
-                    'forge 'gitlab
-                    'url url))))
-   ((string-prefix-p "https://github.com" url)
-    (save-match-data
-      (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
-           (a-alist 'num   (match-string 3 url)
-                    'repo  (match-string 2 url)
-                    'owner (match-string 1 url)
-                    'forge 'github
-                    'url url))))))
+  (let ((gitlab-base-url "gitlab.com")
+        (github-base-url "github.com"))
+    (cond
+     ((string-prefix-p (format "https://%s" gitlab-base-url) url)
+      (save-match-data
+        (let ((res-with-subgroup
+               (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" gitlab-base-url) url)
+                    (a-alist 'num (match-string 4 url)
+                             'repo (format "%s%%2F%s"
+                                           (match-string 2 url)
+                                           (match-string 3 url))
+                             'owner (match-string 1 url)
+                             'forge 'gitlab
+                             'url url))))
+          (if res-with-subgroup
+              res-with-subgroup
+            (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" gitlab-base-url) url)
+                 (a-alist 'num (match-string 3 url)
+                          'repo (match-string 2 url)
+                          'owner (match-string 1 url)
+                          'forge 'gitlab
+                          'url url))))))
+     ((string-prefix-p (format "https://%s" github-base-url) url)
+      (save-match-data
+        (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" github-base-url) url)
+             (a-alist 'num   (match-string 3 url)
+                      'repo  (match-string 2 url)
+                      'owner (match-string 1 url)
+                      'forge 'github
+                      'url url)))))))
 
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."

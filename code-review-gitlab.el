@@ -292,6 +292,7 @@ The payload is used to send a MR review to Gitlab."
   "Get PR details from GITLAB and dispatch to CALLBACK."
   (let* ((owner (oref gitlab owner))
          (repo (oref gitlab repo))
+         (repo-clean (replace-regexp-in-string "%2F" "/" repo))
          (number (oref gitlab number))
          (query
           (format "query{
@@ -364,7 +365,7 @@ repository:project(fullPath: \"%s\") {
     }
   }
 }
-" (format "%s/%s" owner repo) number)))
+" (format "%s/%s" owner repo-clean) number)))
     (code-review-gitlab--graphql
      query
      nil
