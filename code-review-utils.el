@@ -241,23 +241,12 @@ using COMMENTS."
     (cond
      ((string-prefix-p (format "https://%s" gitlab-base-url) url)
       (save-match-data
-        (let ((res-with-subgroup
-               (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" gitlab-base-url) url)
-                    (a-alist 'num (match-string 4 url)
-                             'repo (format "%s%%2F%s"
-                                           (match-string 2 url)
-                                           (match-string 3 url))
-                             'owner (match-string 1 url)
-                             'forge 'gitlab
-                             'url url))))
-          (if res-with-subgroup
-              res-with-subgroup
-            (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" gitlab-base-url) url)
-                 (a-alist 'num (match-string 3 url)
-                          'repo (match-string 2 url)
-                          'owner (match-string 1 url)
-                          'forge 'gitlab
-                          'url url))))))
+        (and (string-match (format "https://%s/\\([^/]*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)" gitlab-base-url) url)
+             (a-alist 'num (match-string 3 url)
+                      'repo (replace-regexp-in-string "/" "%2F" (match-string 2 url))
+                      'owner (match-string 1 url)
+                      'forge 'gitlab
+                      'url url))))
      ((string-prefix-p (format "https://%s" github-base-url) url)
       (save-match-data
         (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" github-base-url) url)
