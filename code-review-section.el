@@ -550,7 +550,8 @@ Optionally DELETE? flag must be set if you want to remove it."
                    (oref obj msg)
                    code-review-fill-column)))
         (insert l)
-        (insert ?\n)))))
+        (insert ?\n))
+      (insert ?\n))))
 
 (defun code-review-comment-insert-reactions (reactions context-name comment-id)
   "Insert REACTIONS in CONTEXT-NAME identified by COMMENT-ID."
