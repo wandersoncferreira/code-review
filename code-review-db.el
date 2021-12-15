@@ -312,7 +312,7 @@
       (oset pullreq title .title)
       (oset pullreq state .state)
       (oset pullreq description .bodyHTML)
-      (oset pullreq sha .headRef.target.oid)
+      (oset pullreq sha .headRefOid)
       (oset pullreq raw-comments .reviews.nodes)
       (oset pullreq assignees .assignees.nodes)
       (oset pullreq milestones `((title . ,.milestone.title)

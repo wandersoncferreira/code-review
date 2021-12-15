@@ -154,7 +154,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
-      headRef { target{ oid } }
+      headRefOid
       baseRefName
       headRefName
       isDraft
@@ -323,7 +323,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
-      headRef { target{ oid } }
+      headRefOid
       baseRefName
       headRefName
       isDraft
