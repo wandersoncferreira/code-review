@@ -371,7 +371,7 @@ repository:project(fullPath: \"%s\") {
      nil
      callback)))
 
-(cl-defmethod code-review-infos-deferred ((gitlab code-review-gitlab-repo) &optionally fallback?)
+(cl-defmethod code-review-infos-deferred ((gitlab code-review-gitlab-repo) &optional fallback?)
   "Get PR infos from GITLAB.
 Optionally sets FALLBACK? to get minimal query."
   (let ((d (deferred:new #'identity)))
