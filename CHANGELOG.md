@@ -5,13 +5,14 @@
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
-- [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer.
+- [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer
 - [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by fallback to simpler query in graphql
 - [#132](https://github.com/wandersoncferreira/code-review/pull/132): Get pr latest SHA even if the branch was already deleted
+- [#134](https://github.com/wandersoncferreira/code-review/pull/134): Support making single diff comment without review
 
 # v0.0.4
 
-- [#96](https://github.com/wandersoncferreira/code-review/pull/96/files): render comments using HTML to allow displaying images.
+- [#96](https://github.com/wandersoncferreira/code-review/pull/96): render comments using HTML to allow displaying images.
 - [#98](https://github.com/wandersoncferreira/code-review/pull/98): add CI status on commits section. Github only. Demo [here](https://github.com/wandersoncferreira/code-review/pull/98).
 - [#101](https://github.com/wandersoncferreira/code-review/pull/101): fix bug with Gitlab rendering comments with HTML.
 - [#102](https://github.com/wandersoncferreira/code-review/pull/102): fix bug with Gitlab sending comments and rendering HTML details.
@@ -37,7 +38,7 @@
 - [#85](https://github.com/wandersoncferreira/code-review/pull/85): remove comment and feedback section with `k`
 - [#86](https://github.com/wandersoncferreira/code-review/pull/86): allow users to define function to open Code Review buffer.
 - [#90](https://github.com/wandersoncferreira/code-review/pull/90): support visit binary files on Dired (`RET`) or Remote (`C-c C-v`)
-- [#93](https://github.com/wandersoncferreira/code-review/pull/93/files): add single top level comment in the PR page without a review attached
+- [#93](https://github.com/wandersoncferreira/code-review/pull/93): add single top level comment in the PR page without a review attached
 
 
 # v0.0.2

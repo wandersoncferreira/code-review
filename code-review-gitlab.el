@@ -234,8 +234,7 @@ The payload is used to send a MR review to Gitlab."
          (pos (oref comment position)))
     (pcase line-type
       ("ADDED"
-       (a-assoc-in payload (list 'position 'new_line)
-                   (+ (- pos (a-get-in mapping (list 'new 'end))) 1)))
+       (a-assoc-in payload (list 'position 'new_line) pos))
       ("REMOVED"
        (a-assoc-in payload (list 'position 'old_line)
                    (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
@@ -573,6 +572,28 @@ Return the blob URL if BLOB? is provided."
              :payload (a-alist 'body comment-msg)
              :callback callback
              :errorback #'code-review-gitlab-errback))
+
+(cl-defmethod code-review-new-code-comment ((gitlab code-review-gitlab-repo) local-comment callback)
+  "Creare a new code comment in GITLAB from a LOCAL-COMMENT and call CALLBACK."
+  (let* ((infos (oref gitlab raw-infos))
+         (payload (a-alist 'body (oref local-comment msg)
+                           'position (a-alist 'position_type "text"
+                                              'base_sha (a-get-in infos (list 'diffRefs 'baseSha))
+                                              'head_sha (a-get-in infos (list 'diffRefs 'headSha))
+                                              'start_sha (a-get-in infos (list 'diffRefs 'startSha))
+                                              'new_path (oref local-comment path)
+                                              'old_path (oref local-comment path)))))
+    (glab-post (format "/v4/projects/%s/merge_requests/%s/discussions"
+                       (code-review-gitlab--project-id gitlab)
+                       (oref gitlab number))
+               nil
+               :auth 'code-review
+               :host code-review-gitlab-host
+               :payload (code-review-gitlab-fix-payload payload local-comment)
+               :callback (lambda (&rest _)
+                           (message "Review Comments successfully!")))
+    (sit-for 0.5)
+    (funcall callback)))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here

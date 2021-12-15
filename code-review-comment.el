@@ -85,6 +85,10 @@ For internal usage only.")
   "Toggle if we are at the commit review buffer.
 For internal usage only.")
 
+(defvar code-review-comment-send? nil
+  "Toggle if we should send the local comment immediately.
+For internal usage only.")
+
 ;; remove free variable warnings
 (defvar code-review-comment-buffer-name)
 (defvar code-review-commit-buffer-name)
@@ -103,7 +107,8 @@ For internal usage only.")
         code-review-comment-description? nil
         code-review-comment-uncommitted nil
         code-review-comment-commit-buffer? nil
-        code-review-comment-single-comment? nil))
+        code-review-comment-single-comment? nil
+        code-review-comment-send? nil))
 
 ;;; Comment C_UD
 
@@ -266,7 +271,8 @@ Optionally define a MSG."
                                  :author (code-review-utils--git-get-user)
                                  :path (a-get obj 'path)
                                  :position diff-pos
-                                 :line-type line-type)))
+                                 :line-type line-type
+                                 :send? code-review-comment-send?)))
             (setq code-review-comment-uncommitted local-comment)
             (code-review-comment-add)))))))
 
@@ -285,8 +291,8 @@ Optionally define a MSG."
 
 ;;; handlers COMMIT
 
-(cl-defmethod code-review-comment-handler-commit ((obj code-review-reply-comment-section))
-  "Commit the reply OBJ."
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-reply-comment-section) default-buff-msg)
+  "Commit the reply OBJ and clean the DEFAULT-BUFF-MSG from the text if any."
   (let* ((reply-pos (- (+ (oref obj position)
                           (length (split-string (oref obj msg) "\n")))
                        2))
@@ -295,7 +301,7 @@ Optionally define a MSG."
                       code-review-buffer-name))
          (clean-msg (code-review-utils--comment-clean-msg
                      (oref obj msg)
-                     code-review-comment-buffer-msg))
+                     default-buff-msg))
          (raw-comment `((author (login . ,(oref obj author)))
                         (state . ,(oref obj state))
                         (comments (nodes ((internal-id . ,(uuidgen-4))
@@ -311,14 +317,14 @@ Optionally define a MSG."
     (code-review--build-buffer buff-name)
     (setq code-review-comment-uncommitted nil)))
 
-(cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section))
-  "Commit the local comment OBJ."
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section) default-buff-msg)
+  "Commit the local comment OBJ and clean the DEFAULT-BUFF-MSG from the text if any."
   (let* ((buff-name (if code-review-comment-commit-buffer?
                         code-review-commit-buffer-name
                       code-review-buffer-name))
          (clean-msg (code-review-utils--comment-clean-msg
                      (oref obj msg)
-                     code-review-comment-buffer-msg))
+                     default-buff-msg))
          (raw-comment `((author (login . ,(oref obj author)))
                         (state . ,(oref obj state))
                         (comments (nodes ((internal-id . ,(uuidgen-4))
@@ -336,12 +342,22 @@ Optionally define a MSG."
       ;;; delete old comment from raw
       (code-review-db-delete-raw-comment (oref obj internalId)))
 
-    (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review--build-buffer buff-name)
+    (if (oref obj send?)
+        (progn
+          (oset obj msg clean-msg)
+          (code-review-new-code-comment
+           (code-review-db-get-pullreq)
+           obj
+           (lambda (&rest _)
+             (let ((code-review-section-full-refresh? t))
+               (code-review--build-buffer buff-name)))))
+      (progn
+        (code-review-db--pullreq-raw-comments-update raw-comment)
+        (code-review--build-buffer buff-name)))
     (setq code-review-comment-uncommitted nil)))
 
-(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue))
-  "Commit the promotion of comment OBJ to new issue."
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue) default-buff-msg)
+  "Commit the promotion of comment OBJ to new issue and clean the DEFAULT-BUFF-MSG from the text if any."
   (save-match-data
     (let ((text (oref obj buffer-text))
           (regex (rx "Title:"
@@ -405,7 +421,16 @@ Optionally define a MSG."
           (progn
             (oset code-review-comment-uncommitted buffer-text comment-text)
             (code-review-comment-handler-commit
-             code-review-comment-uncommitted)))
+             code-review-comment-uncommitted
+             code-review-comment-buffer-msg)))
+
+         (code-review-comment-send?
+          (progn
+            (oset code-review-comment-uncommitted msg comment-text)
+            (code-review-comment-handler-commit
+             code-review-comment-uncommitted
+             code-review-comment-single-comment-msg)))
+
          (code-review-comment-single-comment?
           (let ((msg
                  (code-review-utils--comment-clean-msg
@@ -419,7 +444,8 @@ Optionally define a MSG."
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
-             code-review-comment-uncommitted)))))
+             code-review-comment-uncommitted
+             code-review-comment-buffer-msg)))))
     (code-review-comment-reset-global-vars)))
 
 ;;; ----
@@ -443,8 +469,16 @@ Optionally define a MSG."
 (defun code-review-add-single-comment ()
   "Add single comment without a Review."
   (interactive)
-  (setq code-review-comment-single-comment? t)
-  (code-review-comment-add code-review-comment-single-comment-msg))
+  (let ((code-review-comment-single-comment? t))
+    (code-review-comment-add code-review-comment-single-comment-msg)))
+
+;;;###autoload
+(defun code-review-add-single-diff-comment ()
+  "Add single code comment without a Review."
+  (interactive)
+  (setq code-review-comment-send? t)
+  (let ((code-review-comment-buffer-msg code-review-comment-single-comment-msg))
+    (code-review-comment-add-or-edit)))
 
 ;;;###autoload
 (defun code-review-comment-quit ()

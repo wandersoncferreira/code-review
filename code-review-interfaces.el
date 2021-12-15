@@ -105,5 +105,8 @@
 (cl-defgeneric code-review-new-issue-comment (obj comment-msg callback)
   "Create a new comment issue for OBJ sending the COMMENT-MSG and call CALLBACK.")
 
+(cl-defgeneric code-review-new-code-comment (obj local-comment callback)
+  "Create a new diff comment for OBJ given a LOCAL-COMMENT and call CALLBACK.")
+
 (provide 'code-review-interfaces)
 ;;; code-review-interfaces.el ends here

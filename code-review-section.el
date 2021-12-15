@@ -492,6 +492,7 @@ Optionally DELETE? flag must be set if you want to remove it."
    (local?       :initform t)
    (reply?       :initform nil)
    (edit?        :initform nil)
+   (send?        :initarg :send?)
    (outdated?    :initform nil)
    (heading-face :initform 'code-review-recent-comment-heading)
    (body-face    :initform nil)

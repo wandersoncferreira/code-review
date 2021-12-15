@@ -21,5 +21,7 @@ Features supported by each integrated forge:
 | Promote comment to issue       | x            |        |
 | Get/Visit binary files         | x            | x      |
 | CI status on commit section    | x            |        |
+| Send single comment            | x            | x      |
+| Send single diff comment       | x            | x      |
 
 
