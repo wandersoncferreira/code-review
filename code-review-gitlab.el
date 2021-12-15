@@ -234,8 +234,7 @@ The payload is used to send a MR review to Gitlab."
          (pos (oref comment position)))
     (pcase line-type
       ("ADDED"
-       (a-assoc-in payload (list 'position 'new_line)
-                   (+ (- pos (a-get-in mapping (list 'new 'end))) 1)))
+       (a-assoc-in payload (list 'position 'new_line) pos))
       ("REMOVED"
        (a-assoc-in payload (list 'position 'old_line)
                    (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
