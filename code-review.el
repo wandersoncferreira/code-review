@@ -216,7 +216,23 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
-  (let* ((raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
+  (let* ((errors (a-get (-second-item res) 'errors))
+         (raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
+
+    (when errors
+      (code-review--log
+       "code-review--internal-build"
+       (prin1-to-string raw-infos))
+      (message "GraphQL Github query returned errors. See `code-review-log-file' for details."))
+
+    ;; verify must have value!
+    (let-alist raw-infos
+      (when (not .headRef.target.oid)
+        (code-review--log
+         "code-review--internal-build"
+         (prin1-to-string raw-infos))
+        (error "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")))
+
     ;; 1. save raw diff data
     (progress-reporter-update progress 3)
     (code-review-db--pullreq-raw-diff-update
