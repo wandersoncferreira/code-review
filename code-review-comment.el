@@ -94,8 +94,6 @@ For internal usage only.")
 (defvar code-review-commit-buffer-name)
 (defvar code-review-buffer-name)
 
-(declare-function code-review--build-buffer "code-review" (buffer-name &optional commit-focus? msg))
-
 ;;; general functons
 
 (defun code-review-comment-reset-global-vars ()
