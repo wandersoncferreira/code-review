@@ -36,6 +36,7 @@ The Emacs everywhere goal continues. These are the main features of
 - Promote comments to new issues.
 - Save/Resume in-progress Reviews
 - Visit binary files in Dired or Remote. Example [here](https://github.com/wandersoncferreira/code-review/pull/90)
+- Mention user with `C-c @` in `*code-review-comment*` buffer.
 
 Highly recommend using the transient menu in the `*Code Review*` buffer by pressing `r`.
 
