@@ -4,14 +4,23 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Created: December 15, 2021
-;; Modified: December 15, 2021
 ;; Version: 0.0.1
-;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
-;; Homepage: https://github.com/wandersoncferreira/code-review-actions
-;; Package-Requires: ((emacs "24.3"))
+;; Homepage: https://github.com/wandersoncferreira/code-review
 ;;
 ;; This file is not part of GNU Emacs.
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; For a full copy of the GNU General Public License
+;; see <http://www.gnu.org/licenses/>.
 ;;
 ;;; Commentary:
 ;;
