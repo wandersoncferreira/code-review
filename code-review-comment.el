@@ -102,7 +102,8 @@ For internal usage only.")
         code-review-promote-comment-to-issue? nil
         code-review-comment-description? nil
         code-review-comment-uncommitted nil
-        code-review-comment-commit-buffer? nil))
+        code-review-comment-commit-buffer? nil
+        code-review-comment-single-comment? nil))
 
 ;;; Comment C_UD
 
