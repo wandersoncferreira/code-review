@@ -63,31 +63,31 @@
 (cl-defgeneric code-review-get-labels (obj)
   "Sync call to get a list of labels from OBJ.")
 
-(cl-defgeneric code-review-set-labels (obj callback)
+(cl-defgeneric code-review-send-labels (obj callback)
   "Sync call to set a list of labels for an OBJ and call CALLBACK afterward..")
 
 (cl-defgeneric code-review-get-assignees (obj)
   "Sync call to get a list of assignees from OBJ.")
 
-(cl-defgeneric code-review-set-assignee (obj callback)
+(cl-defgeneric code-review-send-assignee (obj callback)
   "Set an assignee for an OBJ and call CALLBACK afterward..")
 
 (cl-defgeneric code-review-get-milestones (obj)
   "Sync call to get a list of milestones from OBJ.")
 
-(cl-defgeneric code-review-set-milestone (obj callback)
+(cl-defgeneric code-review-send-milestone (obj callback)
   "Set a milestone for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-set-title (obj callback)
+(cl-defgeneric code-review-send-title (obj callback)
   "Set a pullrequest title for an OBJ and call CALLBACK afterward.")
 
-(cl-defgeneric code-review-set-description (obj callback)
+(cl-defgeneric code-review-send-description (obj callback)
   "Set a pullrequest description for an OBJ and call CALLBACK afterward.")
 
 (cl-defgeneric code-review-merge (obj strategy)
   "Merge a PR for an OBJ using a given STRATEGY.")
 
-(cl-defgeneric code-review-set-reaction (obj context-name comment-id reaction)
+(cl-defgeneric code-review-send-reaction (obj context-name comment-id reaction)
   "Set a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
 (cl-defgeneric code-review-delete-reaction (obj context-name comment-id reaction-id)

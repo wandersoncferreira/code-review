@@ -107,7 +107,7 @@ For internal usage only.")
 
 (defvar code-review-title-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-set-title)
+    (define-key map (kbd "RET") 'code-review-set-title)
     map)
   "Keymaps for code-comment sections.")
 
@@ -130,7 +130,7 @@ For internal usage only.")
 
 (defvar code-review-milestone-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-milestone)
+    (define-key map (kbd "RET") 'code-review-set-milestone)
     map)
   "Keymaps for milestone section.")
 
@@ -186,8 +186,8 @@ For internal usage only.")
 
 (defvar code-review-feedback-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-set-feedback)
-    (define-key map (kbd "C-c C-k") 'code-review-comment-delete-feedback)
+    (define-key map (kbd "RET") 'code-review-set-feedback)
+    (define-key map (kbd "C-c C-k") 'code-review-delete-feedback)
     map)
   "Keymaps for feedback section.")
 
@@ -322,7 +322,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
   "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
-  (let* ((res (code-review-set-reaction pr context-name comment-id reaction))
+  (let* ((res (code-review-send-reaction pr context-name comment-id reaction))
          (reaction-id (a-get res 'id))
          (node-id (a-get res 'node_id))
          (existing-reaction-ids (when existing-reactions
@@ -608,7 +608,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defvar code-review-labels-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-label)
+    (define-key map (kbd "RET") 'code-review-set-label)
     map)
   "Keymaps for code-comment sections.")
 
@@ -618,7 +618,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defvar code-review-assignees-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review--set-assignee)
+    (define-key map (kbd "RET") 'code-review-set-assignee)
     map)
   "Keymaps for code-comment sections.")
 

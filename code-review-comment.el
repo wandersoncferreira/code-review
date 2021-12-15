@@ -338,7 +338,7 @@ Optionally define a MSG."
           (oset pr raw-infos (-> (oref pr raw-infos)
                                  (a-assoc 'bodyText comment-text)
                                  (a-assoc 'bodyHTML nil)))
-          (code-review-set-description
+          (code-review-send-description
            pr
            (lambda ()
              (code-review-db-update pr)
@@ -346,7 +346,7 @@ Optionally define a MSG."
          (code-review-comment-title?
           (setq code-review-comment-cursor-pos (point))
           (oset pr title comment-text)
-          (code-review-set-title
+          (code-review-send-title
            pr
            (lambda ()
              (code-review-db-update pr)

@@ -380,7 +380,7 @@ Optionally set a FEEDBACK message."
                       (oref pr labels))))
         (setq code-review-comment-cursor-pos (point))
         (oset pr labels labels)
-        (code-review-set-labels
+        (code-review-send-labels
          pr
          (lambda ()
            (code-review-db-update pr)
@@ -396,7 +396,7 @@ If a valid ASSIGNEE is provided, use that instead."
         (let* ((choice (completing-read "Choose: " options)))
           (setq candidate choice))))
     (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-set-assignee
+    (code-review-send-assignee
      obj
      (lambda ()
        (closql-insert (code-review-db) obj t)
@@ -427,7 +427,7 @@ If a valid ASSIGNEE is provided, use that instead."
                             (number .,(alist-get choice options nil nil 'equal)))))
           (setq code-review-comment-cursor-pos (point))
           (oset pr milestones milestone)
-          (code-review-set-milestone
+          (code-review-send-milestone
            pr
            (lambda ()
              (code-review-db-update pr)
