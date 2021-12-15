@@ -231,7 +231,7 @@ If you want to display a minibuffer MSG in the end."
 
     ;; verify must have value!
     (let-alist raw-infos
-      (when (not .headRef.target.oid)
+      (when (not .headRefOid)
         (code-review--log "code-review--internal-build"
                           "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")
         (code-review--log "code-review--internal-build"
