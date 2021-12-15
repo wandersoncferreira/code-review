@@ -36,7 +36,7 @@
   :group 'code-review
   :type 'string)
 
-(defcustom code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment"
+(defcustom code-review-comment-buffer-msg ";;; Type C-c C-c to include your comment locally\n;;; After that check the transient menu (press r) to see possible actions"
   "Helper text on top of comment buffer."
   :group 'code-review
   :type 'string)
