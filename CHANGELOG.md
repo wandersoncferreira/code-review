@@ -6,7 +6,8 @@
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
 - [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer.
-- [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by removing unsupported features in graphql schema
+- [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by fallback to simpler query in graphql
+- [#132](https://github.com/wandersoncferreira/code-review/pull/132): Get pr latest SHA even if the branch was already deleted
 
 # v0.0.4
 
