@@ -576,9 +576,8 @@ Return the blob URL if BLOB? is provided."
 
 (cl-defmethod code-review-new-code-comment ((gitlab code-review-gitlab-repo) local-comment callback)
   "Creare a new code comment in GITLAB from a LOCAL-COMMENT and call CALLBACK."
-  (let* ((pr (oref review pr))
-         (infos (oref pr raw-infos))
-         (payload (a-alist 'body (oref local-comment body)
+  (let* ((infos (oref gitlab raw-infos))
+         (payload (a-alist 'body (oref local-comment msg)
                            'position (a-alist 'position_type "text"
                                               'base_sha (a-get-in infos (list 'diffRefs 'baseSha))
                                               'head_sha (a-get-in infos (list 'diffRefs 'headSha))
@@ -586,8 +585,8 @@ Return the blob URL if BLOB? is provided."
                                               'new_path (oref local-comment path)
                                               'old_path (oref local-comment path)))))
     (glab-post (format "/v4/projects/%s/merge_requests/%s/discussions"
-                       (code-review-gitlab--project-id pr)
-                       (oref pr number))
+                       (code-review-gitlab--project-id gitlab)
+                       (oref gitlab number))
                nil
                :auth 'code-review
                :host code-review-gitlab-host
