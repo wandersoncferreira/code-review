@@ -216,10 +216,15 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--internal-build ((_github code-review-github-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITHUB based on the fetched RES informing PROGRESS."
-  (let* ((errors (a-get (-second-item res) 'errors))
-         (raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
+  (let* ((errors-complete-query (a-get (-second-item res) 'errors))
+         (raw-infos-complete (a-get-in (-second-item res) (list 'data 'repository 'pullRequest)))
+         (raw-infos-fallback (a-get-in (-third-item res) (list 'data 'repository 'pullRequest)))
+         (raw-infos
+          (if (not raw-infos-complete)
+              raw-infos-fallback
+            raw-infos-complete)))
 
-    (when errors
+    (when errors-complete-query
       (code-review--log "code-review--internal-build"
                         (format "Data returned by GraphQL API: \n %s" (prin1-to-string res)))
       (message "GraphQL Github data contains errors. See `code-review-log-file' for details."))
@@ -283,7 +288,8 @@ If you want to provide a MSG for the end of the process."
       (deferred:$
         (deferred:parallel
           (lambda () (code-review-diff-deferred obj))
-          (lambda () (code-review-infos-deferred obj)))
+          (lambda () (code-review-infos-deferred obj))
+          (lambda () (code-review-infos-deferred obj t)))
         (deferred:nextc it
           (lambda (x)
             (progress-reporter-update progress 2)

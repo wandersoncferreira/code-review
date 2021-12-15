@@ -27,11 +27,11 @@
 ;;
 ;;; Code:
 
-(cl-defgeneric code-review-pullreq-infos (obj callback)
-  "Return infos Pull Request from a OBJ running CALLBACK with results.")
+(cl-defgeneric code-review-pullreq-infos (obj fallback? callback)
+  "Return infos Pull Request from a OBJ, use FALLBACK? to minimal query, run CALLBACK.")
 
-(cl-defgeneric code-review-infos-deferred (obj)
-  "Run OBJ with deferred.")
+(cl-defgeneric code-review-infos-deferred (obj fallback?)
+  "Run OBJ and set if minimal query should be run using FALLBACK?.")
 
 (cl-defgeneric code-review-pullreq-diff (obj callback)
   "Return diff for OBJ running CALLBACK with results.")

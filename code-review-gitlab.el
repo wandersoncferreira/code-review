@@ -288,8 +288,8 @@ The payload is used to send a MR review to Gitlab."
       d))
     d))
 
-(cl-defmethod code-review-pullreq-infos ((gitlab code-review-gitlab-repo) callback)
-  "Get PR details from GITLAB and dispatch to CALLBACK."
+(cl-defmethod code-review-pullreq-infos ((gitlab code-review-gitlab-repo) fallback? callback)
+  "Get PR details from GITLAB, choose minimal query on FALLBACK? and dispatch to CALLBACK."
   (let* ((owner (oref gitlab owner))
          (repo (oref gitlab repo))
          (repo-clean (replace-regexp-in-string "%2F" "/" repo))
@@ -371,11 +371,13 @@ repository:project(fullPath: \"%s\") {
      nil
      callback)))
 
-(cl-defmethod code-review-infos-deferred ((gitlab code-review-gitlab-repo))
-  "Get PR infos from GITLAB."
+(cl-defmethod code-review-infos-deferred ((gitlab code-review-gitlab-repo) &optionally fallback?)
+  "Get PR infos from GITLAB.
+Optionally sets FALLBACK? to get minimal query."
   (let ((d (deferred:new #'identity)))
     (code-review-pullreq-infos
      gitlab
+     fallback?
      (apply-partially
       (lambda (d v &rest _)
         (deferred:callback-post d v))
