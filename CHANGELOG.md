@@ -9,6 +9,7 @@
 - [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by fallback to simpler query in graphql
 - [#132](https://github.com/wandersoncferreira/code-review/pull/132): Get pr latest SHA even if the branch was already deleted
 - [#134](https://github.com/wandersoncferreira/code-review/pull/134): Support making single diff comment without review
+- [#135](https://github.com/wandersoncferreira/code-review/pull/135): Improve package reliability and error messaging
 
 # v0.0.4
 
