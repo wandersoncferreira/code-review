@@ -815,7 +815,8 @@ OUTDATED."
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
    ("p" "Submit Replies" code-review-submit-only-replies)
-   ("s c" "Single Comment, immediately sent" code-review-add-single-comment)]
+   ("s c" "Single Comment, immediately sent" code-review-add-single-comment)
+   ("s C" "Single Diff Comment, immediately sent" code-review-add-single-diff-comment)]
   ["Setters"
    ("s f" "Feedback" code-review-comment-set-feedback)
    ("s r" "Reviewers" code-review-request-reviews)
@@ -834,6 +835,7 @@ OUTDATED."
     (suppress-keymap map t)
     (define-key map (kbd "r") 'code-review-transient-api)
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "C-c RET") 'code-review-add-single-diff-comment)
     (define-key map (kbd "G") 'code-review-reload)
     (set-keymap-parent map magit-section-mode-map)
     map))

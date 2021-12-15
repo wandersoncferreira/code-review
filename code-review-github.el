@@ -897,5 +897,22 @@ Return the blob URL if BLOB? is provided."
              :callback callback
              :errorback #'code-review-github-errback))
 
+(cl-defmethod code-review-new-code-comment ((github code-review-github-repo) local-comment callback)
+  "Creare a new code comment in GITHUB from a LOCAL-COMMENT and call CALLBACK."
+  (ghub-post (format "/repos/%s/%s/pulls/%s/comments"
+                     (oref github owner)
+                     (oref github repo)
+                     (oref github number))
+             nil
+             :auth 'code-review
+             :headers '(("Accept" . "application/vnd.github.v3+json"))
+             :host code-review-github-host
+             :payload (a-alist 'path (oref local-comment path)
+                               'position (oref local-comment position)
+                               'body (oref local-comment msg)
+                               'commit_id (oref github sha))
+             :callback callback
+             :errorback #'code-review-github-errback))
+
 (provide 'code-review-github)
 ;;; code-review-github.el ends here
