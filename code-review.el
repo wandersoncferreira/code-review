@@ -43,6 +43,7 @@
 (require 'code-review-db)
 (require 'code-review-interfaces)
 (require 'code-review-faces)
+(require 'code-review-actions)
 
 (defgroup code-review nil
   "Code Review tool for VC forges."
@@ -98,11 +99,6 @@
   :type 'float
   :group 'code-review)
 
-(defcustom code-review-always-restrict-approval? nil
-  "Set to non-nil to disallow approving a PR with a bad CI state."
-  :type 'boolean
-  :group 'code-review)
-
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title
@@ -140,469 +136,7 @@
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
-;;;###autoload
-(defun code-review-approve (&optional feedback)
-  "Approve current PR.
-Optionally set a FEEDBACK message."
-  (interactive)
-  (let* ((pr (code-review-db-get-pullreq))
-         (last-commit (-> (oref pr raw-infos)
-                          (a-get-in (list 'commits 'nodes))
-                          (-last-item))))
-    (let-alist last-commit
-      (cond
-       ((string-equal .commit.statusCheckRollup.state "SUCCESS")
-        (code-review-submit "APPROVE" feedback))
-       (code-review-always-restrict-approval?
-        (message "PR have CI issues. You cannot approve it."))
-       (t
-        (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
-          (if res
-              (code-review-submit "APPROVE" feedback)
-            (message "Approval process canceled."))))))))
-
-;;;###autoload
-(defun code-review-comments ()
-  "Comment current PR."
-  (interactive)
-  (code-review-submit "COMMENT"))
-
-;;;###autoload
-(defun code-review-request-changes ()
-  "Approve current PR."
-  (interactive)
-  (code-review-submit "REQUEST_CHANGES"))
-
-;;;###autoload
-(defun code-review-save-unfinished-review ()
-  "Save unfinished review work."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (oset pr saved t)
-    (oset pr saved-at (current-time-string))
-    (code-review-db-update pr)
-    (message "PR saved successfully!")))
-
-;;;###autoload
-(defun code-review-recover-unfinished-review (url)
-  "Recover unfinished review for URL."
-  (interactive "sPR URL: ")
-  (let-alist (code-review-utils-pr-from-url url)
-    (let ((obj (code-review-db-search .owner .repo .num)))
-      (if (not obj)
-          (message "No Review found for this URL.")
-        (progn
-          (setq code-review-db--pullreq-id (oref obj id))
-          (let ((code-review-section-full-refresh? nil))
-            (code-review--build-buffer
-             code-review-buffer-name)))))))
-
-;;;###autoload
-(defun code-review-choose-unfinished-review ()
-  "Choose an unfinished review to work on."
-  (interactive)
-  (let* ((objs (code-review-db-all-unfinished))
-         (choice (completing-read "Unifinished Reviews: "
-                                  (-map
-                                   (lambda (o)
-                                     (format "%s/%s - %s - %s"
-                                             (oref o owner)
-                                             (oref o repo)
-                                             (oref o number)
-                                             (oref o saved-at)))
-                                   objs)))
-         (obj-chosen (car (-filter
-                           (lambda (o)
-                             (save-match-data
-                               (and (string-match "\\(.*\\)/\\(.*\\) - \\(.*\\) - \\(.*\\)" choice)
-                                    (let ((owner (match-string 1 choice))
-                                          (repo (match-string 2 choice))
-                                          (number (match-string 3 choice))
-                                          (saved-at (match-string 4 choice)))
-                                      (and (string-equal (oref o owner) owner)
-                                           (string-equal (oref o repo) repo)
-                                           (string-equal (oref o number) number)
-                                           (string-equal (oref o saved-at) saved-at))))))
-                           objs))))
-    (setq code-review-db--pullreq-id (oref obj-chosen id))
-    (let ((code-review-section-full-refresh? nil))
-      (code-review--build-buffer
-       code-review-buffer-name))))
-
-;;; Submit structure
-
-(defclass code-review-submit-local-coment ()
-  ((path     :initarg :path)
-   (position :initarg :position)
-   (body     :initarg :body)
-   (internal-id :initarg :internal-id)
-   (line-type :initarg :line-type)))
-
-(defclass code-review-submit-review ()
-  ((state :initform nil)
-   (pr :initform nil)
-   (local-comments :initform nil
-                   :type (satisfies
-                          (lambda (it)
-                            (-all-p #'code-review-submit-local-coment-p it))))
-   (feedback :initform nil)))
-
-(defclass code-review-submit-reply ()
-  ((reply-to-id :initarg :reply-to-id)
-   (body        :initarg :body)
-   (internal-id :initarg :internal-id)))
-
-(defclass code-review-submit-replies ()
-  ((pr      :initform nil)
-   (replies :initform nil
-            :type (satisfies
-                   (lambda (it)
-                     (-all-p #'code-review-submit-reply-p it))))))
-
-(defun code-review-submit--unique? (previous-obj current-id)
-  "Verify if PREVIOUS-OBJ has CURRENT-ID."
-  (if (not previous-obj)
-      t
-    (not (-contains-p (-map (lambda (it)
-                              (oref it internal-id))
-                            previous-obj)
-                      current-id))))
-
-;;;###autoload
-(defun code-review-submit (event &optional feedback only-reply?)
-  "Submit your review with a final verdict (EVENT).
-If you already have a FEEDBACK string use it.
-If you want only to submit replies, use ONLY-REPLY? as non-nil."
-  (interactive)
-  (setq code-review-comment-cursor-pos (point))
-  (let* ((pr (code-review-db-get-pullreq))
-         (review-obj (cond
-                      ((code-review-github-repo-p pr)
-                       (code-review-submit-github-review))
-                      ((code-review-gitlab-repo-p pr)
-                       (code-review-submit-gitlab-review))
-                      (t
-                       (code-review-submit-review))))
-         (replies-obj (cond
-                       ((code-review-github-repo-p pr)
-                        (code-review-submit-github-replies))
-                       ((code-review-gitlab-repo-p pr)
-                        (code-review-submit-gitlab-replies))
-                       (t
-                        (code-review-submit-replies)))))
-
-    (oset review-obj state event)
-    (oset review-obj pr pr)
-    (oset replies-obj pr pr)
-
-    (when feedback
-      (oset review-obj feedback feedback))
-
-    (let ((replies nil)
-          (local-comments nil))
-      (with-current-buffer (get-buffer code-review-buffer-name)
-        (save-excursion
-          (goto-char (point-min))
-          (magit-wash-sequence
-           (lambda ()
-             (let ((section (magit-current-section)))
-               (with-slots (value) section
-                 ;; get feedback
-                 (when (and (code-review-feedback-section-p section)
-                            (not feedback))
-                   (oset review-obj feedback (oref value msg)))
-
-                 ;; get replies
-                 (when (code-review-reply-comment-section-p section)
-                   (when (code-review-submit--unique? replies (oref value internalId))
-                     (push (code-review-submit-reply
-                            :reply-to-id (oref value id)
-                            :body (oref value msg)
-                            :internal-id (oref value internalId))
-                           replies)))
-
-                 ;; get local comments
-                 (when (code-review-local-comment-section-p section)
-                   (when (code-review-submit--unique? local-comments (oref value internalId))
-                     (push (code-review-submit-local-coment
-                            :path (oref value path)
-                            :position (oref value position)
-                            :body (oref value msg)
-                            :internal-id (oref value internalId)
-                            :line-type (oref value line-type))
-                           local-comments))))
-               (forward-line))))))
-
-      (oset replies-obj replies replies)
-      (oset review-obj local-comments local-comments)
-
-      (if (and (not (oref review-obj feedback))
-               (not only-reply?)
-               (not (string-equal event "APPROVE")))
-          (message "You must provide a feedback msg before submit your Review.")
-        (progn
-          (when (not only-reply?)
-            (code-review-send-review
-             review-obj
-             (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
-                 (oset pr finished t)
-                 (oset pr finished-at (current-time-string))
-                 (code-review-db-update pr)
-                 (code-review--build-buffer
-                  code-review-buffer-name
-                  nil
-                  "Done submitting review")))))
-
-          (when (oref replies-obj replies)
-            (code-review-send-replies
-             replies-obj
-             (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
-                 (code-review--build-buffer
-                  code-review-buffer-name
-                  nil
-                  "Done submitting review and replies."))))))))))
-
-(defun code-review-commit-at-point ()
-  "Review the current commit at point in Code Review buffer."
-  (interactive)
-  (setq code-review-comment-commit-buffer? t)
-  (code-review-section--build-commit-buffer
-   code-review-commit-buffer-name))
-
-(defun code-review-commit-buffer-back ()
-  "Move from commit buffer to review buffer."
-  (interactive)
-  (if (equal (current-buffer)
-             (get-buffer code-review-commit-buffer-name))
-      (progn
-        (setq code-review-comment-commit-buffer? nil
-              code-review-section-full-refresh? nil)
-        (kill-this-buffer)
-        (code-review--trigger-hooks
-         code-review-buffer-name))
-    (message "Command must be called from Code Review Commit buffer.")))
-
-(defun code-review--set-label ()
-  "Set label."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (when-let (options (code-review-get-labels pr))
-      (let* ((choices (completing-read-multiple "Choose: " options))
-             (labels (append
-                      (-map (lambda (x)
-                              `((name . ,x)
-                                (color . "0075ca")))
-                            choices)
-                      (oref pr labels))))
-        (setq code-review-comment-cursor-pos (point))
-        (oset pr labels labels)
-        (code-review-set-labels
-         pr
-         (lambda ()
-           (code-review-db-update pr)
-           (code-review--build-buffer
-            code-review-buffer-name)))))))
-
-(defun code-review--set-assignee-field (obj &optional assignee)
-  "Set assignees header field given an OBJ.
-If a valid ASSIGNEE is provided, use that instead."
-  (let ((candidate nil))
-    (if assignee
-        (setq candidate assignee)
-      (when-let (options (code-review-get-assignees obj))
-        (let* ((choice (completing-read "Choose: " options)))
-          (setq candidate choice))))
-    (oset obj assignees (list `((name) (login . ,candidate))))
-    (code-review-set-assignee
-     obj
-     (lambda ()
-       (closql-insert (code-review-db) obj t)
-       (code-review--build-buffer
-        code-review-buffer-name)))))
-
-(defun code-review--set-assignee ()
-  "Set assignee."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (code-review--set-assignee-field pr)))
-
-(defun code-review--set-assignee-yourself ()
-  "Assign yourself to PR."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (code-review--set-assignee-field
-     pr
-     (code-review-utils--git-get-user))))
-
-(defun code-review--set-milestone ()
-  "Set milestone."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (if-let (options (code-review-get-milestones pr))
-        (let* ((choice (completing-read "Choose: " (a-keys options)))
-               (milestone `((title . ,choice)
-                            (perc . 0)
-                            (number .,(alist-get choice options nil nil 'equal)))))
-          (setq code-review-comment-cursor-pos (point))
-          (oset pr milestones milestone)
-          (code-review-set-milestone
-           pr
-           (lambda ()
-             (code-review-db-update pr)
-             (code-review--build-buffer
-              code-review-buffer-name))))
-      (message "No milestone found."))))
-
-;;;###autoload
-(defun code-review-submit-lgtm ()
-  "Submit LGTM review."
-  (interactive)
-  (code-review-approve code-review-lgtm-message))
-
-
-;;;###autoload
-(defun code-review-submit-only-replies ()
-  "Submit only replies."
-  (interactive)
-  (code-review-submit nil nil t))
-
-;;;###autoload
-(defun code-review-merge-merge ()
-  "Merge PR with MERGE strategy."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (if (code-review-github-repo-p pr)
-        (progn
-          (code-review-merge pr "merge")
-          (oset pr state "MERGED")
-          (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
-      (code-review-gitlab-not-supported-message))))
-
-;;;###autoload
-(defun code-review-merge-rebase ()
-  "Merge PR with REBASE strategy."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (if (code-review-github-repo-p pr)
-        (progn
-          (code-review-merge pr "rebase")
-          (oset pr state "MERGED")
-          (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
-      (code-review-gitlab-not-supported-message))))
-
-;;;###autoload
-(defun code-review-merge-squash ()
-  "Merge PR with SQUASH strategy."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (if (code-review-github-repo-p pr)
-        (progn
-          (code-review-merge pr "squash")
-          (oset pr state "MERGED")
-          (code-review-db-update pr)
-          (code-review--build-buffer
-           code-review-buffer-name))
-      (code-review-gitlab-not-supported-message))))
-
-(defun code-review-promote-comment-to-new-issue ()
-  "Promote the comment to a new issue."
-  (interactive)
-  (let ((pr (code-review-db-get-pullreq)))
-    (if (code-review-gitlab-repo-p pr)
-        (message "Promote comment to issue not supported in Gitlab yet.")
-      (let-alist (code-review-github-promote-comment-to-new-issue-data pr)
-        (-> (code-review-comment-promote-to-issue
-             :reference-link .reference-link
-             :author .author
-             :title .title
-             :body .body)
-            (code-review-comment-handler-add-or-edit))))))
-
 ;;; Entrypoint
-
-;;;###autoload
-(defun code-review-start (url)
-  "Start review given PR URL."
-  (interactive "sURL to review: ")
-  (let ((code-review-section-full-refresh? t))
-    (code-review-auth-source-debug)
-    (code-review-utils-build-obj-from-url url)
-    (code-review--build-buffer
-     code-review-buffer-name)))
-
-;;;###autoload
-(defun code-review-reload ()
-  "Reload the buffer."
-  (interactive)
-  (let* ((pr (code-review-db-get-pullreq))
-         (code-review-section-full-refresh? t))
-    (if pr
-        (code-review--build-buffer
-         code-review-buffer-name)
-      (message "No PR found."))))
-
-;;;###autoload
-(defun code-review-request-reviews (&optional login)
-  "Request reviewers for current PR using LOGIN if available."
-  (interactive)
-  (let* ((pr (code-review-db-get-pullreq))
-         (users (code-review-get-assinable-users pr))
-         (choices
-          (if login
-              (list (format "@%s :- " login))
-            (completing-read-multiple
-             "Request review: "
-             (mapcar
-              (lambda (u)
-                (format "@%s :- %s" (a-get u 'login) (a-get u 'name)))
-              users))))
-         (logins)
-         (ids (mapcar
-               (lambda (choice)
-                 (let* ((login (-> choice
-                                   (split-string ":-")
-                                   (-first-item)
-                                   (split-string "@")
-                                   (-second-item)
-                                   (string-trim)))
-                        (usr (seq-find (lambda (el)
-                                         (equal (a-get el 'login) login))
-                                       users)))
-                   (unless usr
-                     (error "User %s not found" login))
-                   (setq logins
-                         (append logins
-                                 `(((requestedReviewer (login . ,(a-get usr 'login)))))))
-                   (a-get usr 'id)))
-               choices)))
-    (code-review-request-review pr ids
-                                     (lambda ()
-                                       (let* ((infos (oref pr raw-infos))
-                                              (new-infos
-                                               (a-assoc-in infos (list 'reviewRequests 'nodes) logins)))
-                                         (oset pr raw-infos new-infos)
-                                         (code-review-db-update pr)
-                                         (code-review--build-buffer
-                                          code-review-buffer-name))))))
-
-(defun code-review-request-review-at-point ()
-  "Request reviewer at point."
-  (interactive)
-  (setq code-review-comment-cursor-pos (point))
-  (let* ((line (buffer-substring-no-properties
-                (line-beginning-position)
-                (line-end-position)))
-         (login (-> line
-                    (split-string "- @")
-                    (-second-item)
-                    (string-trim))))
-    (code-review-request-reviews login)))
 
 ;;;###autoload
 (defun code-review-forge-pr-at-point ()
@@ -614,6 +148,16 @@ OUTDATED."
     (code-review-auth-source-debug)
     (code-review-utils-build-obj pr-alist)
     (code-review--build-buffer code-review-buffer-name)))
+
+;;;###autoload
+(defun code-review-start (url)
+  "Start review given PR URL."
+  (interactive "sURL to review: ")
+  (let ((code-review-section-full-refresh? t))
+    (code-review-auth-source-debug)
+    (code-review-utils-build-obj-from-url url)
+    (code-review--build-buffer
+     code-review-buffer-name)))
 
 ;;; Commit buffer
 
@@ -628,11 +172,11 @@ OUTDATED."
 (transient-define-prefix code-review-transient-api ()
   "Code Review."
   [["Review"
-    ("a" "Approve" code-review-approve)
-    ("r" "Request Changes" code-review-request-changes)
-    ("c" "Comment" code-review-comments)
-    ("C-c C-s" "Save Unfinished" code-review-save-unfinished-review)
-    ("C-c C-r" "Recover Unfinished" code-review-choose-unfinished-review)]
+    ("a" "Approve" code-review-submit-approve)
+    ("r" "Request Changes" code-review-submit-request-changes)
+    ("c" "Comment" code-review-submit-comments)
+    ("C-c C-s" "Save Unfinished Review" code-review-save-unfinished-review)
+    ("C-c C-r" "Open Unfinished Review" code-review-open-unfinished-review)]
    ["Merge"
     ("m m" "Merge" code-review-merge-merge)
     ("m r" "Merge Rebase" code-review-merge-rebase)
@@ -640,17 +184,17 @@ OUTDATED."
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
    ("p" "Submit Replies" code-review-submit-only-replies)
-   ("s c" "Single Comment, immediately sent" code-review-add-single-comment)
-   ("s C" "Single Diff Comment, immediately sent" code-review-add-single-diff-comment)]
+   ("s c" "Single Comment, immediately sent" code-review-submit-single-top-level-comment)
+   ("s C" "Single Diff Comment, immediately sent" code-review-submit-single-diff-comment)]
   ["Setters"
-   ("s f" "Feedback" code-review-comment-set-feedback)
+   ("s f" "Feedback" code-review-set-feedback)
    ("s r" "Reviewers" code-review-request-reviews)
-   ("s y" "Yourself as Assignee" code-review--set-assignee-yourself)
-   ("s a" "Assignee" code-review--set-assignee)
-   ("s m" "Milestone" code-review--set-milestone)
-   ("s l" "Labels" code-review--set-label)
-   ("s t" "Title" code-review-comment-set-title)
-   ("s d" "Description" code-review-comment-set-description)]
+   ("s y" "Yourself as Assignee" code-review-set-yourself-assignee)
+   ("s a" "Assignee" code-review-set-assignee)
+   ("s m" "Milestone" code-review-set-milestone)
+   ("s l" "Labels" code-review-set-label)
+   ("s t" "Title" code-review-set-title)
+   ("s d" "Description" code-review-set-description)]
   ["Buffer"
    ("G" "Full reload" code-review-reload)
    ("q" "Quit" transient-quit-one)])

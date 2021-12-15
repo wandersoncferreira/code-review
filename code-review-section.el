@@ -1460,41 +1460,44 @@ If you want to display a minibuffer MSG in the end."
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
 
-(defun code-review--build-buffer (buff-name &optional commit-focus? msg)
-  "Build BUFF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
+(defun code-review--build-buffer (&optional buf-name commit-focus? msg)
+  "Build BUF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
-  (if (not code-review-section-full-refresh?)
-      (code-review--trigger-hooks buff-name commit-focus? msg)
-    (let ((obj (code-review-db-get-pullreq))
-          (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
-      (progress-reporter-update progress 1)
-      (deferred:$
-        (deferred:parallel
-          (lambda () (code-review-diff-deferred obj))
-          (lambda () (code-review-infos-deferred obj))
-          (lambda () (code-review-infos-deferred obj t)))
-        (deferred:nextc it
-          (lambda (x)
-            (progress-reporter-update progress 2)
-            (if (code-review--auth-token-set? obj x)
-                (progn
-                  (progress-reporter-done progress)
-                  (message "Required %s token. Look at the README for how to setup your Personal Access Token"
-                           (cond
-                            ((code-review-github-repo-p obj)
-                             "Github")
-                            ((code-review-gitlab-repo-p obj)
-                             "Gitlab")
-                            (t "Unknown"))))
-              (code-review--internal-build obj progress x buff-name msg))))
-        (deferred:error it
-          (lambda (err)
-            (code-review-utils--log
-             "code-review--build-buffer"
-             (prin1-to-string err))
-            (if (and (sequencep err) (string-prefix-p "BUG: Unknown extended header:" (-second-item err)))
-                (message "Your PR might have diffs too large. Currently not supported.")
-              (message "Got an error from your VC provider. Check `code-review-log-file'."))))))))
+  (let ((buff-name (if (not buf-name)
+                       code-review-buffer-name
+                     buf-name)))
+    (if (not code-review-section-full-refresh?)
+        (code-review--trigger-hooks buff-name commit-focus? msg)
+      (let ((obj (code-review-db-get-pullreq))
+            (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
+        (progress-reporter-update progress 1)
+        (deferred:$
+          (deferred:parallel
+            (lambda () (code-review-diff-deferred obj))
+            (lambda () (code-review-infos-deferred obj))
+            (lambda () (code-review-infos-deferred obj t)))
+          (deferred:nextc it
+            (lambda (x)
+              (progress-reporter-update progress 2)
+              (if (code-review--auth-token-set? obj x)
+                  (progn
+                    (progress-reporter-done progress)
+                    (message "Required %s token. Look at the README for how to setup your Personal Access Token"
+                             (cond
+                              ((code-review-github-repo-p obj)
+                               "Github")
+                              ((code-review-gitlab-repo-p obj)
+                               "Gitlab")
+                              (t "Unknown"))))
+                (code-review--internal-build obj progress x buff-name msg))))
+          (deferred:error it
+            (lambda (err)
+              (code-review-utils--log
+               "code-review--build-buffer"
+               (prin1-to-string err))
+              (if (and (sequencep err) (string-prefix-p "BUG: Unknown extended header:" (-second-item err)))
+                  (message "Your PR might have diffs too large. Currently not supported.")
+                (message "Got an error from your VC provider. Check `code-review-log-file'.")))))))))
 
 ;;; * commit buffer
 ;;; TODO this whole feature should be reviewed.
