@@ -221,7 +221,7 @@ If you want to display a minibuffer MSG in the end."
 
     (when errors
       (code-review--log "code-review--internal-build"
-                        (format "Data returned by GraphQL API: \n %s" (prin1-to-string raw-infos)))
+                        (format "Data returned by GraphQL API: \n %s" (prin1-to-string res)))
       (message "GraphQL Github data contains errors. See `code-review-log-file' for details."))
 
     ;; verify must have value!
@@ -230,7 +230,7 @@ If you want to display a minibuffer MSG in the end."
         (code-review--log "code-review--internal-build"
                           "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")
         (code-review--log "code-review--internal-build"
-                          (format "Data returned by GraphQL API: \n %s" (prin1-to-string raw-infos)))
+                          (format "Data returned by GraphQL API: \n %s" (prin1-to-string res)))
         (error "Missing required data")))
 
     ;; 1. save raw diff data
