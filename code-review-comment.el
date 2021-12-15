@@ -423,6 +423,21 @@ Optionally define a MSG."
 
 ;;; ----
 
+
+;;;###autoload
+(defun code-review-input-mention-user-at-point ()
+  "Insert @USERNAME at current point to mention an user."
+  (interactive)
+  (let* ((pr (code-review-db-get-pullreq))
+         (user (completing-read
+                "Mention user: "
+                (-map
+                 (lambda (it)
+                   (a-get it 'login))
+                 (code-review-get-assinable-users pr))
+                nil 'require-match)))
+    (insert "@" user " ")))
+
 ;;;###autoload
 (defun code-review-add-single-comment ()
   "Add single comment without a Review."
@@ -441,6 +456,7 @@ Optionally define a MSG."
   (let ((map (copy-keymap markdown-mode-map)))
     (define-key map (kbd "C-c C-c") 'code-review-comment-commit)
     (define-key map (kbd "C-c C-k") 'code-review-comment-quit)
+    (define-key map (kbd "C-c @") 'code-review-input-mention-user-at-point)
     (set-keymap-parent map markdown-mode-map)
     map))
 

@@ -5,6 +5,7 @@
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
+- [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer.
 
 # v0.0.4
 
