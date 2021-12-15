@@ -282,12 +282,14 @@ using COMMENTS."
                                 :repo .repo
                                 :number .num)))
      (t
-      (message "Forge not supported")))))
+      (error "Forge not supported")))))
 
 (defun code-review-utils-build-obj-from-url (url)
   "Return obj from URL."
   (let ((pr-alist (code-review-utils-pr-from-url url)))
-    (code-review-utils-build-obj pr-alist)))
+    (if pr-alist
+        (code-review-utils-build-obj pr-alist)
+      (error "Could not identify the PR with the given URL: %s" url))))
 
 
 ;;; COLORS
