@@ -220,18 +220,18 @@ If you want to display a minibuffer MSG in the end."
          (raw-infos (a-get-in (-second-item res) (list 'data 'repository 'pullRequest))))
 
     (when errors
-      (code-review--log
-       "code-review--internal-build"
-       (prin1-to-string raw-infos))
-      (message "GraphQL Github query returned errors. See `code-review-log-file' for details."))
+      (code-review--log "code-review--internal-build"
+                        (format "Data returned by GraphQL API: \n %s" (prin1-to-string raw-infos)))
+      (message "GraphQL Github data contains errors. See `code-review-log-file' for details."))
 
     ;; verify must have value!
     (let-alist raw-infos
       (when (not .headRef.target.oid)
-        (code-review--log
-         "code-review--internal-build"
-         (prin1-to-string raw-infos))
-        (error "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")))
+        (code-review--log "code-review--internal-build"
+                          "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")
+        (code-review--log "code-review--internal-build"
+                          (format "Data returned by GraphQL API: \n %s" (prin1-to-string raw-infos)))
+        (error "Missing required data")))
 
     ;; 1. save raw diff data
     (progress-reporter-update progress 3)
