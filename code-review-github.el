@@ -149,13 +149,177 @@ https://github.com/wandersoncferreira/code-review#configuration"))
       d))
     d))
 
-(cl-defmethod code-review-pullreq-infos ((github code-review-github-repo) callback)
-  "Get PR details from GITHUB and dispatch to CALLBACK."
-  (let* ((repo (oref github repo))
-         (owner (oref github owner))
-         (num (oref github number))
-         (query
-          (format "query {
+(defvar code-review-github-graphql-fallback
+  "query {
+  repository(name: \"%s\", owner: \"%s\") {
+    pullRequest(number:%s){
+      id
+      headRef { target{ oid } }
+      baseRefName
+      headRefName
+      isDraft
+      databaseId
+      number
+      createdAt
+      updatedAt
+      latestOpinionatedReviews(first: 100) {
+         nodes {
+           author {
+             login
+           }
+           createdAt
+           state
+         }
+       }
+      reviewRequests(first:100){
+         nodes {
+           asCodeOwner
+           requestedReviewer {
+             __typename
+             ... on User {
+               login
+               name
+             }
+           }
+         }
+       }
+      files(first:100) {
+        nodes {
+          path
+          additions
+          deletions
+        }
+      }
+      milestone {
+        title
+        progressPercentage
+      }
+      labels(first: 10) {
+        nodes {
+          name
+          color
+        }
+      }
+      assignees(first: 15) {
+        nodes {
+          name
+          login
+        }
+      }
+      projectCards(first: 10) {
+        nodes {
+          project {
+            name
+          }
+        }
+      }
+      suggestedReviewers {
+        reviewer {
+          name
+          login
+        }
+      }
+      commits(first: 100) {
+        totalCount
+        nodes {
+          commit {
+            abbreviatedOid
+            message
+            statusCheckRollup {
+              state
+              contexts(first:50){
+                nodes {
+                  ... on CheckRun {
+                    startedAt
+                    completedAt
+                    name
+                    text
+                    title
+                    summary
+                    status
+                    conclusion
+                    detailsUrl
+                    checkSuite {
+                      app {
+                        id
+                        name
+                        description
+                        slug
+                        logoUrl
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      title
+      state
+      bodyHTML
+      bodyText
+      reactions(first:50){
+        nodes {
+          id
+          content
+        }
+      }
+      comments(first:50) {
+        nodes {
+          typename:__typename
+          reactions(first:50){
+            nodes {
+              id
+              content
+            }
+          }
+          author {
+            login
+          }
+          databaseId
+          bodyHTML
+          createdAt
+          updatedAt
+        }
+      }
+      reviews(first: 50) {
+        nodes {
+          typename:__typename
+          author { login }
+          bodyHTML
+          state
+          createdAt
+          databaseId
+          updatedAt
+          comments(first: 50) {
+            nodes {
+              createdAt
+              updatedAt
+              bodyHTML
+              originalPosition
+              diffHunk
+              position
+              outdated
+              path
+              databaseId
+              reactions(first:50){
+                nodes {
+                  id
+                  content
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+")
+
+(defvar code-review-github-graphql-complete
+  "query {
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
@@ -327,9 +491,22 @@ https://github.com/wandersoncferreira/code-review#configuration"))
     }
   }
 }
-" repo owner (if (numberp num)
-                 num
-               (string-to-number num)))))
+")
+
+(cl-defmethod code-review-pullreq-infos ((github code-review-github-repo) fallback? callback)
+  "Get PR details from GITHUB, use FALLBACK? to choose minimal query and dispatch to CALLBACK."
+  (let* ((repo (oref github repo))
+         (owner (oref github owner))
+         (num (oref github number))
+         (query
+          (format (if fallback?
+                      code-review-github-graphql-fallback
+                    code-review-github-graphql-complete)
+                  repo
+                  owner
+                  (if (numberp num)
+                      num
+                    (string-to-number num)))))
     (ghub-graphql query
                   nil
                   :auth 'code-review
@@ -337,11 +514,13 @@ https://github.com/wandersoncferreira/code-review#configuration"))
                   :callback callback
                   :errorback #'code-review-github-errback)))
 
-(cl-defmethod code-review-infos-deferred ((github code-review-github-repo))
-  "Get PR infos from GITHUB using deferred lib."
+(cl-defmethod code-review-infos-deferred ((github code-review-github-repo) &optional fallback?)
+  "Get PR infos from GITHUB using deferred lib.
+Optionally ask for the FALLBACK? query."
   (let ((d (deferred:new #'identity)))
     (code-review-pullreq-infos
      github
+     fallback?
      (apply-partially (lambda (d v &rest _)
                         (deferred:callback-post d v))
                       d))
