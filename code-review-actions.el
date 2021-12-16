@@ -516,7 +516,7 @@ If a valid ASSIGNEE is provided, use that instead."
   "Request reviewers for current PR using LOGIN if available."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
-         (users (code-review-get-assinable-users pr))
+         (users (code-review-get-assignable-users pr))
          (choices
           (if login
               (list (format "@%s :- " login))

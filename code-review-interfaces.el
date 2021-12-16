@@ -93,7 +93,7 @@
 (cl-defgeneric code-review-delete-reaction (obj context-name comment-id reaction-id)
   "Delete a REACTION to a COMMENT-ID in OBJ given a CONTEXT-NAME.")
 
-(cl-defgeneric code-review-get-assinable-users (obj)
+(cl-defgeneric code-review-get-assignable-users (obj)
   "Get users that can review a PR for OBJ.")
 
 (cl-defgeneric code-review-request-review (obj user-ids callback)
