@@ -502,7 +502,7 @@ Optionally sets FALLBACK? to get minimal query."
   "Get labels for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-labels ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-labels ((_gitlab code-review-gitlab-repo) _callback)
   "Set labels for your pr at GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
@@ -510,7 +510,7 @@ Optionally sets FALLBACK? to get minimal query."
   "Get assignees for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-assignee ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-assignee ((_gitlab code-review-gitlab-repo) _callback)
   "Set yourself as assignee in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
@@ -518,15 +518,15 @@ Optionally sets FALLBACK? to get minimal query."
   "Get milestones for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-milestone ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-milestone ((_gitlab code-review-gitlab-repo) _callback)
   "Set milestone for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-title ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-title ((_gitlab code-review-gitlab-repo) _callback)
   "Set title for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-description ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-description ((_gitlab code-review-gitlab-repo) _callback)
   "Set description for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
@@ -534,7 +534,7 @@ Optionally sets FALLBACK? to get minimal query."
   "Merge a pr in GITLAB using STRATEGY."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-set-reaction ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-send-reaction ((_gitlab code-review-gitlab-repo))
   "Set reaction for your pr in GITLAB."
   (code-review-gitlab-not-supported-message))
 

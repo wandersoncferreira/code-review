@@ -539,7 +539,7 @@ Optionally ask for the FALLBACK? query."
        (a-get l 'name))
      resp)))
 
-(cl-defmethod code-review-set-labels ((github code-review-github-repo) callback)
+(cl-defmethod code-review-send-labels ((github code-review-github-repo) callback)
   "Set labels for your pr at GITHUB and call CALLBACK."
   (let ((url (format "/repos/%s/%s/issues/%s/labels"
                      (oref github owner)
@@ -571,7 +571,7 @@ Optionally ask for the FALLBACK? query."
        (a-get l 'login))
      resp)))
 
-(cl-defmethod code-review-set-assignee ((github code-review-github-repo) callback)
+(cl-defmethod code-review-send-assignee ((github code-review-github-repo) callback)
   "Set assignee to your PR in GITHUB and call CALLBACK."
   (ghub-post (format "/repos/%s/%s/issues/%s/assignees"
                      (oref github owner)
@@ -598,7 +598,7 @@ Optionally ask for the FALLBACK? query."
        `(,(a-get l 'title) . ,(a-get l 'number)))
      resp)))
 
-(cl-defmethod code-review-set-milestone ((github code-review-github-repo) callback)
+(cl-defmethod code-review-send-milestone ((github code-review-github-repo) callback)
   "Set milestone for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/issues/%s"
                       (oref github owner)
@@ -613,7 +613,7 @@ Optionally ask for the FALLBACK? query."
                               (funcall callback)
                             (message "You cannot set this Milestone. Verify if the milestone exist in Github.")))))
 
-(cl-defmethod code-review-set-title ((github code-review-github-repo) callback)
+(cl-defmethod code-review-send-title ((github code-review-github-repo) callback)
   "Set title for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
@@ -625,7 +625,7 @@ Optionally ask for the FALLBACK? query."
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-set-description ((github code-review-github-repo) callback)
+(cl-defmethod code-review-send-description ((github code-review-github-repo) callback)
   "Set description for a pullreq in GITHUB and call CALLBACK."
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
@@ -653,7 +653,7 @@ Optionally ask for the FALLBACK? query."
                         (message "Merge %s PR #%s succeeded." strategy (oref github number)))
             :errorback #'code-review-github-errback))
 
-(cl-defmethod code-review-set-reaction ((github code-review-github-repo) context-name comment-id reaction)
+(cl-defmethod code-review-send-reaction ((github code-review-github-repo) context-name comment-id reaction)
   "Set REACTION in GITHUB pullreq COMMENT-ID given a CONTEXT-NAME e.g. issue, pr, discussion."
   (let ((path (pcase context-name
                 ("pr-description"
