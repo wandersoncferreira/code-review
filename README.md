@@ -50,8 +50,8 @@ The basic workflow:
 - `r a` to approve the PR | `r r` to reject the PR | `r c` to add comments in the PR
 
 You can include your own bindings to functions like
-`code-review-comment-set-feedback`, `code-review-approve`,
-`code-review-request-changes`, and `code-review-comments` to not rely on the
+`code-review-set-feedback`, `code-review-submit-approve`,
+`code-review-submit-request-changes`, and `code-review-submit-comments` to not rely on the
 transient panel. But I think you should see it :]
 
 Take a look at which features are available to each integrated forge [here](./docs/forge_support.md).
