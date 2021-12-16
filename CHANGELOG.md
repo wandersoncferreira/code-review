@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- [#138](https://github.com/wandersoncferreira/code-review/pull/138): Fix bug rendering suggested change block
+
 # v0.0.5
 
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`

@@ -924,12 +924,49 @@ INDENT is an optional."
         (length)
         (- 1))))
 
+(defun code-review--dom-string (dom)
+  "Return string of DOM."
+  (mapconcat (lambda (sub)
+               (if (stringp sub)
+                   sub
+                 (code-review--dom-string sub)))
+             (dom-children dom) ""))
+
+(defun code-review--shr-tag-div (dom)
+  "Rendering div tag as DOM in shr, with special handle for suggested-changes."
+  (if (not (string-match-p ".*suggested-changes.*" (or (dom-attr dom 'class) "")))
+      (shr-tag-div dom)
+    (let ((tbody (dom-by-tag dom 'tbody)))
+      (let ((shr-current-font 'code-review-info-state-face))
+        (shr-insert "* Suggested change:")
+        (insert "\n"))
+      (dolist (tr (dom-non-text-children tbody))
+        (dolist (td (dom-non-text-children tr))
+          (let ((classes (split-string (or (dom-attr td 'class) ""))))
+            (cond
+             ((member "blob-num" classes) t)
+             ((member "blob-code-deletion" classes)
+              (let ((shr-current-font 'diff-indicator-removed))
+                (shr-insert "-"))
+              (insert (propertize (concat (code-review--dom-string td)
+                                          "\n")
+                                  'face 'diff-removed)))
+             ((member "blob-code-addition" classes)
+              (let ((shr-current-font 'diff-indicator-added))
+                (shr-insert "+"))
+              (insert (propertize (concat (code-review--dom-string td)
+                                          "\n")
+                                  'face 'diff-added)))
+             (t
+              (shr-generic td)))))))))
+
 (defun code-review--insert-html (body &optional indent)
   "Insert html content BODY.
 INDENT is an optional number, if provided,
 INDENT count of spaces are added at the start of every line."
   (let ((shr-indentation (* (or indent 0) (shr-string-pixel-width "-")))
         (image-scaling-factor code-review-section-image-scaling)
+        (shr-external-rendering-functions '((div . code-review--shr-tag-div)))
         (shr-width code-review-fill-column)
         (start (point))
         end
