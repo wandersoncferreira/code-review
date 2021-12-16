@@ -58,11 +58,6 @@
   :group 'code-review
   :type 'file)
 
-;;;
-(defvar code-review-buffer-name)
-(defvar code-review-commit-buffer-name)
-(defvar code-review-comment-cursor-pos)
-
 ;;; COMMENTS
 
 (defun code-review-utils--comment-key (path pos)
@@ -334,44 +329,6 @@ Return a value between 0 and 1."
 Return a value between 0 and 1."
   (/ (+ (* .2126 red) (* .7152 green) (* .0722 blue)) 256))
 
-
-;;; SECTION
-
-(defun code-review-utils--gen-submit-structure (&optional feedback)
-  "Return A-LIST with replies and reviews to submit.
-If you already have a FEEDBACK string to submit use it."
-  (interactive)
-  (let* ((replies nil)
-         (review-comments nil)
-         (feedback feedback)
-         (pullreq (code-review-db-get-pullreq)))
-    (with-current-buffer (get-buffer code-review-buffer-name)
-      (save-excursion
-        (goto-char (point-min))
-        (magit-wash-sequence
-         (lambda ()
-           (let ((section (magit-current-section)))
-             (with-slots (type value) section
-               (cond
-                ((code-review-reply-comment-section-p section))
-                ((equal type 'code-review-reply-comment-header)
-                 (let-alist value
-                   (push `((comment-id . ,.comment.databaseId)
-                           (body . ,.comment.bodyText))
-                         replies)))
-                ((equal type 'code-review-feedback)
-                 (setq feedback (or (a-get value 'feedback) feedback)))
-                ((equal type 'code-review-local-comment-header)
-                 (let-alist value
-                   (push `((path . ,.comment.path)
-                           (position . ,.comment.position)
-                           (body . ,.comment.bodyText))
-                         review-comments))))
-               (forward-line)))))))
-    (oset pullreq replies replies)
-    (oset pullreq review review-comments)
-    (oset pullreq feedback feedback)
-    pullreq))
 
 ;;; Forge interface
 
