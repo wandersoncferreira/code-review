@@ -605,6 +605,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-request-changes . code-review-submit-request-changes)
     (code-review-choose-unfinished-review . code-review-open-unfinished-review)
     (code-review-add-single-diff-comment . code-review-submit-single-diff-comment-at-point)
+    (code-review-submit-single-diff-comment . code-review-submit-single-diff-comment-at-point)
     (code-review-add-single-comment . code-review-submit-single-top-level-comment)
     (code-review-comment-set-feedback . code-review-set-feedback)
     (code-review--set-assignee-yourself . code-review-set-yourself-assignee)
