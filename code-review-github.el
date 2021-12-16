@@ -766,7 +766,7 @@ Optionally ask for the FALLBACK? query."
                :errorback #'code-review-github-errback
                :callback callback)))
 
-(cl-defmethod code-review-get-assinable-users ((github code-review-github-repo))
+(cl-defmethod code-review-get-assignable-users ((github code-review-github-repo))
   "Get a list of assignable users for current PR in GITHUB."
   (let ((infos (oref github raw-infos))
         (query "query($repo_owner:String!, $repo_name:String!, $cursor:String) {

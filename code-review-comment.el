@@ -403,7 +403,7 @@ Optionally define a MSG."
                 (-map
                  (lambda (it)
                    (a-get it 'login))
-                 (code-review-get-assinable-users pr))
+                 (code-review-get-assignable-users pr))
                 nil 'require-match)))
     (insert "@" user " ")))
 
