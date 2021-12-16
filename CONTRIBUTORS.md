@@ -18,8 +18,8 @@ Names below are sorted alphabetically.
 
 # Contributors
 
+- Björn Larsson <develop@bjornlarsson.net>
 - Michael Eliachevitch <m.eliachevitch@posteo.de>
-
 
 # I would like to join this list. How can I help the project?
 
