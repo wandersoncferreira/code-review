@@ -498,6 +498,10 @@ Optionally sets FALLBACK? to get minimal query."
   (message "Not supported in Gitlab yet.")
   nil)
 
+(cl-defmethod code-review-get-assignable-users ((_gitlab code-review-gitlab-repo))
+  "Get a list of assignable users for current PR at GITLAB."
+(code-review-gitlab-not-supported-message))
+
 (cl-defmethod code-review-get-labels ((_gitlab code-review-gitlab-repo))
   "Get labels for your pr at GITLAB."
   (code-review-gitlab-not-supported-message))
