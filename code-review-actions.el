@@ -209,31 +209,31 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-submit-comments ()
-  "Comment current PR."
+  "Submit a Review Comment for the current PR."
   (interactive)
   (code-review--submit "COMMENT"))
 
 ;;;###autoload
 (defun code-review-submit-request-changes ()
-  "Approve current PR."
+  "Submit a Request Change for the current PR."
   (interactive)
   (code-review--submit "REQUEST_CHANGES"))
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
-  "Submit LGTM review."
+  "Submit an Approve Review wiht a LGTM message."
   (interactive)
   (code-review-submit-approve code-review-lgtm-message))
 
 ;;;###autoload
 (defun code-review-submit-only-replies ()
-  "Submit only replies."
+  "Submit only replies comments."
   (interactive)
   (code-review--submit nil nil t))
 
 ;;;###autoload
 (defun code-review-submit-single-top-level-comment ()
-  "Add single comment without a Review."
+  "Submit a single comment without an attached Review."
   (interactive)
   (let ((code-review-comment-single-comment? t))
     (code-review-comment-add
@@ -241,7 +241,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-submit-single-diff-comment-at-point ()
-  "Add single code comment without a Review."
+  "Submit a single diff comment without an attached Review."
   (interactive)
   (with-slots (value) section
     (if (magit-hunk-section-p section)
@@ -258,7 +258,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-save-unfinished-review ()
-  "Save unfinished review work."
+  "Save unfinished Review."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr saved t)
@@ -268,7 +268,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-recover-unfinished-review (url)
-  "Recover unfinished review for URL."
+  "Recover unfinished Review for the given URL."
   (interactive "sPR URL: ")
   (let-alist (code-review-utils-pr-from-url url)
     (let ((obj (code-review-db-search .owner .repo .num)))
@@ -281,7 +281,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-open-unfinished-review ()
-  "Choose an unfinished review to work on."
+  "Choose an unfinished Review from the previous unfinished list."
   (interactive)
   (let* ((objs (code-review-db-all-unfinished))
          (choice (completing-read "Unifinished Reviews: "
@@ -360,7 +360,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-set-feedback ()
-  "Add review FEEDBACK."
+  "Add review FEEDBACK locally.  Required to Comment and Request Change reviews."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
@@ -375,7 +375,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-set-title ()
-  "Add review title."
+  "Change the title of current PR.  Sent immediately."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
@@ -390,7 +390,8 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-set-label ()
-  "Set label."
+  "Change the labels of current PR.  Sent immediately.
+Rewrite all current labels with the options chosen here."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (when-let (options (code-review-get-labels pr))
@@ -410,7 +411,7 @@ Optionally set a FEEDBACK message."
            (code-review--build-buffer)))))))
 
 (defun code-review--set-assignee-field (obj &optional assignee)
-  "Set assignees header field given an OBJ.
+  "Change assignee header field given an OBJ.
 If a valid ASSIGNEE is provided, use that instead."
   (let ((candidate nil))
     (if assignee
@@ -426,13 +427,13 @@ If a valid ASSIGNEE is provided, use that instead."
        (code-review--build-buffer)))))
 
 (defun code-review-set-assignee ()
-  "Set assignee."
+  "Change assignee for the current PR.  Sent immediately.."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (code-review--set-assignee-field pr)))
 
 (defun code-review-set-yourself-assignee ()
-  "Assign yourself to PR."
+  "Assign yourself for the current PR.  Sent immediately."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (code-review--set-assignee-field
@@ -440,7 +441,7 @@ If a valid ASSIGNEE is provided, use that instead."
      (code-review-utils--git-get-user))))
 
 (defun code-review-set-milestone ()
-  "Set milestone."
+  "Change the milestone for the current PR.  Sent immediately."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (if-let (options (code-review-get-milestones pr))
@@ -459,7 +460,7 @@ If a valid ASSIGNEE is provided, use that instead."
 
 ;;;###autoload
 (defun code-review-set-description ()
-  "Add review description."
+  "Submit new PR description.  Sent immediately."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
@@ -479,7 +480,7 @@ If a valid ASSIGNEE is provided, use that instead."
 
 ;;;###autoload
 (defun code-review-delete-feedback ()
-  "Delete review FEEDBACK."
+  "Delete review FEEDBACK locally."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (oset pr feedback nil)
@@ -492,17 +493,20 @@ If a valid ASSIGNEE is provided, use that instead."
 
 ;;;###autoload
 (defun code-review-reload ()
-  "Reload the buffer."
+  "Reload the buffer.  All your local comments will be lost."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
          (code-review-section-full-refresh? t))
     (if pr
-        (code-review--build-buffer)
+        (progn
+          (let ((choice (y-or-n-p "You will lose all your local comments.  Do you need to proceed? ")))
+            (when choice
+              (code-review--build-buffer))))
       (error "No PR found"))))
 
 ;;;###autoload
-(defun code-review-promote-comment-to-new-issue ()
-  "Promote the comment to a new issue."
+(defun code-review-promote-comment-at-point-to-new-issue ()
+  "Promote comment at point to a new issue.  Sent immediately."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (if (code-review-gitlab-repo-p pr)
@@ -617,7 +621,8 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review--set-milestone . code-review-set-milestone)
     (code-review--set-label . code-review-set-label)
     (code-review-comment-set-title . code-review-set-title)
-    (code-review-comment-set-description . code-review-set-description))
+    (code-review-comment-set-description . code-review-set-description)
+    (code-review-promote-comment-to-new-issue . code-review-promote-comment-at-point-to-new-issue))
   "Functions renamed in release 0.0.5.")
 
 (defun code-review--define-obsolete-fns (old-name new-fn)
