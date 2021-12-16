@@ -240,7 +240,7 @@ Optionally set a FEEDBACK message."
      code-review-comment-single-comment-msg)))
 
 ;;;###autoload
-(defun code-review-submit-single-diff-comment ()
+(defun code-review-submit-single-diff-comment-at-point ()
   "Add single code comment without a Review."
   (interactive)
   (setq code-review-comment-send? t)
@@ -604,7 +604,7 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-comments . code-review-submit-comments)
     (code-review-request-changes . code-review-submit-request-changes)
     (code-review-choose-unfinished-review . code-review-open-unfinished-review)
-    (code-review-add-single-diff-comment . code-review-submit-single-diff-comment)
+    (code-review-add-single-diff-comment . code-review-submit-single-diff-comment-at-point)
     (code-review-add-single-comment . code-review-submit-single-top-level-comment)
     (code-review-comment-set-feedback . code-review-set-feedback)
     (code-review--set-assignee-yourself . code-review-set-yourself-assignee)
