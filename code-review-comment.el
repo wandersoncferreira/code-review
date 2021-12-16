@@ -298,7 +298,7 @@ Optionally define a MSG."
         (code-review--build-buffer buff-name)))
     (setq code-review-comment-uncommitted nil)))
 
-(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue) default-buff-msg)
+(cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue) _default-buff-msg)
   "Commit the promotion of comment OBJ to new issue and clean the DEFAULT-BUFF-MSG from the text if any."
   (save-match-data
     (let ((text (oref obj buffer-text))
@@ -319,8 +319,9 @@ Optionally define a MSG."
                                    (oref obj author)
                                    (oref obj reference-link)))))
         (setq code-review-promote-comment-to-issue? nil)
-        (code-review-new-issue pr body title
-                                    (lambda (&rest _) (message "New issue created.")))))))
+        (code-review-new-issue
+         pr body title
+         (lambda (&rest _) (message "New issue created.")))))))
 
 ;;;###autoload
 (defun code-review-comment-commit ()

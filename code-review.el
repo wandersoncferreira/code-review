@@ -51,54 +51,6 @@
   :link '(custom-group-link 'code-review-github)
   :link '(custom-group-link 'code-review-gitlab))
 
-(defcustom code-review-buffer-name "*Code Review*"
-  "Name of the code review main buffer."
-  :group 'code-review
-  :type 'string)
-
-(defcustom code-review-commit-buffer-name "*Code Review Commit*"
-  "Name of the code review commit buffer."
-  :group 'code-review
-  :type 'string)
-
-(defcustom code-review-lgtm-message "LGTM! :thumbsup:"
-  "Message to add to fast track LGTM code review."
-  :group 'code-review
-  :type 'string)
-
-(defcustom code-review-new-buffer-window-strategy
-  #'switch-to-buffer-other-window
-  "Function used after create a new Code Review buffer."
-  :group 'code-review
-  :type 'function)
-
-(defcustom code-review-fill-column 80
-  "Column number to wrap comments."
-  :group 'code-review
-  :type 'integer)
-
-(defcustom code-review-download-dir "/tmp/code-review/"
-  "Directory where code review will download binary files."
-  :type 'string
-  :group 'code-review)
-
-(defcustom code-review-log-file (expand-file-name
-                                 "code-review-error.log"
-                                 user-emacs-directory)
-  "Path to write append only log errors."
-  :group 'code-review
-  :type 'file)
-
-(defcustom code-review-section-indent-width 1
-  "Indent width for nested sections."
-  :type 'integer
-  :group 'code-review)
-
-(defcustom code-review-section-image-scaling 0.8
-  "Image scaling number used to resize images in buffer."
-  :type 'float
-  :group 'code-review)
-
 (defcustom code-review-headers-hook
   '(code-review-section-insert-header-title
     code-review-section-insert-title

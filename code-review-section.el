@@ -40,6 +40,37 @@
 (require 'code-review-gitlab)
 (require 'emojify)
 
+(defcustom code-review-section-indent-width 1
+  "Indent width for nested sections."
+  :type 'integer
+  :group 'code-review)
+
+(defcustom code-review-section-image-scaling 0.8
+  "Image scaling number used to resize images in buffer."
+  :type 'float
+  :group 'code-review)
+
+(defcustom code-review-fill-column 80
+  "Column number to wrap comments."
+  :group 'code-review
+  :type 'integer)
+
+(defcustom code-review-buffer-name "*Code Review*"
+  "Name of the code review main buffer."
+  :group 'code-review
+  :type 'string)
+
+(defcustom code-review-commit-buffer-name "*Code Review Commit*"
+  "Name of the code review commit buffer."
+  :group 'code-review
+  :type 'string)
+
+(defcustom code-review-new-buffer-window-strategy
+  #'switch-to-buffer-other-window
+  "Function used after create a new Code Review buffer."
+  :group 'code-review
+  :type 'function)
+
 (defun code-review--propertize-keyword (str)
   "Add property face to STR."
   (propertize str 'face
@@ -57,10 +88,7 @@
 
 ;; fix unbound symbols
 (defvar magit-root-section)
-(defvar code-review-buffer-name)
-(defvar code-review-commit-buffer-name)
 (defvar code-review-comment-commit-buffer?)
-(defvar code-review-fill-column)
 (defvar code-review-comment-cursor-pos)
 
 (defvar code-review-reaction-types

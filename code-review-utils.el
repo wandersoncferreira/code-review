@@ -46,10 +46,21 @@
   :type 'string
   :group 'code-review-gitlab)
 
+(defcustom code-review-download-dir "/tmp/code-review/"
+  "Directory where code review will download binary files."
+  :type 'string
+  :group 'code-review)
+
+(defcustom code-review-log-file (expand-file-name
+                                 "code-review-error.log"
+                                 user-emacs-directory)
+  "Path to write append only log errors."
+  :group 'code-review
+  :type 'file)
+
 ;;;
 (defvar code-review-buffer-name)
 (defvar code-review-commit-buffer-name)
-(defvar code-review-log-file)
 (defvar code-review-comment-cursor-pos)
 
 ;;; COMMENTS

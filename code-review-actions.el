@@ -39,6 +39,16 @@
   :type 'boolean
   :group 'code-review)
 
+(defcustom code-review-lgtm-message "LGTM! :thumbsup:"
+  "Message to add to fast track LGTM code review."
+  :group 'code-review
+  :type 'string)
+
+;; remove free variable warnings
+(defvar code-review-comment-buffer-name)
+(defvar code-review-commit-buffer-name)
+(defvar code-review-buffer-name)
+
 ;;;
 ;;;; * Submit review
 ;;;
@@ -213,7 +223,7 @@ Optionally set a FEEDBACK message."
 (defun code-review-submit-lgtm ()
   "Submit LGTM review."
   (interactive)
-  (code-review-approve code-review-lgtm-message))
+  (code-review-submit-approve code-review-lgtm-message))
 
 ;;;###autoload
 (defun code-review-submit-only-replies ()
