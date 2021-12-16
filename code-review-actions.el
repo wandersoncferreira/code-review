@@ -618,7 +618,7 @@ If a valid ASSIGNEE is provided, use that instead."
 (defun code-review--define-obsolete-fns (old-name new-fn)
   `(progn
      (defun ,old-name () (interactive) (funcall ,new-fn))
-     (define-obsolete-function-alias ',old-name ',new-fn)))
+     (define-obsolete-function-alias ',old-name ',new-fn "v0.0.5")))
 
 (defmacro code-review-set-obsolete-fns ()
   "Make functions in `code-review-actions--renamed' list obsolete."
