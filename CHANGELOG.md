@@ -2,6 +2,8 @@
 
 # Unreleased
 
+# v0.0.5
+
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
