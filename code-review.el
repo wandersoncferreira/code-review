@@ -156,7 +156,7 @@ OUTDATED."
     (suppress-keymap map t)
     (define-key map (kbd "r") 'code-review-transient-api)
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c RET") 'code-review-add-single-diff-comment-at-point)
+    (define-key map (kbd "C-c RET") 'code-review-submit-single-diff-comment-at-point)
     (define-key map (kbd "G") 'code-review-reload)
     (set-keymap-parent map magit-section-mode-map)
     map))
