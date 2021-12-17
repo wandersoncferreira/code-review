@@ -33,7 +33,8 @@ index fb7586b..1269943 100644
 ## Infos request
 
 Several additional informations about your PR is gathered by a GraphQL query.
-The expected structure:
+
+A sample logged under the tag `code-review--build-buffer: [INFOS_main]`:
 
 ```elisp
 ((data 
