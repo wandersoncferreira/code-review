@@ -578,6 +578,16 @@ If a valid ASSIGNEE is provided, use that instead."
                     (string-trim))))
     (code-review-request-reviews login)))
 
+;;;###autoload
+(defun code-review-toggle-display-comments ()
+  "Toggle display comments."
+  (interactive)
+  (setq code-review-section-toggle-display-comments
+        (not code-review-section-toggle-display-comments))
+  (code-review--build-buffer))
+
+
+
 ;;;
 ;;;; * Commit actions
 ;;;

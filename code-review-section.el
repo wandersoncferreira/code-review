@@ -122,6 +122,10 @@ For internal usage only.")
   "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
+(defvar code-review-section-toggle-display-comments t
+  "Variable to define if we should display comments or not.
+For internal usage only.")
+
 ;;; sections
 
 (defclass code-review-is-draft-section (magit-section)
@@ -1355,7 +1359,9 @@ Please Report this Bug" path-name))
                    (grouped-comment (code-review-utils--comment-get
                                      code-review-section-grouped-comments
                                      path-pos)))
-              (if (and (not written?) grouped-comment)
+              (if (and (not written?)
+                       grouped-comment
+                       code-review-section-toggle-display-comments)
                   (progn
                     (push path-pos code-review-section-hold-written-comment-ids)
                     (code-review-section-insert-comment
