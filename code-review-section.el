@@ -122,6 +122,18 @@ For internal usage only.")
   "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
+(defvar code-review-section--display-all-comments t
+  "Variable to define if we should display all comments or not.
+For internal usage only.")
+
+(defvar code-review-section--display-top-level-comments t
+  "Variable to define if we should display top level comments or not.
+For internal usage only.")
+
+(defvar code-review-section--display-diff-comments t
+  "Variable to define if we should display diff comments or not.
+For internal usage only.")
+
 ;;; sections
 
 (defclass code-review-is-draft-section (magit-section)
@@ -1119,7 +1131,8 @@ INDENT count of spaces are added at the start of every line."
     (magit-insert-section (code-review-comment-header-section)
       (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
       (magit-insert-heading)
-      (code-review--insert-conversation-section pr))))
+      (when code-review-section--display-top-level-comments
+        (code-review--insert-conversation-section pr)))))
 
 
 (defun code-review-section-insert-files-report ()
@@ -1225,27 +1238,34 @@ We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
 (defun code-review-section-insert-comment (comments amount-loc)
   "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
 A quite good assumption: every comment in an outdated hunk will be outdated."
-  (if (oref (-first-item comments) outdated?)
+  (if (and (oref (-first-item comments) outdated?)
+           code-review-section--display-diff-comments)
       (code-review-section-insert-outdated-comment
        comments
        amount-loc)
     (let ((new-amount-loc amount-loc))
       (forward-line)
       (dolist (c comments)
-        (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
-               (amount-loc-incr-partial (+ 2 written-loc))
-               (amount-loc-incr (if (oref c reactions)
-                                    (+ 2 amount-loc-incr-partial)
-                                  amount-loc-incr-partial)))
-          (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
-          (oset c amount-loc new-amount-loc)
+        (when (or (and (code-review-local-comment-section-p c)
+                       code-review-section--display-diff-comments)
+                  (and (code-review-reply-comment-section-p c)
+                       code-review-section--display-diff-comments)
+                  (and (code-review-code-comment-section-p c)
+                       code-review-section--display-diff-comments))
+          (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
+                 (amount-loc-incr-partial (+ 2 written-loc))
+                 (amount-loc-incr (if (oref c reactions)
+                                      (+ 2 amount-loc-incr-partial)
+                                    amount-loc-incr-partial)))
+            (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
+            (oset c amount-loc new-amount-loc)
 
-          (setq code-review-section-hold-written-comment-count
-                (code-review-utils--comment-update-written-count
-                 code-review-section-hold-written-comment-count
-                 (oref c path)
-                 amount-loc-incr))
-          (code-review-comment-insert-lines c))))))
+            (setq code-review-section-hold-written-comment-count
+                  (code-review-utils--comment-update-written-count
+                   code-review-section-hold-written-comment-count
+                   (oref c path)
+                   amount-loc-incr))
+            (code-review-comment-insert-lines c)))))))
 
 (defclass code-review-binary-file-section (magit-section)
   ((keymap :initform 'code-review-binary-file-section-map)))
@@ -1355,7 +1375,9 @@ Please Report this Bug" path-name))
                    (grouped-comment (code-review-utils--comment-get
                                      code-review-section-grouped-comments
                                      path-pos)))
-              (if (and (not written?) grouped-comment)
+              (if (and (not written?)
+                       grouped-comment
+                       code-review-section--display-all-comments)
                   (progn
                     (push path-pos code-review-section-hold-written-comment-ids)
                     (code-review-section-insert-comment
@@ -1371,7 +1393,8 @@ Please Report this Bug" path-name))
                                     path-name
                                     code-review-section-hold-written-comment-ids
                                     code-review-section-grouped-comments))
-            (when (eobp)
+            (when (and (eobp)
+                       code-review-section--display-all-comments)
               (code-review-section-insert-outdated-comment-missing
                path-name
                missing-paths
