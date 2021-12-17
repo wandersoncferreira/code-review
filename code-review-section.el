@@ -1525,6 +1525,11 @@ If you want to display a minibuffer MSG in the end."
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
 
+(defcustom code-review-log-raw-request-responses nil
+  "Log the Raw request responses from your VC provider."
+  :type 'string
+  :group 'code-review)
+
 (defun code-review--build-buffer (&optional buf-name commit-focus? msg)
   "Build BUF-NAME set COMMIT-FOCUS? mode to use commit list of hooks.
 If you want to provide a MSG for the end of the process."
@@ -1543,6 +1548,17 @@ If you want to provide a MSG for the end of the process."
             (lambda () (code-review-infos-deferred obj t)))
           (deferred:nextc it
             (lambda (x)
+              (when code-review-log-raw-request-responses
+                (code-review-utils--log
+                 "code-review--build-buffer: [DIFF]"
+                 (prin1-to-string (-first-item x)))
+                (code-review-utils--log
+                 "code-review--build-buffer: [INFOS_main]"
+                 (prin1-to-string (-second-item x)))
+                (code-review-utils--log
+                 "code-review--build-buffer: [INFOS_fallback]"
+                 (prin1-to-string (-third-item x))))
+
               (progress-reporter-update progress 2)
               (if (code-review--auth-token-set? obj x)
                   (progn
