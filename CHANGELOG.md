@@ -2,18 +2,19 @@
 
 # Unreleased
 
-- [#138](https://github.com/wandersoncferreira/code-review/pull/138): Fix bug rendering suggested change block
+- [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
+- [#141](https://github.com/wandersoncferreira/code-review/pull/141): add `code-review-toggle-display-comments` function.
 
 # v0.0.5
 
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
-- [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer
-- [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by fallback to simpler query in graphql
-- [#132](https://github.com/wandersoncferreira/code-review/pull/132): Get pr latest SHA even if the branch was already deleted
-- [#134](https://github.com/wandersoncferreira/code-review/pull/134): Support making single diff comment without review
-- [#135](https://github.com/wandersoncferreira/code-review/pull/135): Improve package reliability, error messaging, more sane function names
+- [#130](https://github.com/wandersoncferreira/code-review/pull/130): mention user with `C-c @` in comment buffer
+- [#131](https://github.com/wandersoncferreira/code-review/pull/131): support Github Enterprise 3.0 by fallback to simpler query in graphql
+- [#132](https://github.com/wandersoncferreira/code-review/pull/132): get pr latest SHA even if the branch was already deleted
+- [#134](https://github.com/wandersoncferreira/code-review/pull/134): support making single diff comment without review
+- [#135](https://github.com/wandersoncferreira/code-review/pull/135): improve package reliability, error messaging, more sane function names
 
 # v0.0.4
 
