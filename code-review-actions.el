@@ -579,14 +579,32 @@ If a valid ASSIGNEE is provided, use that instead."
     (code-review-request-reviews login)))
 
 ;;;###autoload
-(defun code-review-toggle-display-comments ()
+(defun code-review-toggle-display-all-comments ()
   "Toggle display comments."
   (interactive)
-  (setq code-review-section-toggle-display-comments
-        (not code-review-section-toggle-display-comments))
+  (let ((flag (not code-review-section--display-all-comments)))
+    (setq code-review-section--display-all-comments flag
+          code-review-section--display-diff-comments flag
+          code-review-section--display-top-level-comments flag))
   (code-review--build-buffer))
 
+;;;###autoload
+(defun code-review-toggle-display-top-level-comments ()
+  "Toggle display the top level comments."
+  (interactive)
+  (setq code-review-section--display-top-level-comments
+        (not code-review-section--display-top-level-comments))
+  (code-review--build-buffer))
 
+;;;###autoload
+(defun code-review-toggle-display-diff-comments ()
+  "Toggle display the top level comments."
+  (interactive)
+  (setq
+   code-review-section--display-all-comments t
+   code-review-section--display-diff-comments
+   (not code-review-section--display-diff-comments))
+  (code-review--build-buffer))
 
 ;;;
 ;;;; * Commit actions
