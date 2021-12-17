@@ -3,7 +3,7 @@
 # Unreleased
 
 - [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
-- [#141](https://github.com/wandersoncferreira/code-review/pull/141): add `code-review-toggle-display-comments` function.
+- [#142](https://github.com/wandersoncferreira/code-review/pull/142): add `code-review-toggle-display-*-comments` functions.
 
 # v0.0.5
 
