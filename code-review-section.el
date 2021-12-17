@@ -1503,6 +1503,12 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
+
+  (when-let (err (a-get (-second-item res) 'errors))
+    (code-review--log
+     "code-review--internal-build"
+     (format "Data returned by GraphQL API: \n%s" (prin1-to-string err))))
+
   ;; 1. save raw diff data
   (progress-reporter-update progress 3)
   (code-review-db--pullreq-raw-diff-update
