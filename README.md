@@ -1,6 +1,7 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](https://melpa.org/packages/code-review-badge.svg)](https://melpa.org/#/code-review)
 ![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
+[![Chat on IRC](https://badgen.net/badge/irc/%23code-review-emacs/green)](https://web.libera.chat/gamja/?channels=#code-review-emacs)
 
 # Code Review
 
