@@ -1089,8 +1089,8 @@ INDENT count of spaces are added at the start of every line."
                      " - "
                      (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
             (magit-insert-heading)
+            (insert ?\n)
             (code-review-insert-comment-lines obj)
-
             (when reactions
               (code-review-comment-insert-reactions
                reaction-objs
