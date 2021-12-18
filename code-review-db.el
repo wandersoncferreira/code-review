@@ -121,7 +121,7 @@
 
 ;;; LOL, why? why did I started the database on version 7? :/
 ;;; damn copy and paste from `forge-db'.
-(defconst code-review-db-version 7)
+(defconst code-review-db-version 8)
 
 (defconst code-review-db--sqlite-available-p
   (with-demoted-errors "Code Review initialization: %S"
