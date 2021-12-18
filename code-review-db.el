@@ -340,6 +340,8 @@
       (oset pullreq raw-infos infos)
       (oset pullreq title .title)
       (oset pullreq state .state)
+      (oset pullreq base-ref-name .baseRefName)
+      (oset pullreq head-ref-name .headRefName)
       (oset pullreq description .bodyHTML)
       (oset pullreq sha .headRefOid)
       (oset pullreq raw-comments .reviews.nodes)
