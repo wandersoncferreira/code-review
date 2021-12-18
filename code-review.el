@@ -67,7 +67,7 @@
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-renders-hook
+(defcustom code-review-sections-hook
   '(code-review-render-insert-headers
     code-review-render-insert-commits
     code-review-render-insert-pr-description
@@ -78,7 +78,7 @@
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-renders-commit-hook
+(defcustom code-review-sections-commit-hook
   '(code-review-render-insert-headers)
   "Hook run to insert sections into a code review commit buffer."
   :group 'code-review

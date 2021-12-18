@@ -1440,8 +1440,8 @@ If you want to display a minibuffer MSG in the end."
             (magit-insert-section (review-buffer)
               (magit-insert-section (code-review)
                 (if commit-focus?
-                    (magit-run-render-hook 'code-review-renders-commit-hook)
-                  (magit-run-render-hook 'code-review-renders-hook)))
+                    (magit-run-section-hook 'code-review-sections-commit-hook)
+                  (magit-run-section-hook 'code-review-sections-hook)))
               (magit-wash-sequence
                (apply-partially #'magit-diff-wash-diff ())))
             (if window
