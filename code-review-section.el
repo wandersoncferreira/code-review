@@ -140,40 +140,6 @@ For internal usage only.")
   ((draft? :initform nil
            :type (or null string))))
 
-(defclass code-review-title-section (magit-section)
-  ((keymap  :initform 'code-review-title-section-map)
-   (title  :initform nil
-           :type (or null string))))
-
-(defvar code-review-title-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-set-title)
-    map)
-  "Keymaps for code-comment sections.")
-
-(defclass code-review-state-section (magit-section)
-  ((state  :initform nil
-           :type (or null string))))
-
-(defclass code-review-ref-section (magit-section)
-  ((base   :initarg :base
-           :type (or null string))
-   (head   :initarg :head
-           :type (or null string))))
-
-(defclass code-review-milestone-section (magit-section)
-  ((keymap :initform 'code-review-milestone-section-map)
-   (title  :initarg :title)
-   (perc   :initarg :perc)
-   (number :initarg :number
-           :type number)))
-
-(defvar code-review-milestone-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-set-milestone)
-    map)
-  "Keymaps for milestone section.")
-
 ;;; Description
 
 (defclass code-review-description-section (magit-section)
@@ -230,20 +196,6 @@ For internal usage only.")
     (define-key map (kbd "C-c C-k") 'code-review-delete-feedback)
     map)
   "Keymaps for feedback section.")
-
-;;; Milestone
-
-(cl-defmethod code-review-pretty-milestone ((obj code-review-milestone-section))
-  "Get the pretty version of milestone for a given OBJ."
-  (cond
-   ((and (oref obj title) (oref obj perc))
-    (format "%s (%s%%)"
-            (oref obj title)
-            (oref obj perc)))
-   ((oref obj title)
-    (oref obj title))
-   (t
-    "No milestone")))
 
 ;;; Commit
 
@@ -663,17 +615,6 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Keymaps for code-comment sections.")
 
 ;;; headers
-
-(defun code-review-section-insert-header-title ()
-  "Insert the title header line."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (setq header-line-format
-            (propertize
-             (format "#%s: %s".number (code-review-db--pullreq-title))
-             'font-lock-face
-             'magit-section-heading)))))
-
 ;;; TODO: add some nice face to true and false
 (defun code-review-section-insert-is-draft ()
   "Insert the isDraft value of the header buffer."
@@ -703,45 +644,6 @@ Optionally DELETE? flag must be set if you want to remove it."
                    (insert ?\n)))
                groups)
       (insert ?\n))))
-
-(defun code-review-section-insert-title ()
-  "Insert the title of the header buffer."
-  (when-let (title (code-review-db--pullreq-title))
-    (magit-insert-section (code-review-title-section title)
-      (insert (format "%-17s" "Title: ") title)
-      (insert ?\n))))
-
-(defun code-review-section-insert-state ()
-  "Insert the state of the header buffer."
-  (when-let (state (code-review-db--pullreq-state))
-    (let ((value (if state state "none")))
-      (magit-insert-section (code-review-state-section value)
-        (insert (format "%-17s" "State: ") value)
-        (insert ?\n)))))
-
-(defun code-review-section-insert-ref ()
-  "Insert the state of the header buffer."
-  (when-let (pr (code-review-db-get-pullreq))
-    (let ((obj (code-review-ref-section
-                :base (oref pr base-ref-name)
-                :head (oref pr head-ref-name))))
-      (magit-insert-section (code-review-ref-section obj)
-        (insert (format "%-17s" "Refs: "))
-        (insert (oref pr base-ref-name))
-        (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
-        (insert (oref pr head-ref-name))
-        (insert ?\n)))))
-
-(defun code-review-section-insert-milestone ()
-  "Insert the milestone of the header buffer."
-  (let ((milestones (code-review-db--pullreq-milestones)))
-    (let-alist milestones
-      (let* ((title (when (not (string-empty-p .title)) .title))
-             (obj (code-review-milestone-section :title title :perc .perc)))
-        (magit-insert-section (code-review-milestone-section obj)
-          (insert (format "%-17s" "Milestone: "))
-          (insert (propertize (code-review-pretty-milestone obj) 'font-lock-face 'magit-dimmed))
-          (insert ?\n))))))
 
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."

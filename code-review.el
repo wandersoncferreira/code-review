@@ -38,6 +38,7 @@
 (require 'code-review-github)
 (require 'code-review-gitlab)
 (require 'code-review-section)
+(require 'code-review-section-header)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
@@ -52,11 +53,11 @@
   :link '(custom-group-link 'code-review-gitlab))
 
 (defcustom code-review-headers-hook
-  '(code-review-section-insert-header-title
-    code-review-section-insert-title
-    code-review-section-insert-state
-    code-review-section-insert-ref
-    code-review-section-insert-milestone
+  '(code-review-section-header-insert-headerline
+    code-review-section-header-insert-title
+    code-review-section-header-insert-state
+    code-review-section-header-insert-ref
+    code-review-section-header-insert-milestone
     code-review-section-insert-labels
     code-review-section-insert-assignee
     code-review-section-insert-project
