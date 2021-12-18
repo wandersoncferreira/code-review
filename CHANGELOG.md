@@ -5,6 +5,7 @@
 - [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
 - [#142](https://github.com/wandersoncferreira/code-review/pull/142): add `code-review-toggle-display-*-comments` functions.
 - [#143](https://github.com/wandersoncferreira/code-review/pull/143): add db migration scheme to introduce new columns in the future
+- [#148](https://github.com/wandersoncferreira/code-review/pull/148): fix UI heading bug #145.
 
 # v0.0.5
 
