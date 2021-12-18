@@ -78,7 +78,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
       (let ((obj (code-review-milestone-section :title "Milestone Title" :perc "50")))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
                                                                (progressPercentage . "50"))))
-        (with-written-render (lambda () (code-review-render-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "Milestone Title (50%)")))
@@ -86,7 +86,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (it "if title is missing, add default msg"
       (let ((obj (code-review-milestone-section :title nil :perc "50")))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . nil) (progressPercentage . "50"))))
-        (with-written-render (lambda () (code-review-render-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "No milestone")))
@@ -94,7 +94,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
     (it "if progress is missing, leave it out."
       (let ((obj (code-review-milestone-section :title "My title" :perc nil)))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . "My title"))))
-        (with-written-render (lambda () (code-review-render-insert-milestone))
+        (with-written-section (lambda () (code-review-render-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
         (expect (code-review-pretty-milestone obj) :to-equal "My title"))))
