@@ -86,6 +86,8 @@
    (closql-class-prefix :initform "code-review-")
    (closql-order-by     :initform [(desc number)])
    (id                  :initarg :id)
+   (base-ref-name       :initform nil)
+   (head-ref-name       :initform nil)
    (finished            :initform nil)
    (finished-at         :initform nil)
    (saved               :initform nil)
@@ -117,7 +119,9 @@
 (defclass code-review-db-database (emacsql-sqlite-connection closql-database)
   ((object-class :initform 'code-review-db-pullreq)))
 
-(defconst code-review-db-version 7)
+;;; LOL, why? why did I started the database on version 7? :/
+;;; damn copy and paste from `forge-db'.
+(defconst code-review-db-version 8)
 
 (defconst code-review-db--sqlite-available-p
   (with-demoted-errors "Code Review initialization: %S"
@@ -132,7 +136,20 @@
   (unless (and code-review-db-connection (emacsql-live-p code-review-db-connection))
     (make-directory (file-name-directory code-review-db-database-file) t)
     (closql-db 'code-review-db-database 'code-review-db-connection
-               code-review-db-database-file t))
+               code-review-db-database-file t)
+    (let* ((db code-review-db-connection)
+           (version (closql--db-get-version db))
+           (version (code-review--db-maybe-update code-review-db-connection version)))
+      (cond
+       ((> version code-review-db-version)
+        (emacsql-close db)
+        (user-error
+         "The Code Review database was created with a newer Code Review version.  %s"
+         "You need to update the Code Review package."))
+       ((< version code-review-db-version)
+        (emacsql-close db)
+        (error "BUG: The Code Review database scheme changed %s"
+               "and there is no upgrade path.")))))
   code-review-db-connection)
 
 ;;; Schema
@@ -141,6 +158,8 @@
   '((pullreq
      [(class :not-null)
       (id :not-null :primary-key)
+      base-ref-name
+      head-ref-name
       finished
       finished-at
       saved
@@ -207,6 +226,16 @@
     (pcase-dolist (`(,table . ,schema) code-review-db-table-schema)
       (emacsql db [:create-table $i1 $S2] table schema))
     (closql--db-set-version db code-review-db-version)))
+
+(defun code-review--db-maybe-update (db version)
+  (emacsql-with-transaction db
+    (when (= version 7)
+      (message "Upgrading Code Review database from version 7 to 8...")
+      (emacsql db [:alter-table pullreq :add-column base-ref-name :default nil])
+      (emacsql db [:alter-table pullreq :add-column head-ref-name :default nil])
+      (closql--db-set-version db (setq version 8))
+      (message "Upgrading Code Review database from version 7 to 8...done"))
+    version))
 
 ;;; Core
 
@@ -311,6 +340,8 @@
       (oset pullreq raw-infos infos)
       (oset pullreq title .title)
       (oset pullreq state .state)
+      (oset pullreq base-ref-name .baseRefName)
+      (oset pullreq head-ref-name .headRefName)
       (oset pullreq description .bodyHTML)
       (oset pullreq sha .headRefOid)
       (oset pullreq raw-comments .reviews.nodes)

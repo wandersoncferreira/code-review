@@ -156,9 +156,9 @@ For internal usage only.")
            :type (or null string))))
 
 (defclass code-review-ref-section (magit-section)
-  ((base   :initform nil
+  ((base   :initarg :base
            :type (or null string))
-   (head   :initform nil
+   (head   :initarg :head
            :type (or null string))))
 
 (defclass code-review-milestone-section (magit-section)
@@ -721,17 +721,16 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (defun code-review-section-insert-ref ()
   "Insert the state of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (let ((obj (code-review-ref-section)))
-        (oset obj base .baseRefName)
-        (oset obj head .headRefName)
-        (magit-insert-section (code-review-ref-section obj)
-          (insert (format "%-17s" "Refs: "))
-          (insert .baseRefName)
-          (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
-          (insert .headRefName)
-          (insert ?\n))))))
+  (when-let (pr (code-review-db-get-pullreq))
+    (let ((obj (code-review-ref-section
+                :base (oref pr base-ref-name)
+                :head (oref pr head-ref-name))))
+      (magit-insert-section (code-review-ref-section obj)
+        (insert (format "%-17s" "Refs: "))
+        (insert (oref pr base-ref-name))
+        (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
+        (insert (oref pr head-ref-name))
+        (insert ?\n)))))
 
 (defun code-review-section-insert-milestone ()
   "Insert the milestone of the header buffer."
