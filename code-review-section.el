@@ -1029,6 +1029,7 @@ INDENT count of spaces are added at the start of every line."
         (magit-insert-section (code-review-description-section obj)
           (insert (propertize "Description" 'font-lock-face 'magit-section-heading))
           (magit-insert-heading)
+          (insert ?\n)
           (magit-insert-section (code-review-description-section obj)
             (if is-empty?
                 (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
