@@ -167,7 +167,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
             (code-review-send-review
              review-obj
              (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
+               (let ((code-review-render-full-refresh? t))
                  (oset pr finished t)
                  (oset pr finished-at (current-time-string))
                  (code-review-db-update pr)
@@ -180,7 +180,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
             (code-review-send-replies
              replies-obj
              (lambda (&rest _)
-               (let ((code-review-section-full-refresh? t))
+               (let ((code-review-render-full-refresh? t))
                  (code-review--build-buffer
                   code-review-buffer-name
                   nil
@@ -276,7 +276,7 @@ Optionally set a FEEDBACK message."
           (message "No Review found for this URL.")
         (progn
           (setq code-review-db--pullreq-id (oref obj id))
-          (let ((code-review-section-full-refresh? nil))
+          (let ((code-review-render-full-refresh? nil))
             (code-review--build-buffer)))))))
 
 ;;;###autoload
@@ -307,7 +307,7 @@ Optionally set a FEEDBACK message."
                                            (string-equal (oref o saved-at) saved-at))))))
                            objs))))
     (setq code-review-db--pullreq-id (oref obj-chosen id))
-    (let ((code-review-section-full-refresh? nil))
+    (let ((code-review-render-full-refresh? nil))
       (code-review--build-buffer))))
 
 ;;;
@@ -496,7 +496,7 @@ If a valid ASSIGNEE is provided, use that instead."
   "Reload the buffer.  All your local comments will be lost."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
-         (code-review-section-full-refresh? t))
+         (code-review-render-full-refresh? t))
     (if pr
         (progn
           (let ((choice (y-or-n-p "You will lose all your local comments.  Do you need to proceed? ")))
@@ -582,18 +582,18 @@ If a valid ASSIGNEE is provided, use that instead."
 (defun code-review-toggle-display-all-comments ()
   "Toggle display comments."
   (interactive)
-  (let ((flag (not code-review-section--display-all-comments)))
-    (setq code-review-section--display-all-comments flag
-          code-review-section--display-diff-comments flag
-          code-review-section--display-top-level-comments flag))
+  (let ((flag (not code-review-render--display-all-comments)))
+    (setq code-review-render--display-all-comments flag
+          code-review-render--display-diff-comments flag
+          code-review-render--display-top-level-comments flag))
   (code-review--build-buffer))
 
 ;;;###autoload
 (defun code-review-toggle-display-top-level-comments ()
   "Toggle display the top level comments."
   (interactive)
-  (setq code-review-section--display-top-level-comments
-        (not code-review-section--display-top-level-comments))
+  (setq code-review-render--display-top-level-comments
+        (not code-review-render--display-top-level-comments))
   (code-review--build-buffer))
 
 ;;;###autoload
@@ -601,9 +601,9 @@ If a valid ASSIGNEE is provided, use that instead."
   "Toggle display the top level comments."
   (interactive)
   (setq
-   code-review-section--display-all-comments t
-   code-review-section--display-diff-comments
-   (not code-review-section--display-diff-comments))
+   code-review-render--display-all-comments t
+   code-review-render--display-diff-comments
+   (not code-review-render--display-diff-comments))
   (code-review--build-buffer))
 
 ;;;
@@ -615,7 +615,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (interactive)
   ;; TODO rewrite the whole feature
   ;; (let ((code-review-comment-commit-buffer? t))
-  ;;   (code-review-section--build-commit-buffer
+  ;;   (code-review-render--build-commit-buffer
   ;;    code-review-commit-buffer-name))
   (error "Sorry, this feature became outdated and require a rewrite!"))
 
@@ -626,7 +626,7 @@ If a valid ASSIGNEE is provided, use that instead."
   ;;            (get-buffer code-review-commit-buffer-name))
   ;;     (progn
   ;;       (setq code-review-comment-commit-buffer? nil
-  ;;             code-review-section-full-refresh? nil)
+  ;;             code-review-render-full-refresh? nil)
   ;;       (kill-this-buffer)
   ;;       (code-review--trigger-hooks code-review-buffer-name))
   ;;   (message "Command must be called from Code Review Commit buffer."))

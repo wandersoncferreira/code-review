@@ -37,7 +37,7 @@
 (require 'magit-section)
 (require 'code-review-github)
 (require 'code-review-gitlab)
-(require 'code-review-section)
+(require 'code-review-render)
 (require 'code-review-comment)
 (require 'code-review-utils)
 (require 'code-review-db)
@@ -52,34 +52,34 @@
   :link '(custom-group-link 'code-review-gitlab))
 
 (defcustom code-review-headers-hook
-  '(code-review-section-insert-header-title
-    code-review-section-insert-title
-    code-review-section-insert-state
-    code-review-section-insert-ref
-    code-review-section-insert-milestone
-    code-review-section-insert-labels
-    code-review-section-insert-assignee
-    code-review-section-insert-project
-    code-review-section-insert-is-draft
-    code-review-section-insert-suggested-reviewers
-    code-review-section-insert-reviewers)
+  '(code-review-render-insert-header-title
+    code-review-render-insert-title
+    code-review-render-insert-state
+    code-review-render-insert-ref
+    code-review-render-insert-milestone
+    code-review-render-insert-labels
+    code-review-render-insert-assignee
+    code-review-render-insert-project
+    code-review-render-insert-is-draft
+    code-review-render-insert-suggested-reviewers
+    code-review-render-insert-reviewers)
   "Hook run to insert headers into the code review buffer."
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-sections-hook
-  '(code-review-section-insert-headers
-    code-review-section-insert-commits
-    code-review-section-insert-pr-description
-    code-review-section-insert-feedback-heading
-    code-review-section-insert-general-comments
-    code-review-section-insert-files-report)
+(defcustom code-review-renders-hook
+  '(code-review-render-insert-headers
+    code-review-render-insert-commits
+    code-review-render-insert-pr-description
+    code-review-render-insert-feedback-heading
+    code-review-render-insert-general-comments
+    code-review-render-insert-files-report)
   "Hook run to insert sections into a code review buffer."
   :group 'code-review
   :type 'hook)
 
-(defcustom code-review-sections-commit-hook
-  '(code-review-section-insert-headers)
+(defcustom code-review-renders-commit-hook
+  '(code-review-render-insert-headers)
   "Hook run to insert sections into a code review commit buffer."
   :group 'code-review
   :type 'hook)
@@ -95,7 +95,7 @@
   "Review the forge pull request at point.
 OUTDATED."
   (interactive)
-  (let ((code-review-section-full-refresh? t)
+  (let ((code-review-render-full-refresh? t)
         (pr-alist (code-review-utils--alist-forge-at-point)))
     (code-review-auth-source-debug)
     (code-review-utils-build-obj pr-alist)
@@ -105,7 +105,7 @@ OUTDATED."
 (defun code-review-start (url)
   "Start review given PR URL."
   (interactive "sURL to review: ")
-  (let ((code-review-section-full-refresh? t))
+  (let ((code-review-render-full-refresh? t))
     (code-review-auth-source-debug)
     (code-review-utils-build-obj-from-url url)
     (code-review--build-buffer

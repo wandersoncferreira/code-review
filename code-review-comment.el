@@ -28,7 +28,7 @@
 ;;
 ;;; Code:
 
-(require 'code-review-section)
+(require 'code-review-render)
 (require 'code-review-utils)
 (require 'markdown-mode)
 
@@ -291,7 +291,7 @@ Optionally define a MSG."
            (code-review-db-get-pullreq)
            obj
            (lambda (&rest _)
-             (let ((code-review-section-full-refresh? t))
+             (let ((code-review-render-full-refresh? t))
                (code-review--build-buffer buff-name)))))
       (progn
         (code-review-db--pullreq-raw-comments-update raw-comment)
@@ -380,7 +380,7 @@ Optionally define a MSG."
                   comment-text
                   code-review-comment-single-comment-msg))
                 (callback (lambda (&rest _)
-                            (let ((code-review-section-full-refresh? t))
+                            (let ((code-review-render-full-refresh? t))
                               (code-review--build-buffer code-review-buffer-name)))))
             (code-review-new-issue-comment pr msg callback)))
          (t

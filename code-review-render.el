@@ -1,4 +1,4 @@
-;;; code-review-section.el --- UI -*- lexical-binding: t; -*-
+;;; code-review-render.el --- UI -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -40,12 +40,12 @@
 (require 'code-review-gitlab)
 (require 'emojify)
 
-(defcustom code-review-section-indent-width 1
+(defcustom code-review-render-indent-width 1
   "Indent width for nested sections."
   :type 'integer
   :group 'code-review)
 
-(defcustom code-review-section-image-scaling 0.8
+(defcustom code-review-render-image-scaling 0.8
   "Image scaling number used to resize images in buffer."
   :type 'float
   :group 'code-review)
@@ -106,31 +106,31 @@
 (declare-function code-review-utils--visit-binary-file-at-remote "code-review-utils")
 (declare-function code-review-utils--visit-binary-file-at-point "code-review-utils")
 
-(defvar code-review-section-full-refresh? nil
+(defvar code-review-render-full-refresh? nil
   "Indicate if we want to perform a complete restart.
 For internal usage only.")
 
-(defvar code-review-section-grouped-comments nil
+(defvar code-review-render-grouped-comments nil
   "Hold grouped comments to avoid computation on every hunk line.
 For internal usage only.")
 
-(defvar code-review-section-hold-written-comment-ids nil
+(defvar code-review-render-hold-written-comment-ids nil
   "List to hold written comments ids.
 For internal usage only.")
 
-(defvar code-review-section-hold-written-comment-count nil
+(defvar code-review-render-hold-written-comment-count nil
   "List of number of lines of comments written in the buffer.
 For internal usage only.")
 
-(defvar code-review-section--display-all-comments t
+(defvar code-review-render--display-all-comments t
   "Variable to define if we should display all comments or not.
 For internal usage only.")
 
-(defvar code-review-section--display-top-level-comments t
+(defvar code-review-render--display-top-level-comments t
   "Variable to define if we should display top level comments or not.
 For internal usage only.")
 
-(defvar code-review-section--display-diff-comments t
+(defvar code-review-render--display-diff-comments t
   "Variable to define if we should display diff comments or not.
 For internal usage only.")
 
@@ -344,7 +344,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 (cl-defmethod code-review-insert-comment-lines ((obj code-review-comment-section))
   "Insert the comment lines given in the OBJ."
-  (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width)))
+  (code-review--insert-html (oref obj msg) (* 3 code-review-render-indent-width)))
 
 ;;; Reactions
 
@@ -550,14 +550,14 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defvar code-review-local-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
+    (define-key map (kbd "C-c C-k") 'code-review-render-delete-comment)
     map)
   "Keymaps for local-comment sections.")
 
 (defvar code-review-reply-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
+    (define-key map (kbd "C-c C-k") 'code-review-render-delete-comment)
     map)
   "Keymaps for reply-comment sections.")
 
@@ -623,7 +623,7 @@ Optionally DELETE? flag must be set if you want to remove it."
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading))
     (magit-insert-section (code-review-code-comment-section obj)
-      (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
+      (code-review--insert-html (oref obj msg) (* 3 code-review-render-indent-width))
       (when-let (reactions-obj (oref obj reactions))
         (code-review-comment-insert-reactions
          reactions-obj
@@ -664,7 +664,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 
 ;;; headers
 
-(defun code-review-section-insert-header-title ()
+(defun code-review-render-insert-header-title ()
   "Insert the title header line."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -675,7 +675,7 @@ Optionally DELETE? flag must be set if you want to remove it."
              'magit-section-heading)))))
 
 ;;; TODO: add some nice face to true and false
-(defun code-review-section-insert-is-draft ()
+(defun code-review-render-insert-is-draft ()
   "Insert the isDraft value of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -684,7 +684,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (format "%-17s" "Draft: ") draft?)
           (insert ?\n))))))
 
-(defun code-review-section-insert-reviewers ()
+(defun code-review-render-insert-reviewers ()
   "Insert the reviewers section."
   (let* ((infos (code-review-db--pullreq-raw-infos))
          (groups (code-review-utils--fmt-reviewers infos)))
@@ -704,14 +704,14 @@ Optionally DELETE? flag must be set if you want to remove it."
                groups)
       (insert ?\n))))
 
-(defun code-review-section-insert-title ()
+(defun code-review-render-insert-title ()
   "Insert the title of the header buffer."
   (when-let (title (code-review-db--pullreq-title))
     (magit-insert-section (code-review-title-section title)
       (insert (format "%-17s" "Title: ") title)
       (insert ?\n))))
 
-(defun code-review-section-insert-state ()
+(defun code-review-render-insert-state ()
   "Insert the state of the header buffer."
   (when-let (state (code-review-db--pullreq-state))
     (let ((value (if state state "none")))
@@ -719,7 +719,7 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert (format "%-17s" "State: ") value)
         (insert ?\n)))))
 
-(defun code-review-section-insert-ref ()
+(defun code-review-render-insert-ref ()
   "Insert the state of the header buffer."
   (when-let (pr (code-review-db-get-pullreq))
     (let ((obj (code-review-ref-section
@@ -732,7 +732,7 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert (oref pr head-ref-name))
         (insert ?\n)))))
 
-(defun code-review-section-insert-milestone ()
+(defun code-review-render-insert-milestone ()
   "Insert the milestone of the header buffer."
   (let ((milestones (code-review-db--pullreq-milestones)))
     (let-alist milestones
@@ -743,7 +743,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (propertize (code-review-pretty-milestone obj) 'font-lock-face 'magit-dimmed))
           (insert ?\n))))))
 
-(defun code-review-section-insert-labels ()
+(defun code-review-render-insert-labels ()
   "Insert the labels of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let* ((labels (-distinct
@@ -772,7 +772,7 @@ Optionally DELETE? flag must be set if you want to remove it."
           (insert (propertize "None yet" 'font-lock-face 'magit-dimmed)))
         (insert ?\n)))))
 
-(defun code-review-section-insert-assignee ()
+(defun code-review-render-insert-assignee ()
   "Insert the assignee of the header buffer."
   (when-let (infos (code-review-db--pullreq-assignees))
     (let* ((assignee-names (-map
@@ -789,7 +789,7 @@ Optionally DELETE? flag must be set if you want to remove it."
         (insert (format "%-17s" "Assignees: ") assignees)
         (insert ?\n)))))
 
-(defun code-review-section-insert-project ()
+(defun code-review-render-insert-project ()
   "Insert the project of the header buffer."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -813,7 +813,7 @@ Optionally DELETE? flag must be set if you want to remove it."
     map)
   "Keymaps for suggested reviewers section.")
 
-(defun code-review-section-insert-suggested-reviewers ()
+(defun code-review-render-insert-suggested-reviewers ()
   "Insert the suggested reviewers."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -849,7 +849,7 @@ Optionally DELETE? flag must be set if you want to remove it."
               (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
           (insert ?\n))))))
 
-(defun code-review-section-insert-headers ()
+(defun code-review-render-insert-headers ()
   "Insert all the headers."
   (magit-insert-headers 'code-review-headers-hook))
 
@@ -858,7 +858,7 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defclass code-review-check-section (magit-section)
   ((details :initarg :details)))
 
-(defun code-review-section-insert-commits ()
+(defun code-review-render-insert-commits ()
   "Insert commits from PULL-REQUEST."
   (let ((pr (code-review-db-get-pullreq)))
     (let-alist (oref pr raw-infos)
@@ -915,7 +915,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Compute how many lines the HTML BODY will have in the buffer.
 INDENT is an optional."
   (let ((shr-indentation (* (or indent 0) (shr-string-pixel-width "-")))
-        (image-scaling-factor code-review-section-image-scaling)
+        (image-scaling-factor code-review-render-image-scaling)
         (shr-width code-review-fill-column)
         start
         dom)
@@ -976,7 +976,7 @@ INDENT is an optional."
 INDENT is an optional number, if provided,
 INDENT count of spaces are added at the start of every line."
   (let ((shr-indentation (* (or indent 0) (shr-string-pixel-width "-")))
-        (image-scaling-factor code-review-section-image-scaling)
+        (image-scaling-factor code-review-render-image-scaling)
         (shr-external-rendering-functions '((div . code-review--shr-tag-div)))
         (shr-width code-review-fill-column)
         (start (point))
@@ -1007,7 +1007,7 @@ INDENT count of spaces are added at the start of every line."
             (insert (propertize " " 'display `(space :width (,shr-indentation)))))
           (forward-line))))))
 
-(defun code-review-section-insert-pr-description ()
+(defun code-review-render-insert-pr-description ()
   "Insert PULL-REQUEST description."
   (when-let (infos (code-review-db--pullreq-raw-infos))
     (let-alist infos
@@ -1034,7 +1034,7 @@ INDENT count of spaces are added at the start of every line."
             (if is-empty?
                 (insert (propertize description-cleaned 'font-lock-face 'magit-dimmed))
               (if is-html?
-                  (code-review--insert-html description-cleaned (* 2 code-review-section-indent-width))
+                  (code-review--insert-html description-cleaned (* 2 code-review-render-indent-width))
                 (insert description-cleaned)))
             (insert ?\n)
             (when .reactions.nodes
@@ -1044,7 +1044,7 @@ INDENT count of spaces are added at the start of every line."
                .databaseId))
             (insert ?\n)))))))
 
-(defun code-review-section-insert-feedback-heading ()
+(defun code-review-render-insert-feedback-heading ()
   "Insert feedback heading."
   (let* ((feedback (code-review-db--pullreq-feedback))
          (obj (code-review-feedback-section :msg feedback)))
@@ -1125,17 +1125,17 @@ INDENT count of spaces are added at the start of every line."
                   (code-review-insert-comment-lines obj)
                   (insert ?\n))))))))))
 
-(defun code-review-section-insert-general-comments ()
+(defun code-review-render-insert-general-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
   (when-let (pr (code-review-db-get-pullreq))
     (magit-insert-section (code-review-comment-header-section)
       (insert (propertize "Conversation" 'font-lock-face 'magit-section-heading))
       (magit-insert-heading)
-      (when code-review-section--display-top-level-comments
+      (when code-review-render--display-top-level-comments
         (code-review--insert-conversation-section pr)))))
 
 
-(defun code-review-section-insert-files-report ()
+(defun code-review-render-insert-files-report ()
   "Insert files changed, added, deleted in the PR."
   (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
     (let-alist files
@@ -1148,7 +1148,7 @@ INDENT count of spaces are added at the start of every line."
                             'magit-section-heading))
         (magit-insert-heading)))))
 
-(defun code-review-section-insert-outdated-comment (comments amount-loc)
+(defun code-review-render-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
   ;;; hunk groups are necessary because we usually have multiple reviews about
   ;;; the same original position across different commits snapshots.
@@ -1159,7 +1159,7 @@ INDENT count of spaces are added at the start of every line."
     (dolist (hunk hunks)
       (when (not hunk)
         (code-review-utils--log
-         "code-review-section-insert-outdated-comment"
+         "code-review-render-insert-outdated-comment"
          (format "Every outdated comment must have a hunk! Error found for %S"
                  (prin1-to-string hunk)))
         (message "Hunk empty found. A empty string will be used instead. Report this bug please."))
@@ -1172,9 +1172,9 @@ INDENT count of spaces are added at the start of every line."
 
         (setq amount-loc-internal (+ amount-loc-internal amount-new-loc))
 
-        (setq code-review-section-hold-written-comment-count
+        (setq code-review-render-hold-written-comment-count
               (code-review-utils--comment-update-written-count
-               code-review-section-hold-written-comment-count
+               code-review-render-hold-written-comment-count
                (oref first-hunk-commit path)
                amount-new-loc))
 
@@ -1193,7 +1193,7 @@ INDENT count of spaces are added at the start of every line."
               (oset outdated-section hidden t)
 
               (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
-                (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
+                (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-render-indent-width)))
                        (amount-new-loc-outdated-partial (+ 2 written-loc))
                        (amount-new-loc-outdated (if (oref c reactions)
                                                     (+ 2 amount-new-loc-outdated-partial)
@@ -1201,9 +1201,9 @@ INDENT count of spaces are added at the start of every line."
 
                   (setq amount-loc-internal (+ amount-loc-internal amount-new-loc-outdated))
 
-                  (setq code-review-section-hold-written-comment-count
+                  (setq code-review-render-hold-written-comment-count
                         (code-review-utils--comment-update-written-count
-                         code-review-section-hold-written-comment-count
+                         code-review-render-hold-written-comment-count
                          (oref first-hunk-commit path)
                          amount-new-loc-outdated))
                   (oset c amount-loc amount-loc-internal)
@@ -1213,7 +1213,7 @@ INDENT count of spaces are added at the start of every line."
                                                   (oref c author)
                                                   (oref c state)))
                     (magit-insert-section (code-review-outdated-comment-section c)
-                      (code-review--insert-html (oref c msg) (* 3 code-review-section-indent-width))
+                      (code-review--insert-html (oref c msg) (* 3 code-review-render-indent-width))
                       (when-let (reactions-obj (oref c reactions))
                         (code-review-comment-insert-reactions
                          reactions-obj
@@ -1221,38 +1221,38 @@ INDENT count of spaces are added at the start of every line."
                          (oref c id)))))
                   (insert ?\n))))))))))
 
-(defun code-review-section-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
+(defun code-review-render-insert-outdated-comment-missing (path-name missing-paths grouped-comments)
   "Write missing outdated comments in the end of the current path.
 We need PATH-NAME, MISSING-PATHS, and GROUPED-COMMENTS to make this work."
   (dolist (path-pos missing-paths)
     (let ((comment-written-pos
-           (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal)
+           (or (alist-get path-name code-review-render-hold-written-comment-count nil nil 'equal)
                0)))
-      (code-review-section-insert-outdated-comment
+      (code-review-render-insert-outdated-comment
        (code-review-utils--comment-get
         grouped-comments
         path-pos)
        comment-written-pos)
-      (push path-pos code-review-section-hold-written-comment-ids))))
+      (push path-pos code-review-render-hold-written-comment-ids))))
 
-(defun code-review-section-insert-comment (comments amount-loc)
+(defun code-review-render-insert-comment (comments amount-loc)
   "Insert COMMENTS to PULLREQ-ID keep the AMOUNT-LOC of comments written.
 A quite good assumption: every comment in an outdated hunk will be outdated."
   (if (and (oref (-first-item comments) outdated?)
-           code-review-section--display-diff-comments)
-      (code-review-section-insert-outdated-comment
+           code-review-render--display-diff-comments)
+      (code-review-render-insert-outdated-comment
        comments
        amount-loc)
     (let ((new-amount-loc amount-loc))
       (forward-line)
       (dolist (c comments)
         (when (or (and (code-review-local-comment-section-p c)
-                       code-review-section--display-diff-comments)
+                       code-review-render--display-diff-comments)
                   (and (code-review-reply-comment-section-p c)
-                       code-review-section--display-diff-comments)
+                       code-review-render--display-diff-comments)
                   (and (code-review-code-comment-section-p c)
-                       code-review-section--display-diff-comments))
-          (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
+                       code-review-render--display-diff-comments))
+          (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-render-indent-width)))
                  (amount-loc-incr-partial (+ 2 written-loc))
                  (amount-loc-incr (if (oref c reactions)
                                       (+ 2 amount-loc-incr-partial)
@@ -1260,9 +1260,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
             (setq new-amount-loc (+ new-amount-loc amount-loc-incr))
             (oset c amount-loc new-amount-loc)
 
-            (setq code-review-section-hold-written-comment-count
+            (setq code-review-render-hold-written-comment-count
                   (code-review-utils--comment-update-written-count
-                   code-review-section-hold-written-comment-count
+                   code-review-render-hold-written-comment-count
                    (oref c path)
                    amount-loc-incr))
             (code-review-comment-insert-lines c)))))))
@@ -1277,7 +1277,7 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     map)
   "Keymaps for binary files sections.")
 
-(defun code-review-section--magit-diff-insert-file-section
+(defun code-review-render--magit-diff-insert-file-render
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE.
 ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the original fn."
@@ -1319,7 +1319,7 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n")))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
-(defun code-review-section--magit-diff-wash-hunk ()
+(defun code-review-render--magit-diff-wash-hunk ()
   "Overwrite the original Magit function on `magit-diff.el' file.
 Code Review inserts PR comments sections in the diff buffer.
 Argument GROUPED-COMMENTS comments grouped by path and diff position."
@@ -1339,7 +1339,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
 
       (when (not head-pos)
         (code-review-utils--log
-         "code-review-section--magit-diff-wash-hunk"
+         "code-review-render--magit-diff-wash-hunk"
          (format "Every diff is associated with a PATH (the file). Head pos nil for %S"
                  (prin1-to-string path)))
         (message "ERROR: Head position for path %s was not found.
@@ -1366,21 +1366,21 @@ Please Report this Bug" path-name))
           ;;; code-review specific code.
           ;;; add code comments
             (let* ((comment-written-pos
-                    (or (alist-get path-name code-review-section-hold-written-comment-count nil nil 'equal) 0))
+                    (or (alist-get path-name code-review-render-hold-written-comment-count nil nil 'equal) 0))
                    (diff-pos (+ 1 (- (code-review--line-number-at-pos)
                                      (or head-pos 0)
                                      comment-written-pos)))
                    (path-pos (code-review-utils--comment-key path-name diff-pos))
-                   (written? (-contains-p code-review-section-hold-written-comment-ids path-pos))
+                   (written? (-contains-p code-review-render-hold-written-comment-ids path-pos))
                    (grouped-comment (code-review-utils--comment-get
-                                     code-review-section-grouped-comments
+                                     code-review-render-grouped-comments
                                      path-pos)))
               (if (and (not written?)
                        grouped-comment
-                       code-review-section--display-all-comments)
+                       code-review-render--display-all-comments)
                   (progn
-                    (push path-pos code-review-section-hold-written-comment-ids)
-                    (code-review-section-insert-comment
+                    (push path-pos code-review-render-hold-written-comment-ids)
+                    (code-review-render-insert-comment
                      grouped-comment
                      comment-written-pos))
                 (forward-line))))
@@ -1391,14 +1391,14 @@ Please Report this Bug" path-name))
           ;;; important to only consider comments for this path.
           (when-let (missing-paths (code-review-utils--missing-outdated-commments?
                                     path-name
-                                    code-review-section-hold-written-comment-ids
-                                    code-review-section-grouped-comments))
+                                    code-review-render-hold-written-comment-ids
+                                    code-review-render-grouped-comments))
             (when (and (eobp)
-                       code-review-section--display-all-comments)
-              (code-review-section-insert-outdated-comment-missing
+                       code-review-render--display-all-comments)
+              (code-review-render-insert-outdated-comment-missing
                path-name
                missing-paths
-               code-review-section-grouped-comments)))
+               code-review-render-grouped-comments)))
 
         ;;; --- end -- code-review specific code.
           (oset section end (point))
@@ -1420,14 +1420,14 @@ If you want to display a minibuffer MSG in the end."
   (unwind-protect
       (progn
         ;; advices
-        (advice-add 'magit-diff-insert-file-section :override #'code-review-section--magit-diff-insert-file-section)
-        (advice-add 'magit-diff-wash-hunk :override #'code-review-section--magit-diff-wash-hunk)
+        (advice-add 'magit-diff-insert-file-render :override #'code-review-render--magit-diff-insert-file-render)
+        (advice-add 'magit-diff-wash-hunk :override #'code-review-render--magit-diff-wash-hunk)
 
-        (setq code-review-section-grouped-comments
+        (setq code-review-render-grouped-comments
               (code-review-utils-make-group
                (code-review-db--pullreq-raw-comments))
-              code-review-section-hold-written-comment-count nil
-              code-review-section-hold-written-comment-ids nil)
+              code-review-render-hold-written-comment-count nil
+              code-review-render-hold-written-comment-ids nil)
 
         (with-current-buffer (get-buffer-create buff-name)
           (let* ((window (get-buffer-window buff-name))
@@ -1440,8 +1440,8 @@ If you want to display a minibuffer MSG in the end."
             (magit-insert-section (review-buffer)
               (magit-insert-section (code-review)
                 (if commit-focus?
-                    (magit-run-section-hook 'code-review-sections-commit-hook)
-                  (magit-run-section-hook 'code-review-sections-hook)))
+                    (magit-run-render-hook 'code-review-renders-commit-hook)
+                  (magit-run-render-hook 'code-review-renders-hook)))
               (magit-wash-sequence
                (apply-partially #'magit-diff-wash-diff ())))
             (if window
@@ -1458,14 +1458,14 @@ If you want to display a minibuffer MSG in the end."
                   (code-review-mode)
                   (code-review-commit-minor-mode))
               (code-review-mode))
-            (code-review-section-insert-header-title)
+            (code-review-render-insert-header-title)
             (when msg
               (message nil)
               (message msg)))))
 
     ;; remove advices
-    (advice-remove 'magit-diff-insert-file-section #'code-review-section--magit-diff-insert-file-section)
-    (advice-remove 'magit-diff-wash-hunk #'code-review-section--magit-diff-wash-hunk)))
+    (advice-remove 'magit-diff-insert-file-render #'code-review-render--magit-diff-insert-file-render)
+    (advice-remove 'magit-diff-wash-hunk #'code-review-render--magit-diff-wash-hunk)))
 
 (cl-defmethod code-review--auth-token-set? ((_github code-review-github-repo) res)
   "Check if the RES has a message for auth token not set for GITHUB."
@@ -1565,7 +1565,7 @@ If you want to provide a MSG for the end of the process."
   (let ((buff-name (if (not buf-name)
                        code-review-buffer-name
                      buf-name)))
-    (if (not code-review-section-full-refresh?)
+    (if (not code-review-render-full-refresh?)
         (code-review--trigger-hooks buff-name commit-focus? msg)
       (let ((obj (code-review-db-get-pullreq))
             (progress (make-progress-reporter "Fetch diff PR..." 1 6)))
@@ -1611,12 +1611,12 @@ If you want to provide a MSG for the end of the process."
 
 ;;; * commit buffer
 ;;; TODO this whole feature should be reviewed.
-(defun code-review-section--build-commit-buffer (buff-name)
+(defun code-review-render--build-commit-buffer (buff-name)
   "Build commit buffer review given by BUFF-NAME."
   (code-review--build-buffer buff-name t))
 
 ;;;###autoload
-(defun code-review-section-delete-comment ()
+(defun code-review-render-delete-comment ()
   "Delete a local comment."
   (interactive)
   (let ((buff-name (if code-review-comment-commit-buffer?
@@ -1626,5 +1626,5 @@ If you want to provide a MSG for the end of the process."
       (code-review-db-delete-raw-comment (oref value internalId))
       (code-review--build-buffer buff-name))))
 
-(provide 'code-review-section)
-;;; code-review-section.el ends here
+(provide 'code-review-render)
+;;; code-review-render.el ends here

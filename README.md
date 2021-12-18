@@ -169,9 +169,9 @@ If you are not an Evil user you can set the letter `k`, for example, to delete a
 local comment or feedback at point.
 
 ``` emacs-lisp
-(define-key code-review-feedback-section-map (kbd "k") 'code-review-section-delete-comment)
-(define-key code-review-local-comment-section-map (kbd "k") 'code-review-section-delete-comment)
-(define-key code-review-reply-comment-section-map (kbd "k") 'code-review-section-delete-comment)
+(define-key code-review-feedback-render-map (kbd "k") 'code-review-render-delete-comment)
+(define-key code-review-local-comment-render-map (kbd "k") 'code-review-render-delete-comment)
+(define-key code-review-reply-comment-render-map (kbd "k") 'code-review-render-delete-comment)
 ```
 
 # Extension to other forges
