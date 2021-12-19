@@ -1360,7 +1360,6 @@ If you want to display a minibuffer MSG in the end."
                   (code-review-mode)
                   (code-review-commit-minor-mode))
               (code-review-mode))
-            (code-review-section-header-insert-headerline)
             (when msg
               (message nil)
               (message msg)))))
