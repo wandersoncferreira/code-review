@@ -29,6 +29,7 @@
 ;;; Code:
 
 (require 'code-review-section)
+(require 'code-review-section-header)
 (require 'code-review-utils)
 (require 'markdown-mode)
 
