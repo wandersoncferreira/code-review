@@ -256,7 +256,7 @@ INDENT count of spaces are added at the start of every line."
 
 (defun code-review-section-insert-title ()
   "Insert the title of the header buffer."
-  (let ((title (code-review-db--pullreq-title)))
+  (when-let (title (code-review-db--pullreq-title))
     (magit-insert-section (code-review-title-section title)
       (insert (format "%-17s" "Title: ") title)
       (insert ?\n))))
