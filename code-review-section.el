@@ -134,11 +134,7 @@ For internal usage only.")
   "Variable to define if we should display diff comments or not.
 For internal usage only.")
 
-;;; sections
-
-(defclass code-review-is-draft-section (magit-section)
-  ((draft? :initform nil
-           :type (or null string))))
+;; headers
 
 (defclass code-review-title-section (magit-section)
   ((keymap  :initform 'code-review-title-section-map)
@@ -151,15 +147,52 @@ For internal usage only.")
     map)
   "Keymaps for code-comment sections.")
 
+(defun code-review-section-insert-header-title ()
+  "Insert the title header line."
+  (let ((pr (code-review-db-get-pullreq)))
+    (setq header-line-format
+          (propertize
+           (format "#%s: %s" (oref pr number) (oref pr title))
+           'font-lock-face
+           'magit-section-heading))))
+
+(defun code-review-section-insert-title ()
+  "Insert the title of the header buffer."
+  (let ((title (code-review-db--pullreq-title)))
+    (magit-insert-section (code-review-title-section title)
+      (insert (format "%-17s" "Title: ") title)
+      (insert ?\n))))
+
 (defclass code-review-state-section (magit-section)
   ((state  :initform nil
            :type (or null string))))
+
+(defun code-review-section-insert-state ()
+  "Insert the state of the header buffer."
+  (when-let (state (code-review-db--pullreq-state))
+    (let ((value (if state state "none")))
+      (magit-insert-section (code-review-state-section value)
+        (insert (format "%-17s" "State: ") value)
+        (insert ?\n)))))
 
 (defclass code-review-ref-section (magit-section)
   ((base   :initarg :base
            :type (or null string))
    (head   :initarg :head
            :type (or null string))))
+
+(defun code-review-section-insert-ref ()
+  "Insert the state of the header buffer."
+  (let* ((pr (code-review-db-get-pullreq))
+         (obj (code-review-ref-section
+               :base (oref pr base-ref-name)
+               :head (oref pr head-ref-name))))
+    (magit-insert-section (code-review-ref-section obj)
+      (insert (format "%-17s" "Refs: "))
+      (insert (oref pr base-ref-name))
+      (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
+      (insert (oref pr head-ref-name))
+      (insert ?\n))))
 
 (defclass code-review-milestone-section (magit-section)
   ((keymap :initform 'code-review-milestone-section-map)
@@ -174,7 +207,214 @@ For internal usage only.")
     map)
   "Keymaps for milestone section.")
 
-;;; Description
+(defun code-review-section-insert-milestone ()
+  "Insert the milestone of the header buffer."
+  (let ((milestones (code-review-db--pullreq-milestones)))
+    (let-alist milestones
+      (let* ((title (when (not (string-empty-p .title)) .title))
+             (obj (code-review-milestone-section :title title :perc .perc)))
+        (magit-insert-section (code-review-milestone-section obj)
+          (insert (format "%-17s" "Milestone: "))
+          (insert (propertize (code-review-pretty-milestone obj) 'font-lock-face 'magit-dimmed))
+          (insert ?\n))))))
+
+(defclass code-review-labels-section (magit-section)
+  ((keymap :initform 'code-review-labels-section-map)
+   (labels :initarg :labels)))
+
+(defvar code-review-labels-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-set-label)
+    map)
+  "Keymaps for code-comment sections.")
+
+(defun code-review-section-insert-labels ()
+  "Insert the labels of the header buffer."
+  (let* ((infos (code-review-db--pullreq-raw-infos))
+         (labels (-distinct
+                  (append (code-review-db--pullreq-labels)
+                          (a-get-in infos (list 'labels 'nodes)))))
+         (obj (code-review-labels-section :labels labels)))
+    (magit-insert-section (code-review-labels-section obj)
+      (insert (format "%-17s" "Labels: "))
+      (if labels
+          (dolist (label labels)
+            (insert (a-get label 'name))
+            (let* ((raw-color (a-get label 'color))
+                   (color (if (string-prefix-p "#" raw-color)
+                              raw-color
+                            (concat "#" raw-color)))
+                   (background (code-review-utils--sanitize-color color))
+                   (foreground (code-review-utils--contrast-color color))
+                   (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
+              (overlay-put o 'priority 2)
+              (overlay-put o 'evaporate t)
+              (overlay-put o 'font-lock-face
+                           `((:background ,background)
+                             (:foreground ,foreground)
+                             forge-topic-label)))
+            (insert " "))
+        (insert (propertize "None yet" 'font-lock-face 'magit-dimmed)))
+      (insert ?\n))))
+
+(defclass code-review-assignees-section (magit-section)
+  ((keymap :initform 'code-review-assignees-section-map)
+   (assignees :initarg :assignees)))
+
+(defvar code-review-assignees-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-set-assignee)
+    map)
+  "Keymaps for code-comment sections.")
+
+(defun code-review-section-insert-assignee ()
+  "Insert the assignee of the header buffer."
+  (let* ((infos (code-review-db--pullreq-assignees))
+         (assignee-names (-map
+                          (lambda (a)
+                            (format "%s (@%s)"
+                                    (a-get a 'name)
+                                    (a-get a 'login)))
+                          infos))
+         (assignees (if assignee-names
+                        (string-join assignee-names ", ")
+                      (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed)))
+         (obj (code-review-assignees-section :assignees assignees)))
+    (magit-insert-section (code-review-assignees-section obj)
+      (insert (format "%-17s" "Assignees: ") assignees)
+      (insert ?\n))))
+
+(defclass code-review-project-section (magit-section)
+  ((name :initarg :name)))
+
+(defun code-review-section-insert-project ()
+  "Insert the project of the header buffer."
+  (let-alist (code-review-db--pullreq-raw-infos)
+    (let* ((project-names (-map
+                           (lambda (p)
+                             (a-get-in p (list 'project 'name)))
+                           .projectCards.nodes))
+           (projects (if project-names
+                         (string-join project-names ", ")
+                       (propertize "None yet" 'font-lock-face 'magit-dimmed))))
+      (magit-insert-section (code-review-project-section projects)
+        (insert (format "%-17s" "Projects: ") projects)
+        (insert ?\n)))))
+
+(defclass code-review-is-draft-section (magit-section)
+  ((draft? :initform nil
+           :type (or null string))))
+
+(defun code-review-section-insert-is-draft ()
+  "Insert the isDraft value of the header buffer."
+  (let-alist (code-review-db--pullreq-raw-infos)
+    (let* ((draft? (if .isDraft "true" "false")))
+      (magit-insert-section (code-review-is-draft-section draft?)
+        (insert (format "%-17s" "Draft: ") draft?)
+        (insert ?\n)))))
+
+(defclass code-review-suggested-reviewers-section (magit-section)
+  ((keymap :initform 'code-review-suggested-reviewers-section-map)))
+
+(defvar code-review-suggested-reviewers-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-request-review-at-point)
+    map)
+  "Keymaps for suggested reviewers section.")
+
+(defun code-review-section-insert-suggested-reviewers ()
+  "Insert the suggested reviewers."
+  (let ((infos (code-review-db--pullreq-raw-infos)))
+    (let-alist infos
+      (let* ((reviewers-group (code-review-utils--fmt-reviewers infos))
+             (reviewers (->> .suggestedReviewers
+                             (-map
+                              (lambda (r)
+                                (a-get-in r (list 'reviewer 'login))))
+                             (-filter
+                              (lambda (r)
+                                (let* ((res nil))
+                                  (maphash
+                                   (lambda (_status users)
+                                     (setq res (append res
+                                                       (-map
+                                                        (lambda (it)
+                                                          (a-get it 'login))
+                                                        users))))
+                                   reviewers-group)
+                                  (and (not (equal r nil))
+                                       (not (-contains-p res r))))))))
+             (suggested-reviewers (if (not reviewers)
+                                      (propertize "No suggestions" 'font-lock-face 'magit-dimmed)
+                                    reviewers)))
+        (magit-insert-section (code-review-suggested-reviewers-section suggested-reviewers)
+          (insert "Suggested-Reviewers:")
+          (if (not reviewers)
+              (insert " " suggested-reviewers)
+            (dolist (sr suggested-reviewers)
+              (insert ?\n)
+              (insert (propertize "Request Review" 'face 'code-review-request-review-face))
+              (insert " - ")
+              (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
+          (insert ?\n))))))
+
+(defclass code-review-reviewers-section (magit-section)
+  (()))
+
+(defun code-review-section-insert-reviewers ()
+  "Insert the reviewers section."
+  (let* ((infos (code-review-db--pullreq-raw-infos))
+         (groups (code-review-utils--fmt-reviewers infos)))
+    (magit-insert-section (code-review-reviewers-section)
+      (insert "Reviewers:\n")
+      (maphash (lambda (status users-objs)
+                 (dolist (user-o users-objs)
+                   (let-alist user-o
+                     (insert (code-review--propertize-keyword status))
+                     (insert " - ")
+                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
+                     (when .code-owner?
+                       (insert " as CODE OWNER"))
+                     (when .at
+                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
+                   (insert ?\n)))
+               groups)
+      (insert ?\n))))
+
+;; headers hook definition
+
+(defun code-review-section-insert-headers ()
+  "Insert all the headers."
+  (magit-insert-headers 'code-review-headers-hook))
+
+;; commits
+
+(defclass code-review-commits-header-section (magit-section)
+  (()))
+
+(defclass code-review-commit-section (magit-section)
+  ((keymap :initform 'code-review-commit-section-map)
+   (sha    :initarg :sha)
+   (msg    :initarg :msg)))
+
+(defvar code-review-commit-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-commit-at-point)
+    map)
+  "Keymaps for commit section.")
+
+(defclass code-review-commit-check-detail-section (magit-section)
+  ((keymap :initform 'code-review-commit-check-detail-section-map)
+   (details :initarg :details)
+   (check   :initarg :check)))
+
+(defvar code-review-commit-check-detail-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-commit-goto-check-at-remote)
+    map)
+  "Keymaps for commit check section.")
+
+;; description
 
 (defclass code-review-description-section (magit-section)
   ((keymap :initform 'code-review-description-section-map)
@@ -187,6 +427,173 @@ For internal usage only.")
     (define-key map (kbd "C-c C-r") 'code-review-description-reaction-at-point)
     map)
   "Keymaps for description section.")
+
+;; feedback
+
+(defclass code-review-feedback-section (magit-section)
+  ((keymap :initform 'code-review-feedback-section-map)
+   (msg    :initarg :msg)))
+
+(defvar code-review-feedback-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-set-feedback)
+    (define-key map (kbd "C-c C-k") 'code-review-delete-feedback)
+    map)
+  "Keymaps for feedback section.")
+
+;;; general comments - top level comments
+
+(defclass code-review-comment-header-section (magit-section)
+  (()))
+
+(defclass code-review-comment-section (magit-section)
+  ((keymap :initform 'code-review-comment-section-map)
+   (author :initarg :author
+           :type string)
+   (msg    :initarg :msg
+           :type string)
+   (id     :initarg :id)
+   (reactions :initarg :reactions)
+   (typename :initarg :typename)
+   (face   :initform 'magit-log-author)))
+
+(defvar code-review-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-at-point-to-new-issue)
+    map)
+  "Keymaps for comment section.")
+
+;; files report
+
+(defclass code-review-files-report-section (magit-section)
+  (()))
+
+;; -
+
+(defclass code-review-reaction-section ()
+  ((id :initarg :id)
+   (content :initarg :content)))
+
+(defclass code-review-reactions-section (magit-section)
+  ((context-name :initarg :context-name)
+   (comment-id :initarg :comment-id)
+   (reactions :initarg :reactions
+              :type (satisfies
+                     (lambda (it)
+                       (-all-p #'code-review-reaction-section-p it))))))
+
+(defclass code-review-base-comment-section (magit-section)
+  ((state      :initarg :state
+               :type string)
+   (author     :initarg :author
+               :type string)
+   (msg        :initarg :msg
+               :type string)
+   (position   :initarg :position
+               :type number)
+   (reactions  :initarg :reactions
+               :type (or null
+                        (satisfies
+                         (lambda (it)
+                           (-all-p #'code-review-reaction-section-p it)))))
+   (path       :initarg :path
+               :type string)
+   (diffHunk   :initarg :diffHunk
+               :type (or null string))
+   (id         :initarg :id
+               :documentation "ID that identifies the comment in the Forge.")
+   (internalId :initarg :internalId)
+   (amount-loc :initform nil)
+   (outdated?  :initform nil
+               :type boolean)
+   (reply?     :initform nil
+               :type boolean)
+   (local?     :initform nil
+               :type boolean)
+   (createdAt  :initarg :createdAt)
+   (updatedAt  :initarg :updatedAt)))
+
+(defclass code-review-code-comment-section (code-review-base-comment-section)
+  ((keymap     :initform 'code-review-code-comment-section-map)
+   (diffHunk   :initarg :diffHunk)
+   (id         :initarg :id
+               :documentation "ID that identifies the comment in the Forge.")
+   (amount-loc :initform nil)
+   (outdated?  :initform nil
+               :type boolean)
+   (reply?     :initform nil
+               :type boolean)
+   (local?     :initform nil
+               :type boolean)))
+
+(defclass code-review-local-comment-section (code-review-base-comment-section)
+  ((keymap       :initform 'code-review-local-comment-section-map)
+   (local?       :initform t)
+   (reply?       :initform nil)
+   (edit?        :initform nil)
+   (send?        :initarg :send?)
+   (outdated?    :initform nil)
+   (heading-face :initform 'code-review-recent-comment-heading)
+   (body-face    :initform nil)
+   (diffHunk     :initform nil)
+   (line-type    :initarg :line-type)))
+
+(defclass code-review-reply-comment-section (code-review-base-comment-section)
+  ((keymap       :initform 'code-review-reply-comment-section-map)
+   (reply?       :initform t)
+   (local?       :initform t)
+   (edit?        :initform nil)
+   (outdated?    :initform nil)
+   (heading-face :initform 'code-review-recent-comment-heading)
+   (body-face    :initform nil)))
+
+(defclass code-review-outdated-comment-section (code-review-base-comment-section)
+  ((keymap       :initform 'code-review-outdated-comment-section-map)
+   (local?       :initform t)
+   (outdated?    :initform t)))
+
+(defclass code-review-check-section (magit-section)
+  ((details :initarg :details)))
+
+(defclass code-review-binary-file-section (magit-section)
+  ((keymap :initform 'code-review-binary-file-section-map)))
+
+
+(defvar code-review-code-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
+    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-at-point-to-new-issue)
+    map)
+  "Keymaps for code-comment sections.")
+
+(defvar code-review-local-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
+    map)
+  "Keymaps for local-comment sections.")
+
+(defvar code-review-reply-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
+    map)
+  "Keymaps for reply-comment sections.")
+
+(defvar code-review-outdated-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
+    map)
+  "Keymaps for outdated-comment sections.")
+
+(defvar code-review-binary-file-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
+    (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
+    map)
+  "Keymaps for binary files sections.")
 
 (defun code-review-description-reaction-at-point ()
   "Toggle reaction in description sections."
@@ -218,21 +625,6 @@ For internal usage only.")
     (oset pr raw-infos infos)
     (code-review-db-update pr)))
 
-;;; Feedback
-
-(defclass code-review-feedback-section (magit-section)
-  ((keymap :initform 'code-review-feedback-section-map)
-   (msg    :initarg :msg)))
-
-(defvar code-review-feedback-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-set-feedback)
-    (define-key map (kbd "C-c C-k") 'code-review-delete-feedback)
-    map)
-  "Keymaps for feedback section.")
-
-;;; Milestone
-
 (cl-defmethod code-review-pretty-milestone ((obj code-review-milestone-section))
   "Get the pretty version of milestone for a given OBJ."
   (cond
@@ -245,30 +637,6 @@ For internal usage only.")
    (t
     "No milestone")))
 
-;;; Commit
-
-(defclass code-review-commit-section (magit-section)
-  ((keymap :initform 'code-review-commit-section-map)
-   (sha    :initarg :sha)
-   (msg    :initarg :msg)))
-
-(defclass code-review-commit-check-detail-section (magit-section)
-  ((keymap :initform 'code-review-commit-check-detail-section-map)
-   (details :initarg :details)
-   (check   :initarg :check)))
-
-(defvar code-review-commit-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-commit-at-point)
-    map)
-  "Keymaps for commit section.")
-
-(defvar code-review-commit-check-detail-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-commit-goto-check-at-remote)
-    map)
-  "Keymaps for commit check section.")
-
 (defun code-review-commit-goto-check-at-remote ()
   "Visit the details of the check at point in the remote."
   (interactive)
@@ -277,27 +645,6 @@ For internal usage only.")
         (with-slots (value) section
           (browse-url (oref value details)))
       (message "Goto check at remote not defined in this section."))))
-
-
-;;; General Comment - Conversation
-
-(defclass code-review-comment-section (magit-section)
-  ((keymap :initform 'code-review-comment-section-map)
-   (author :initarg :author
-           :type string)
-   (msg    :initarg :msg
-           :type string)
-   (id     :initarg :id)
-   (reactions :initarg :reactions)
-   (typename :initarg :typename)
-   (face   :initform 'magit-log-author)))
-
-(defvar code-review-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-r") 'code-review-conversation-reaction-at-point)
-    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-at-point-to-new-issue)
-    map)
-  "Keymaps for comment section.")
 
 (defun code-review-conversation-reaction-at-point ()
   "Toggle reaction in conversation sections."
@@ -345,20 +692,6 @@ Optionally DELETE? flag must be set if you want to remove it."
 (cl-defmethod code-review-insert-comment-lines ((obj code-review-comment-section))
   "Insert the comment lines given in the OBJ."
   (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width)))
-
-;;; Reactions
-
-(defclass code-review-reaction-section ()
-  ((id :initarg :id)
-   (content :initarg :content)))
-
-(defclass code-review-reactions-section (magit-section)
-  ((context-name :initarg :context-name)
-   (comment-id :initarg :comment-id)
-   (reactions :initarg :reactions
-              :type (satisfies
-                     (lambda (it)
-                       (-all-p #'code-review-reaction-section-p it))))))
 
 (defun code-review--toggle-reaction-at-point (pr context-name comment-id existing-reactions reaction)
   "Given a PR, use the CONTEXT-NAME to toggle REACTION in COMMENT-ID considering EXISTING-REACTIONS."
@@ -424,60 +757,6 @@ Optionally DELETE? flag must be set if you want to remove it."
      (oref obj reactions)
      gh-value)))
 
-;;; Comment, Code Comment, Reply Comment
-
-(defclass code-review-base-comment-section (magit-section)
-  ((state      :initarg :state
-               :type string)
-   (author     :initarg :author
-               :type string)
-   (msg        :initarg :msg
-               :type string)
-   (position   :initarg :position
-               :type number)
-   (reactions  :initarg :reactions
-               :type (or null
-                        (satisfies
-                         (lambda (it)
-                           (-all-p #'code-review-reaction-section-p it)))))
-   (path       :initarg :path
-               :type string)
-   (diffHunk   :initarg :diffHunk
-               :type (or null string))
-   (id         :initarg :id
-               :documentation "ID that identifies the comment in the Forge.")
-   (internalId :initarg :internalId)
-   (amount-loc :initform nil)
-   (outdated?  :initform nil
-               :type boolean)
-   (reply?     :initform nil
-               :type boolean)
-   (local?     :initform nil
-               :type boolean)
-   (createdAt  :initarg :createdAt)
-   (updatedAt  :initarg :updatedAt)))
-
-(defclass code-review-code-comment-section (code-review-base-comment-section)
-  ((keymap     :initform 'code-review-code-comment-section-map)
-   (diffHunk   :initarg :diffHunk)
-   (id         :initarg :id
-               :documentation "ID that identifies the comment in the Forge.")
-   (amount-loc :initform nil)
-   (outdated?  :initform nil
-               :type boolean)
-   (reply?     :initform nil
-               :type boolean)
-   (local?     :initform nil
-               :type boolean)))
-
-(defvar code-review-code-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-r") 'code-review-code-comment-reaction-at-point)
-    (define-key map (kbd "C-c C-n") 'code-review-promote-comment-at-point-to-new-issue)
-    map)
-  "Keymaps for code-comment sections.")
-
 (defun code-review-code-comment-reaction-at-point ()
   "Toggle reaction in code-comment section."
   (interactive)
@@ -525,41 +804,6 @@ Optionally DELETE? flag must be set if you want to remove it."
 (defun code-review-code-comment-delete-reaction (comment-id reaction-id)
   "Delete REACTION-ID for COMMENT-ID."
   (code-review-code-comment--add-or-delete-reaction comment-id reaction-id nil t))
-
-(defclass code-review-local-comment-section (code-review-base-comment-section)
-  ((keymap       :initform 'code-review-local-comment-section-map)
-   (local?       :initform t)
-   (reply?       :initform nil)
-   (edit?        :initform nil)
-   (send?        :initarg :send?)
-   (outdated?    :initform nil)
-   (heading-face :initform 'code-review-recent-comment-heading)
-   (body-face    :initform nil)
-   (diffHunk     :initform nil)
-   (line-type    :initarg :line-type)))
-
-(defclass code-review-reply-comment-section (code-review-base-comment-section)
-  ((keymap       :initform 'code-review-reply-comment-section-map)
-   (reply?       :initform t)
-   (local?       :initform t)
-   (edit?        :initform nil)
-   (outdated?    :initform nil)
-   (heading-face :initform 'code-review-recent-comment-heading)
-   (body-face    :initform nil)))
-
-(defvar code-review-local-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    map)
-  "Keymaps for local-comment sections.")
-
-(defvar code-review-reply-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    (define-key map (kbd "C-c C-k") 'code-review-section-delete-comment)
-    map)
-  "Keymaps for reply-comment sections.")
 
 (defgeneric code-review-comment-insert-lines (obj)
   "Insert comment lines in the code section based on section type denoted by OBJ.")
@@ -630,233 +874,6 @@ Optionally DELETE? flag must be set if you want to remove it."
          "code-comment"
          (oref obj id)))
       (insert ?\n))))
-
-(defclass code-review-outdated-comment-section (code-review-base-comment-section)
-  ((keymap       :initform 'code-review-outdated-comment-section-map)
-   (local?       :initform t)
-   (outdated?    :initform t)))
-
-(defvar code-review-outdated-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-comment-add-or-edit)
-    map)
-  "Keymaps for outdated-comment sections.")
-
-(defclass code-review-labels-section (magit-section)
-  ((keymap :initform 'code-review-labels-section-map)
-   (labels :initarg :labels)))
-
-(defvar code-review-labels-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-set-label)
-    map)
-  "Keymaps for code-comment sections.")
-
-(defclass code-review-assignees-section (magit-section)
-  ((keymap :initform 'code-review-assignees-section-map)
-   (assignees :initarg :assignees)))
-
-(defvar code-review-assignees-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-set-assignee)
-    map)
-  "Keymaps for code-comment sections.")
-
-;;; headers
-
-(defun code-review-section-insert-header-title ()
-  "Insert the title header line."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (setq header-line-format
-            (propertize
-             (format "#%s: %s".number (code-review-db--pullreq-title))
-             'font-lock-face
-             'magit-section-heading)))))
-
-;;; TODO: add some nice face to true and false
-(defun code-review-section-insert-is-draft ()
-  "Insert the isDraft value of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (let* ((draft? (if .isDraft "true" "false")))
-        (magit-insert-section (code-review-is-draft-section draft?)
-          (insert (format "%-17s" "Draft: ") draft?)
-          (insert ?\n))))))
-
-(defun code-review-section-insert-reviewers ()
-  "Insert the reviewers section."
-  (let* ((infos (code-review-db--pullreq-raw-infos))
-         (groups (code-review-utils--fmt-reviewers infos)))
-    (magit-insert-section (code-review-reviewers-section)
-      (insert "Reviewers:\n")
-      (maphash (lambda (status users-objs)
-                 (dolist (user-o users-objs)
-                   (let-alist user-o
-                     (insert (code-review--propertize-keyword status))
-                     (insert " - ")
-                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
-                     (when .code-owner?
-                       (insert " as CODE OWNER"))
-                     (when .at
-                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
-                   (insert ?\n)))
-               groups)
-      (insert ?\n))))
-
-(defun code-review-section-insert-title ()
-  "Insert the title of the header buffer."
-  (when-let (title (code-review-db--pullreq-title))
-    (magit-insert-section (code-review-title-section title)
-      (insert (format "%-17s" "Title: ") title)
-      (insert ?\n))))
-
-(defun code-review-section-insert-state ()
-  "Insert the state of the header buffer."
-  (when-let (state (code-review-db--pullreq-state))
-    (let ((value (if state state "none")))
-      (magit-insert-section (code-review-state-section value)
-        (insert (format "%-17s" "State: ") value)
-        (insert ?\n)))))
-
-(defun code-review-section-insert-ref ()
-  "Insert the state of the header buffer."
-  (when-let (pr (code-review-db-get-pullreq))
-    (let ((obj (code-review-ref-section
-                :base (oref pr base-ref-name)
-                :head (oref pr head-ref-name))))
-      (magit-insert-section (code-review-ref-section obj)
-        (insert (format "%-17s" "Refs: "))
-        (insert (oref pr base-ref-name))
-        (insert (propertize " ... " 'font-lock-face 'magit-dimmed))
-        (insert (oref pr head-ref-name))
-        (insert ?\n)))))
-
-(defun code-review-section-insert-milestone ()
-  "Insert the milestone of the header buffer."
-  (let ((milestones (code-review-db--pullreq-milestones)))
-    (let-alist milestones
-      (let* ((title (when (not (string-empty-p .title)) .title))
-             (obj (code-review-milestone-section :title title :perc .perc)))
-        (magit-insert-section (code-review-milestone-section obj)
-          (insert (format "%-17s" "Milestone: "))
-          (insert (propertize (code-review-pretty-milestone obj) 'font-lock-face 'magit-dimmed))
-          (insert ?\n))))))
-
-(defun code-review-section-insert-labels ()
-  "Insert the labels of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let* ((labels (-distinct
-                    (append (code-review-db--pullreq-labels)
-                            (a-get-in infos (list 'labels 'nodes)))))
-           (obj (code-review-labels-section :labels labels)))
-      (magit-insert-section (code-review-labels-section obj)
-        (insert (format "%-17s" "Labels: "))
-        (if labels
-            (dolist (label labels)
-              (insert (a-get label 'name))
-              (let* ((raw-color (a-get label 'color))
-                     (color (if (string-prefix-p "#" raw-color)
-                                raw-color
-                              (concat "#" raw-color)))
-                     (background (code-review-utils--sanitize-color color))
-                     (foreground (code-review-utils--contrast-color color))
-                     (o (make-overlay (- (point) (length (a-get label 'name))) (point))))
-                (overlay-put o 'priority 2)
-                (overlay-put o 'evaporate t)
-                (overlay-put o 'font-lock-face
-                             `((:background ,background)
-                               (:foreground ,foreground)
-                               forge-topic-label)))
-              (insert " "))
-          (insert (propertize "None yet" 'font-lock-face 'magit-dimmed)))
-        (insert ?\n)))))
-
-(defun code-review-section-insert-assignee ()
-  "Insert the assignee of the header buffer."
-  (when-let (infos (code-review-db--pullreq-assignees))
-    (let* ((assignee-names (-map
-                            (lambda (a)
-                              (format "%s (@%s)"
-                                      (a-get a 'name)
-                                      (a-get a 'login)))
-                            infos))
-           (assignees (if assignee-names
-                          (string-join assignee-names ", ")
-                        (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed)))
-           (obj (code-review-assignees-section :assignees assignees)))
-      (magit-insert-section (code-review-assignees-section obj)
-        (insert (format "%-17s" "Assignees: ") assignees)
-        (insert ?\n)))))
-
-(defun code-review-section-insert-project ()
-  "Insert the project of the header buffer."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (let* ((project-names (-map
-                             (lambda (p)
-                               (a-get-in p (list 'project 'name)))
-                             .projectCards.nodes))
-             (projects (if project-names
-                           (string-join project-names ", ")
-                         (propertize "None yet" 'font-lock-face 'magit-dimmed))))
-        (magit-insert-section (code-review-project-section projects)
-          (insert (format "%-17s" "Projects: ") projects)
-          (insert ?\n))))))
-
-(defclass code-review-suggested-reviewers-section (magit-section)
-  ((keymap :initform 'code-review-suggested-reviewers-section-map)))
-
-(defvar code-review-suggested-reviewers-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-request-review-at-point)
-    map)
-  "Keymaps for suggested reviewers section.")
-
-(defun code-review-section-insert-suggested-reviewers ()
-  "Insert the suggested reviewers."
-  (when-let (infos (code-review-db--pullreq-raw-infos))
-    (let-alist infos
-      (let* ((reviewers-group (code-review-utils--fmt-reviewers infos))
-             (reviewers (->> .suggestedReviewers
-                             (-map
-                              (lambda (r)
-                                (a-get-in r (list 'reviewer 'login))))
-                             (-filter
-                              (lambda (r)
-                                (let* ((res nil))
-                                  (maphash
-                                   (lambda (_status users)
-                                     (setq res (append res
-                                                       (-map
-                                                        (lambda (it)
-                                                          (a-get it 'login))
-                                                        users))))
-                                   reviewers-group)
-                                  (and (not (equal r nil))
-                                       (not (-contains-p res r))))))))
-             (suggested-reviewers (if (not reviewers)
-                                      (propertize "No suggestions" 'font-lock-face 'magit-dimmed)
-                                    reviewers)))
-        (magit-insert-section (code-review-suggested-reviewers-section suggested-reviewers)
-          (insert "Suggested-Reviewers:")
-          (if (not reviewers)
-              (insert " " suggested-reviewers)
-            (dolist (sr suggested-reviewers)
-              (insert ?\n)
-              (insert (propertize "Request Review" 'face 'code-review-request-review-face))
-              (insert " - ")
-              (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
-          (insert ?\n))))))
-
-(defun code-review-section-insert-headers ()
-  "Insert all the headers."
-  (magit-insert-headers 'code-review-headers-hook))
-
-;;; next sections
-
-(defclass code-review-check-section (magit-section)
-  ((details :initarg :details)))
 
 (defun code-review-section-insert-commits ()
   "Insert commits from PULL-REQUEST."
@@ -1266,16 +1283,6 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                    (oref c path)
                    amount-loc-incr))
             (code-review-comment-insert-lines c)))))))
-
-(defclass code-review-binary-file-section (magit-section)
-  ((keymap :initform 'code-review-binary-file-section-map)))
-
-(defvar code-review-binary-file-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
-    (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
-    map)
-  "Keymaps for binary files sections.")
 
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
