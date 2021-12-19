@@ -56,8 +56,9 @@
 
 (defun code-review-section-header-insert-title ()
   "Insert the title of the header buffer."
-  (let ((title (code-review-db--pullreq-title)))
-    (magit-insert-section (code-review-title-section title)
+  (let* ((title (code-review-db--pullreq-title))
+         (obj (code-review-title-section :title title)))
+    (magit-insert-section (code-review-title-section obj)
       (insert (format "%-17s" "Title: ") title)
       (insert ?\n))))
 
