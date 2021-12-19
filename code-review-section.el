@@ -469,6 +469,19 @@ For internal usage only.")
 (defclass code-review-files-report-section (magit-section)
   (()))
 
+(defun code-review-section-insert-files-report ()
+  "Insert files changed, added, deleted in the PR."
+  (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
+    (let-alist files
+      (magit-insert-section (code-review-files-report-section)
+        (insert (propertize (format "Files changed (%s files; %s additions, %s deletions)"
+                                    (length .nodes)
+                                    (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
+                                    (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))
+                            'font-lock-face
+                            'magit-section-heading))
+        (magit-insert-heading)))))
+
 ;; -
 
 (defclass code-review-reaction-section ()
@@ -1151,19 +1164,6 @@ INDENT count of spaces are added at the start of every line."
       (when code-review-section--display-top-level-comments
         (code-review--insert-conversation-section pr)))))
 
-
-(defun code-review-section-insert-files-report ()
-  "Insert files changed, added, deleted in the PR."
-  (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
-    (let-alist files
-      (magit-insert-section (code-review-files-report-section)
-        (insert (propertize (format "Files changed (%s files; %s additions, %s deletions)"
-                                    (length .nodes)
-                                    (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
-                                    (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))
-                            'font-lock-face
-                            'magit-section-heading))
-        (magit-insert-heading)))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
