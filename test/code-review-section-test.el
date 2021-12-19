@@ -111,7 +111,7 @@ Verify if the buffer has anything written using BUFFER-NIL?."
                                                                       (databaseId . 1234)
                                                                       (createdAt . "2021-11-08T00:24:09Z"))))))
         (with-written-section
-         (lambda () (code-review-section-insert-general-comments))
+         (lambda () (code-review-section-insert-top-level-comments))
          `(((type . code-review-comment-header-section))
            ((type . code-review-comment-section)
             (value . ,obj))))))))
