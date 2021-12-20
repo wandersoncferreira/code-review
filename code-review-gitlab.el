@@ -28,10 +28,12 @@
 ;;
 ;;; Code:
 
+(require 'dash)
+(require 'let-alist)
 (require 'code-review-db)
+(require 'code-review-parse-hunk)
 (require 'code-review-interfaces)
 (require 'code-review-utils)
-(require 'let-alist)
 
 (defgroup code-review-gitlab nil
   "Interact with Gitlab REST and GraphQL APIs."
