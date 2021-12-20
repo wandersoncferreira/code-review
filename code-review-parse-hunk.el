@@ -26,6 +26,8 @@
 ;;
 ;;  Library to parse hunk strings
 ;;
+;;  https://stackoverflow.com/questions/41662127/how-to-comment-on-a-specific-line-number-on-a-pr-on-github
+;;
 ;;; Code:
 
 (require 'dash)
