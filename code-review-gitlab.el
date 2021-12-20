@@ -28,10 +28,12 @@
 ;;
 ;;; Code:
 
+(require 'dash)
+(require 'let-alist)
 (require 'code-review-db)
+(require 'code-review-parse-hunk)
 (require 'code-review-interfaces)
 (require 'code-review-utils)
-(require 'let-alist)
 
 (defgroup code-review-gitlab nil
   "Interact with Gitlab REST and GraphQL APIs."
@@ -127,7 +129,8 @@ an object then we need to build the diff string ourselves here."
   (let* ((review-comments (nreverse
                            (-filter
                             (lambda (c)
-                              (not (code-review-gitlab--regular-comment? c)))
+                              (and (not (code-review-gitlab--regular-comment? c))
+                                   (not (a-get c 'system))))
                             raw-comments)))
          (grouped-comments (-group-by
                             (lambda (c)
@@ -152,18 +155,16 @@ an object then we need to build the diff string ourselves here."
          (comment->code-review-comment
           (lambda (c)
             (let-alist c
-              (let* ((mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
+              (let* ((path .position.oldPath)
+                     (mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
                                           nil nil 'equal))
-                     (discussion-id (-second-item
-                                     (split-string .discussion.id "DiffDiscussion/")))
-                     (diff-pos
-                      ;; NOTE: not sure if this should not be a little different in the future
-                      ;; e.g. verify if the comment was done in Added/Removed/Unchanged line
-                      ;; and handling accordingly.
-                      (+ 1 (- (or .position.oldLine
-                                  .position.newLine)
-                              (or (a-get-in mapping (list 'old 'beg))
-                                  (a-get-in mapping (list 'new 'beg)))))))
+                     (line-obj (if .position.oldLine
+                                   `((old . t)
+                                     (line-pos . ,.position.oldLine))
+                                 `((new . t)
+                                   (line-pos . ,.position.newLine))))
+                     (discussion-id (-second-item (split-string .discussion.id "DiffDiscussion/")))
+                     (diff-pos (code-review-parse-hunk-relative-pos mapping line-obj)))
                 `((author (login . ,.author.login))
                   (state . ,"")
                   (bodyHTML .,"")
@@ -190,19 +191,9 @@ an object then we need to build the diff string ourselves here."
 (defun code-review-gitlab--regular-comment? (comment)
   "Predicate to identify regular (overview) COMMENT from review comment."
   (let-alist comment
-    (let ((has-in-mapping?
-           (or (a-get-in (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
-                                    nil nil 'equal)
-                         (list 'old 'beg))
-               (a-get-in (alist-get .position.newPath code-review-gitlab-line-diff-mapping
-                                    nil nil 'equal)
-                         (list 'new 'beg)))))
-      (or (and (not .system)
-               (not has-in-mapping?))
-          (and (not .system)
-               (or (not (a-get comment 'resolvable))
-                   (not (a-get comment 'position))))
-          (not has-in-mapping?)))))
+    (and (not .system)
+         (or (not .resolvable)
+             (not .position)))))
 
 (defun code-review-gitlab-fix-infos (gitlab-infos)
   "Make GITLAB-INFOS structure compatible with GITHUB."
@@ -234,16 +225,19 @@ The payload is used to send a MR review to Gitlab."
          (pos (oref comment position)))
     (pcase line-type
       ("ADDED"
-       (a-assoc-in payload (list 'position 'new_line) pos))
+       (a-assoc-in payload (list 'position 'new_line)
+                   (code-review-parse-hunk-line-pos mapping `((added . t) (line-pos . ,pos)))))
       ("REMOVED"
        (a-assoc-in payload (list 'position 'old_line)
-                   (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))
+                   (code-review-parse-hunk-line-pos mapping `((deleted . t) (line-pos . ,pos)))))
       ("UNCHANGED"
-       (-> payload
-           (a-assoc-in (list 'position 'new_line)
-                       (+ (- pos (a-get-in mapping (list 'new 'end))) 1))
-           (a-assoc-in (list 'position 'old_line)
-                       (- (+ pos (a-get-in mapping (list 'old 'beg))) 1)))))))
+       (let ((line-pos-res
+              (code-review-parse-hunk-line-pos
+               mapping
+               `((normal . t) (line-pos . ,pos)))))
+         (-> payload
+             (a-assoc-in (list 'position 'new_line) (a-get line-pos-res 'new-line))
+             (a-assoc-in (list 'position 'old_line) (a-get line-pos-res 'old-line))))))))
 
 ;;; classes
 
@@ -385,36 +379,13 @@ Optionally sets FALLBACK? to get minimal query."
 
 (defun code-review-gitlab-pos-line-number->diff-line-number (gitlab-diff)
   "Get mapping of pos-line to diff-line given GITLAB-DIFF."
-  (let* ((if-zero-null (lambda (n)
-                         (let ((nn (string-to-number n)))
-                           (when (> nn 0)
-                             nn))))
-         (regex
-          (rx "@@ -"
-              (group-n 1 (one-or-more digit))
-              ","
-              (group-n 2 (one-or-more digit))
-              " +"
-              (group-n 3 (one-or-more digit))
-              ","
-              (group-n 4 (one-or-more digit))))
-         (res
+  (let* ((res
           (-reduce-from
            (lambda (acc it)
              (let ((str (a-get it 'diff)))
-               (save-match-data
-                 (if (and (string-match regex str))
-                     ;;; NOTE: it's possible that using "old_path" blindly here
-                     ;;; might cause issues when this value is null
-                     (a-assoc acc (or (a-get it 'old_path)
-                                      (a-get it 'new_path))
-                              (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 1 str))
-                                                     'end (funcall if-zero-null (match-string 2 str))
-                                                     'path (a-get it 'old_path))
-                                       'new (a-alist 'beg (funcall if-zero-null (match-string 3 str))
-                                                     'end (funcall if-zero-null (match-string 4 str))
-                                                     'path (a-get it 'new_path))))
-                   acc))))
+               (a-assoc acc (or (a-get it 'old_path)
+                                (a-get it 'new_path))
+                        (code-review-parse-hunk-table str))))
            nil
            gitlab-diff)))
     (setq code-review-gitlab-line-diff-mapping res)))
