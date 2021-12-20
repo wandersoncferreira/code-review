@@ -14,6 +14,7 @@
 ;;; Code:
 
 (require 'code-review-db)
+(require 'code-review-parse-hunk)
 
 (defcustom code-review-bitbucket-host "api.bitbucket.org/2.0"
   "Host used to access Bitbucket API."
@@ -162,25 +163,13 @@ For internal usage only.")
 
 (defun code-review-bitbucket-pos-line-number->diff-line-number (bitbucket-diff-raw)
   "Get mapping of pos-line to diff-line given BITBUCKET-DIFF-RAW."
-  (let* ((if-zero-null (lambda (n)
-                         (let ((nn (string-to-number n)))
-                           (when (> nn 0)
-                             nn))))
-         (bitbucket-diff
-          (cdr (split-string bitbucket-diff-raw "diff --git")))
-         (regex
-          (rx "--- a/"
-              (group-n 1 (+? anything))
-              "+++ b/"
-              (group-n 2 (+? anything))
-              "@@ -"
-              (group-n 3 (one-or-more digit))
-              ","
-              (group-n 4 (one-or-more digit))
-              " +"
-              (group-n 5 (one-or-more digit))
-              ","
-              (group-n 6 (one-or-more digit))))
+  (let* ((bitbucket-diff (-> bitbucket-diff-raw
+                             (split-string "diff --git")
+                             (cdr)))
+         (regex (rx "--- a/"
+                    (group-n 1 (+? anything))
+                    "+++ b/"
+                    (group-n 2 (+? anything))))
          (res
           (-reduce-from
            (lambda (acc it)
@@ -190,14 +179,12 @@ For internal usage only.")
                           (path-2 (match-string 2 it))
                           (path (if (string-equal path-1 "/dev/null")
                                     path-2
-                                  path-1)))
-                     (a-assoc acc (string-trim path)
-                              (a-alist 'old (a-alist 'beg (funcall if-zero-null (match-string 3 it))
-                                                     'end (funcall if-zero-null (match-string 4 it))
-                                                     'path path-1)
-                                       'new (a-alist 'beg (funcall if-zero-null (match-string 5 it))
-                                                     'old (funcall if-zero-null (match-string 6 it))
-                                                     'path path-2))))
+                                  path-1))
+                          (hunkdiff (->> it
+                                         (s-split (rx "+++ b/" (+ not-newline)))
+                                         (-second-item )
+                                         (string-trim))))
+                     (a-assoc acc (string-trim path) (code-review-parse-hunk-table hunkdiff)))
                  acc)))
            nil bitbucket-diff)))
     (setq code-review-bitbucket-line-diff-mapping res)))
@@ -208,17 +195,16 @@ For internal usage only.")
          (-map
           (lambda (it)
             (let-alist it
-              (let* ((mapping (alist-get (string-trim .path) code-review-bitbucket-line-diff-mapping
+              (let* ((path (string-trim .path))
+                     (mapping (alist-get path
+                                         code-review-bitbucket-line-diff-mapping
                                          nil nil 'equal))
                      (diff-pos
                       (cond
                        ((eq :to .position-type)
-                        (- .position
-                           (a-get-in mapping (list 'old 'beg))
-                           1))
+                        (code-review-parse-hunk-relative-pos mapping `((new . t) (line-pos . ,.position))))
                        ((eq :from .position-type)
-                        (+ 1 (- .position
-                                (a-get-in mapping (list 'old 'beg)))))))
+                        (code-review-parse-hunk-relative-pos mapping `((old . t) (line-pos . ,.position))))))
                      (cn (a-assoc (-first-item .comments.nodes) 'originalPosition diff-pos)))
                 (-> it
                     (a-assoc 'position diff-pos)

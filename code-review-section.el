@@ -738,8 +738,6 @@ INDENT count of spaces are added at the start of every line."
 
 (cl-defmethod code-review--insert-conversation-section ((bitbucket code-review-bitbucket-repo))
   (let-alist (oref bitbucket raw-infos)
-    (prin1 "AGORA VAI!")
-    (prin1 .comments.nodes)
     (let ((list-of-comments (--sort
                              (< (time-to-seconds (date-to-time (a-get it 'createdAt)))
                                 (time-to-seconds (date-to-time (a-get other 'createdAt))))
@@ -1184,7 +1182,6 @@ Optionally DELETE? flag must be set if you want to remove it."
                     (propertize (code-review-utils--format-timestamp (oref obj createdAt)) 'face 'code-review-timestamp-face))))
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading)
-      (prin1 "WAND?\n")
       (magit-insert-section (code-review-code-comment-section obj)
         (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
         (when-let (reactions-obj (oref obj reactions))
