@@ -1,4 +1,4 @@
-;;; code-review.el --- Perform code review from Github and Gitlab -*- lexical-binding: t; -*-
+;;; code-review.el --- Perform code review from Github, Gitlab, and Bitbucket Cloud -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 Wanderson Ferreira
 ;;
@@ -28,7 +28,7 @@
 ;;; Commentary:
 ;;
 ;; Review Pull Request in Emacs using a modern interface based on Magit Section
-;; and Transient.  Currently supports Github and Gitlab.
+;; and Transient.  Currently supports Github, Gitlab, and Bitbucket Cloud.
 ;;
 
 ;;; Code:
