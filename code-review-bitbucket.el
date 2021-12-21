@@ -142,18 +142,75 @@
          (infos (oref pr raw-infos)))
     ;; 1. send all comments to the PR
     (dolist (c (oref review local-comments))
-      (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/comments"
-                                   (oref pr owner)
-                                   (oref pr repo)
-                                   (oref pr number))
-                    nil
-                    :forge 'bitbucket
-                    :auth 'code-review
-                    :host code-review-bitbucket-host
-                    :payload `((content (raw . ,(oref c body)))
-                               (inline (path . ,(oref c path))
-                                       (from . 23))) ;;; TODO: compute the correct line number.. use the same strategy used in Gitlab integration
-                    ))))
+      (let* ((mapping
+              (alist-get (oref c path)
+                         code-review-bitbucket-line-diff-mapping
+                         nil nil 'equal))
+             (inline-arg (pcase (oref c line-type)
+                           ("ADDED"
+                            `((path . ,(oref c path))
+                              (to . ,(code-review-parse-hunk-line-pos
+                                      mapping
+                                      `((added . t)
+                                        (line-pos . ,(oref c position)))))))
+                           ("REMOVED"
+                            `((path . ,(oref c path))
+                              (from . ,(code-review-parse-hunk-line-pos
+                                        mapping
+                                        `((deleted . t)
+                                          (line-pos . ,(oref c position)))))))
+                           ("UNCHANGED"
+                            `((path . ,(oref c path))
+                              (from . ,(a-get
+                                        (code-review-parse-hunk-line-pos
+                                         mapping
+                                         `((deleted . t)
+                                           (line-pos . ,(oref c position))))
+                                        'old-line)))))))
+        (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/comments"
+                                     (oref pr owner)
+                                     (oref pr repo)
+                                     (oref pr number))
+                      nil
+                      :forge 'bitbucket
+                      :auth 'code-review
+                      :host code-review-bitbucket-host
+                      :payload (a-assoc
+                                `((content (raw . ,(oref c body))))
+                                :inline inline-arg))))
+    ;; 2. send the review verdict
+    (pcase (oref review state)
+      ("APPROVE"
+       (let ((res (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/approve"
+                                               (oref pr owner)
+                                               (oref pr repo)
+                                               (oref pr number))
+                                nil
+                                :forge 'bitbucket
+                                :auth 'code-review
+                                :host code-review-bitbucket-host
+                                :noerror 'return
+                                :payload `((workspace . ,(oref pr owner))))))
+         (when (string-equal (a-get res 'type) "error")
+           (error (prin1-to-string res)))))
+      ("REQUEST_CHANGES"
+       (let ((res (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/request-changes"
+                                               (oref pr owner)
+                                               (oref pr repo)
+                                               (oref pr number))
+                                nil
+                                :forge 'bitbucket
+                                :auth 'code-review
+                                :host code-review-bitbucket-host
+                                :noerror 'return
+                                :payload `((workspace . ,(oref pr owner))))))
+         (when (string-equal (a-get res 'type) "error")
+           (error (prin1-to-string res)))))
+      ("COMMENT"))
+    ;; 3. call callback
+    ;; seems like we need to wait a bit for bitbucket's API to update internally :/
+    (sit-for 0.5)
+    (funcall callback)))
 
 ;;; fixes
 

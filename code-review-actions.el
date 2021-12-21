@@ -30,6 +30,7 @@
 
 (require 'code-review-comment)
 (require 'code-review-db)
+(require 'code-review-bitbucket)
 (require 'code-review-gitlab)
 (require 'code-review-github)
 (require 'let-alist)
@@ -103,6 +104,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                        (code-review-submit-github-review))
                       ((code-review-gitlab-repo-p pr)
                        (code-review-submit-gitlab-review))
+                      ((code-review-bitbucket-repo-p pr)
+                       (code-review-submit-bitbucket-review))
                       (t
                        (code-review-submit-review))))
          (replies-obj (cond
