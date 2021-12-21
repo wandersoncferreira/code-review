@@ -133,7 +133,7 @@ An optionally provide a CALLBACK."
                        (oref bitbucket repo)
                        (oref bitbucket number))))
          (comments (->> (code-review-bitbucket--ghub-get
-                         (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=300"
+                         (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=100"
                                  (oref bitbucket owner)
                                  (oref bitbucket repo)
                                  (oref bitbucket number)))
