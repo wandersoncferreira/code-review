@@ -105,16 +105,14 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                       ((code-review-gitlab-repo-p pr)
                        (code-review-submit-gitlab-review))
                       ((code-review-bitbucket-repo-p pr)
-                       (code-review-submit-bitbucket-review))
-                      (t
-                       (code-review-submit-review))))
+                       (code-review-submit-bitbucket-review))))
          (replies-obj (cond
                        ((code-review-github-repo-p pr)
                         (code-review-submit-github-replies))
                        ((code-review-gitlab-repo-p pr)
                         (code-review-submit-gitlab-replies))
-                       (t
-                        (code-review-submit-replies)))))
+                       ((code-review-bitbucket-repo-p pr)
+                        (code-review-submit-bitbucket-replies)))))
 
     (oset review-obj state event)
     (oset review-obj pr pr)
