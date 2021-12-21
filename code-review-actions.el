@@ -196,17 +196,19 @@ Optionally set a FEEDBACK message."
          (last-commit (-> (oref pr raw-infos)
                           (a-get-in (list 'commits 'nodes))
                           (-last-item))))
-    (let-alist last-commit
-      (cond
-       ((string-equal .commit.statusCheckRollup.state "SUCCESS")
-        (code-review--submit "APPROVE" feedback))
-       (code-review-always-restrict-approval?
-        (message "PR have CI issues. You cannot approve it."))
-       (t
-        (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
-          (if res
-              (code-review--submit "APPROVE" feedback)
-            (message "Approval process canceled."))))))))
+    (if (code-review-github-repo-p pr)
+        (let-alist last-commit
+          (cond
+           ((string-equal .commit.statusCheckRollup.state "SUCCESS")
+            (code-review--submit "APPROVE" feedback))
+           (code-review-always-restrict-approval?
+            (message "PR have CI issues. You cannot approve it."))
+           (t
+            (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
+              (if res
+                  (code-review--submit "APPROVE" feedback)
+                (message "Approval process canceled."))))))
+      (code-review--submit "APPROVE" feedback))))
 
 ;;;###autoload
 (defun code-review-submit-comments ()
