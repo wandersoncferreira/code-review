@@ -30,6 +30,7 @@
 
 (require 'code-review-comment)
 (require 'code-review-db)
+(require 'code-review-bitbucket)
 (require 'code-review-gitlab)
 (require 'code-review-github)
 (require 'let-alist)
@@ -103,15 +104,15 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                        (code-review-submit-github-review))
                       ((code-review-gitlab-repo-p pr)
                        (code-review-submit-gitlab-review))
-                      (t
-                       (code-review-submit-review))))
+                      ((code-review-bitbucket-repo-p pr)
+                       (code-review-submit-bitbucket-review))))
          (replies-obj (cond
                        ((code-review-github-repo-p pr)
                         (code-review-submit-github-replies))
                        ((code-review-gitlab-repo-p pr)
                         (code-review-submit-gitlab-replies))
-                       (t
-                        (code-review-submit-replies)))))
+                       ((code-review-bitbucket-repo-p pr)
+                        (code-review-submit-bitbucket-replies)))))
 
     (oset review-obj state event)
     (oset review-obj pr pr)
@@ -195,17 +196,19 @@ Optionally set a FEEDBACK message."
          (last-commit (-> (oref pr raw-infos)
                           (a-get-in (list 'commits 'nodes))
                           (-last-item))))
-    (let-alist last-commit
-      (cond
-       ((string-equal .commit.statusCheckRollup.state "SUCCESS")
-        (code-review--submit "APPROVE" feedback))
-       (code-review-always-restrict-approval?
-        (message "PR have CI issues. You cannot approve it."))
-       (t
-        (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
-          (if res
-              (code-review--submit "APPROVE" feedback)
-            (message "Approval process canceled."))))))))
+    (if (code-review-github-repo-p pr)
+        (let-alist last-commit
+          (cond
+           ((string-equal .commit.statusCheckRollup.state "SUCCESS")
+            (code-review--submit "APPROVE" feedback))
+           (code-review-always-restrict-approval?
+            (message "PR have CI issues. You cannot approve it."))
+           (t
+            (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
+              (if res
+                  (code-review--submit "APPROVE" feedback)
+                (message "Approval process canceled."))))))
+      (code-review--submit "APPROVE" feedback))))
 
 ;;;###autoload
 (defun code-review-submit-comments ()

@@ -46,6 +46,11 @@
   :type 'string
   :group 'code-review-gitlab)
 
+(defcustom code-review-bitbucket-base-url "bitbucket.org"
+  "Host used to identify PR URLs from Bitbucket."
+  :type 'string
+  :group 'code-review-bitbucket)
+
 (defcustom code-review-download-dir "/tmp/code-review/"
   "Directory where code review will download binary files."
   :type 'string
@@ -271,6 +276,16 @@ using COMMENTS."
                     'repo  (match-string 2 url)
                     'owner (match-string 1 url)
                     'forge 'github
+                    'url url))))
+   ((string-prefix-p (format "https://%s" code-review-bitbucket-base-url) url)
+    (save-match-data
+      (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/pull-requests/\\([0-9]+\\)"
+                                 code-review-bitbucket-base-url)
+                         url)
+           (a-alist 'num   (match-string 3 url)
+                    'repo  (match-string 2 url)
+                    'owner (match-string 1 url)
+                    'forge 'bitbucket
                     'url url))))))
 
 (defun code-review-utils-build-obj (pr-alist)
@@ -287,6 +302,11 @@ using COMMENTS."
        (code-review-gitlab-repo :owner .owner
                                 :repo .repo
                                 :number .num)))
+     ((equal .forge 'bitbucket)
+      (code-review-db--pullreq-create
+       (code-review-bitbucket-repo :owner .owner
+                                   :repo .repo
+                                   :number .num)))
      (t
       (error "Forge not supported")))))
 

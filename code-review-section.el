@@ -28,17 +28,20 @@
 ;;
 ;;; Code:
 
+(require 'emojify)
 (require 'deferred)
 (require 'magit-section)
 (require 'magit-diff)
 (require 'shr)
+
 (require 'code-review-faces)
-(require 'code-review-interfaces)
 (require 'code-review-db)
 (require 'code-review-utils)
+
+(require 'code-review-interfaces)
 (require 'code-review-github)
 (require 'code-review-gitlab)
-(require 'emojify)
+(require 'code-review-bitbucket)
 
 (defcustom code-review-section-indent-width 1
   "Indent width for nested sections."
@@ -733,6 +736,28 @@ INDENT count of spaces are added at the start of every line."
                   (code-review-insert-comment-lines obj)
                   (insert ?\n))))))))))
 
+(cl-defmethod code-review--insert-conversation-section ((bitbucket code-review-bitbucket-repo))
+  (let-alist (oref bitbucket raw-infos)
+    (let ((list-of-comments (--sort
+                             (< (time-to-seconds (date-to-time (a-get it 'createdAt)))
+                                (time-to-seconds (date-to-time (a-get other 'createdAt))))
+                             .comments.nodes)))
+      (dolist (c list-of-comments)
+        (let* ((obj (code-review-comment-section
+                     :author (a-get-in c (list 'author 'login))
+                     :msg (a-get c 'bodyHTML)
+                     :id (a-get c 'databaseId)
+                     :typename (a-get c 'typename))))
+          (magit-insert-section (code-review-comment-section obj)
+            (insert (concat
+                     (propertize (format "@%s" (oref obj author)) 'font-lock-face (oref obj face))
+                     " - "
+                     (propertize (code-review-utils--format-timestamp (a-get c 'createdAt)) 'face 'code-review-timestamp-face)))
+            (magit-insert-heading)
+            (insert ?\n)
+            (code-review-insert-comment-lines obj)
+            (insert ?\n)))))))
+
 (defun code-review-section-insert-top-level-comments ()
   "Insert general comments for the PULL-REQUEST in the buffer."
   (when-let (pr (code-review-db-get-pullreq))
@@ -1156,15 +1181,15 @@ Optionally DELETE? flag must be set if you want to remove it."
                     " - "
                     (propertize (code-review-utils--format-timestamp (oref obj createdAt)) 'face 'code-review-timestamp-face))))
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
-      (magit-insert-heading heading))
-    (magit-insert-section (code-review-code-comment-section obj)
-      (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
-      (when-let (reactions-obj (oref obj reactions))
-        (code-review-comment-insert-reactions
-         reactions-obj
-         "code-comment"
-         (oref obj id)))
-      (insert ?\n))))
+      (magit-insert-heading heading)
+      (magit-insert-section (code-review-code-comment-section obj)
+        (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
+        (when-let (reactions-obj (oref obj reactions))
+          (code-review-comment-insert-reactions
+           reactions-obj
+           "code-comment"
+           (oref obj id)))
+        (insert ?\n)))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
@@ -1483,6 +1508,10 @@ If you want to display a minibuffer MSG in the end."
   "Check if the RES has a message for auth token not set for GITLAB."
   (string-prefix-p "Required Gitlab token" (-first-item (a-get res 'error))))
 
+(cl-defmethod code-review--auth-token-set? ((_bitbucket code-review-bitbucket-repo) res)
+  "Check if the RES has a message for auth token not set for BITBUCKET."
+  (string-prefix-p "Required Bitbucket token" (-first-item (a-get res 'error))))
+
 (cl-defmethod code-review--auth-token-set? (obj res)
   "Default catch all unknown values passed to this function as OBJ and RES."
   (code-review--log
@@ -1561,6 +1590,40 @@ If you want to display a minibuffer MSG in the end."
   (progress-reporter-update progress 6)
   (code-review--trigger-hooks buff-name msg)
   (progress-reporter-done progress))
+
+(cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
+  "Helper function to build process for BITBUCKET based on the fetched RES informing PROGRESS."
+  (let* ((raw-infos (let-alist (-second-item res)
+                      `((title . ,.title)
+                        (number . ,.id)
+                        (state . ,.state)
+                        (bodyHTML . ,.rendered.description.html)
+                        (headRef (target (oid . ,.source.commit.hash)))
+                        (baseRefName . ,.destination.branch.name)
+                        (headRefName . ,.source.branch.name)
+                        (comments (nodes . ,.comments.nodes))
+                        (reviews (nodes . ,.reviews.nodes))))))
+
+    ;; 1. save raw diff data
+    (progress-reporter-update progress 3)
+    (code-review-db--pullreq-raw-diff-update
+     (code-review-utils--clean-diff-prefixes
+      (a-get (-first-item res) 'message)))
+
+    ;; 1.1. compute position line numbers to diff line numbers
+    (progress-reporter-update progress 4)
+    (code-review-bitbucket-pos-line-number->diff-line-number
+     (a-get (-first-item res) 'message))
+
+    ;; 1.2 save raw info data e.g. data from GraphQL API
+    (progress-reporter-update progress 4)
+    (code-review-db--pullreq-raw-infos-update
+     (code-review-bitbucket--fix-diff-comments raw-infos))
+
+    ;; 1.3 trigger renders
+    (progress-reporter-update progress 5)
+    (code-review--trigger-hooks buff-name msg)
+    (progress-reporter-done progress)))
 
 (defcustom code-review-log-raw-request-responses nil
   "Log the Raw request responses from your VC provider."

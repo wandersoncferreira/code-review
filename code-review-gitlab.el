@@ -454,7 +454,7 @@ Optionally sets FALLBACK? to get minimal query."
                   :callback (lambda (&rest _)
                               (message "Approved!"))))
       ("REQUEST_CHANGES"
-       (message "Not supported in Gitlab"))
+       (error "Not supported in Gitlab"))
       ("COMMENT"))
 
     ;; 3. call callback
