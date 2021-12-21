@@ -8,7 +8,7 @@
 # Code Review
 
 Package to help you perform code reviews from your VC provider. Currently
-supports Github and basic Gitlab workflow.
+supports Github and basic Gitlab and Bitbucket workflows.
 
 ![Demo of code review package](./docs/code_review_demo.png)
 
@@ -134,6 +134,21 @@ and token:
 ``` emacs-lisp
 machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
 ```
+
+#### Bitbucket
+
+1. Create a personal access token using Bitbucket. Go to your Personal Settings -> App Password
+2. Choose the `pull_request:write` scope
+
+##### Auth
+
+Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
+and token:
+
+``` emacs-lisp
+machine api.bitbucket.org/2.0 login yourlogin^code-review password MYAPPPASSWORD
+```
+
 
 # Keybindings
 
