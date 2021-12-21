@@ -39,38 +39,24 @@
 (defclass code-review-bitbucket-repo (code-review-db-pullreq)
   ((callback            :initform nil)))
 
-(defun code-review-bitbucket--ghub-post (url payload &optional callback)
-  "Given URL and PAYLOAD perform a POST.
-An optionally provide a CALLBACK."
-  (ghub-request "POST" url
-                nil
-                :forge 'bitbucket
-                :auth 'code-review
-                :host code-review-bitbucket-host
-                :payload payload
-                :callback callback))
-
-(defun code-review-bitbucket--ghub-get (url &optional callback)
-  "Given URL and PAYLOAD perform a GET.
-An optionally provide a CALLBACK."
-  (ghub-request "GET" url
-                nil
-                :forge 'bitbucket
-                :auth 'code-review
-                :host code-review-bitbucket-host
-                :callback callback))
-
 (cl-defmethod code-review-pullreq-diff ((bitbucket code-review-bitbucket-repo) callback)
   "Get PR diff from BITBUCKET, run CALLBACK."
-  (let ((diff-url (let-alist (code-review-bitbucket--ghub-get
-                              (format "/repositories/%s/%s/pullrequests/%s"
-                                      (oref bitbucket owner)
-                                      (oref bitbucket repo)
-                                      (oref bitbucket number)))
+  (let ((diff-url (let-alist (ghub-request "GET" (format "/repositories/%s/%s/pullrequests/%s"
+                                                         (oref bitbucket owner)
+                                                         (oref bitbucket repo)
+                                                         (oref bitbucket number))
+                                           nil
+                                           :forge 'bitbucket
+                                           :auth 'code-review
+                                           :host code-review-bitbucket-host)
                     (-> .links.diff.href
                         (split-string code-review-bitbucket-host)
                         (-second-item)))))
-    (code-review-bitbucket--ghub-get diff-url callback)))
+    (ghub-request "GET" diff-url nil
+                  :forge 'bitbucket
+                  :auth 'code-review
+                  :host code-review-bitbucket-host
+                  :callback callback)))
 
 (cl-defmethod code-review-diff-deferred ((bitbucket code-review-bitbucket-repo))
   "Get PR diff from BITBUCKET using deferred lib."
@@ -83,65 +69,65 @@ An optionally provide a CALLBACK."
       d))
     d))
 
-(defun code-review-bitbucket--top-level-comments (comments)
-  (->> comments
-       (-remove
-        (lambda (it)
-          (a-get it 'inline)))
-       (-map
-        (lambda (it)
-          (let-alist it
-            `((bodyHTML . ,.content.html)
-              (createdAt . ,.created_on)
-              (reactions)
-              (author (login . ,.user.nickname))
-              (databaseId . ,.id)
-              (typename . ,.type)))))))
-
-(defun code-review-bitbucket--diff-comments (comments)
-  (->> comments
-       (-filter
-        (lambda (it)
-          (a-get it 'inline)))
-       (-map
-        (lambda (it)
-          (let-alist it
-            (let ((position-fixed (or .inline.from
-                                      .inline.to))
-                  (position-type (if .inline.from
-                                     :from
-                                   :to)))
-              `((typename . ,.type)
-                (author (login . ,.user.nickname))
-                (databaseId . ,.id)
-                (state . "COMMENTED")
-                (position . ,position-fixed)
-                (position-type . ,position-type)
-                (path . ,.inline.path)
-                (comments (nodes ((bodyHTML . ,.content.html)
-                                  (originalPosition . ,position-fixed)
-                                  (position-type . ,position-type)
-                                  (databaseId . ,.id)
-                                  (path . ,.inline.path)
-                                  (createdAt . ,.created_on)))))))))))
-
 (cl-defmethod code-review-pullreq-infos ((bitbucket code-review-bitbucket-repo) callback)
   "Get PR infos from BITBUCKET, run CALLBACK."
-  (let* ((res (code-review-bitbucket--ghub-get
-               (format "/repositories/%s/%s/pullrequests/%s"
-                       (oref bitbucket owner)
-                       (oref bitbucket repo)
-                       (oref bitbucket number))))
-         (comments (->> (code-review-bitbucket--ghub-get
-                         (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=300"
-                                 (oref bitbucket owner)
-                                 (oref bitbucket repo)
-                                 (oref bitbucket number)))
+  (let* ((res (ghub-request "GET" (format "/repositories/%s/%s/pullrequests/%s"
+                                          (oref bitbucket owner)
+                                          (oref bitbucket repo)
+                                          (oref bitbucket number))
+                            nil
+                            :forge 'bitbucket
+                            :auth 'code-review
+                            :host code-review-bitbucket-host))
+         (comments (->> (ghub-request "GET" (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=300"
+                                                    (oref bitbucket owner)
+                                                    (oref bitbucket repo)
+                                                    (oref bitbucket number))
+                                      nil
+                                      :forge 'bitbucket
+                                      :auth 'code-review
+                                      :host code-review-bitbucket-host)
                         (-remove
                          (lambda (it)
                            (a-get it 'deleted)))))
-         (top-level-comments (code-review-bitbucket--top-level-comments comments))
-         (diff-comments (code-review-bitbucket--diff-comments comments)))
+         (top-level-comments (->> comments
+                                  (-remove
+                                   (lambda (it)
+                                     (a-get it 'inline)))
+                                  (-map
+                                   (lambda (it)
+                                     (let-alist it
+                                       `((bodyHTML . ,.content.html)
+                                         (createdAt . ,.created_on)
+                                         (reactions)
+                                         (author (login . ,.user.nickname))
+                                         (databaseId . ,.id)
+                                         (typename . ,.type)))))))
+         (diff-comments (->> comments
+                             (-filter
+                              (lambda (it)
+                                (a-get it 'inline)))
+                             (-map
+                              (lambda (it)
+                                (let-alist it
+                                  (let ((position-fixed (or .inline.from
+                                                            .inline.to))
+                                        (position-type (if .inline.from
+                                                           :from
+                                                         :to)))
+                                    `((typename . ,.type)
+                                      (author (login . ,.user.nickname))
+                                      (databaseId . ,.id)
+                                      (state . "COMMENTED")
+                                      (position . ,position-fixed)
+                                      (position-type . ,position-type)
+                                      (path . ,.inline.path)
+                                      (comments (nodes ((bodyHTML . ,.content.html)
+                                                        (originalPosition . ,position-fixed)
+                                                        (position-type . ,position-type)
+                                                        (databaseId . ,.id)
+                                                        (path . ,.inline.path)
+                                                        (createdAt . ,.created_on))))))))))))
     (funcall callback (-> res
                           (a-assoc-in (list 'comments 'nodes) top-level-comments)
                           (a-assoc-in (list 'reviews 'nodes) diff-comments)))))
@@ -200,31 +186,43 @@ An optionally provide a CALLBACK."
          (infos (oref pr raw-infos)))
     ;; 1. send all comments to the PR
     (dolist (c (oref review local-comments))
-      (code-review-bitbucket--ghub-post
-       (format "/repositories/%s/%s/pullrequests/%s/comments"
-               (oref pr owner)
-               (oref pr repo)
-               (oref pr number))
-       `((content (raw . ,(oref c body)))
-         (inline . ,(code-review-bitbucket--inline-arg c)))))
+      (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/comments"
+                                   (oref pr owner)
+                                   (oref pr repo)
+                                   (oref pr number))
+                    nil
+                    :forge 'bitbucket
+                    :auth 'code-review
+                    :host code-review-bitbucket-host
+                    :payload (a-assoc
+                              `((content (raw . ,(oref c body))))
+                              :inline (code-review-bitbucket--inline-arg c))))
     ;; 2. send the review verdict
     (pcase (oref review state)
       ("APPROVE"
-       (let ((res (code-review-bitbucket--ghub-post
-                   (format "/repositories/%s/%s/pullrequests/%s/approve"
-                           (oref pr owner)
-                           (oref pr repo)
-                           (oref pr number))
-                   `((workspace . ,(oref pr owner))))))
+       (let ((res (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/approve"
+                                               (oref pr owner)
+                                               (oref pr repo)
+                                               (oref pr number))
+                                nil
+                                :forge 'bitbucket
+                                :auth 'code-review
+                                :host code-review-bitbucket-host
+                                :noerror 'return
+                                :payload `((workspace . ,(oref pr owner))))))
          (when (string-equal (a-get res 'type) "error")
            (error (prin1-to-string res)))))
       ("REQUEST_CHANGES"
-       (let ((res (code-review-bitbucket--ghub-post
-                   (format "/repositories/%s/%s/pullrequests/%s/request-changes"
-                           (oref pr owner)
-                           (oref pr repo)
-                           (oref pr number))
-                   `((workspace . ,(oref pr owner))))))
+       (let ((res (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/request-changes"
+                                               (oref pr owner)
+                                               (oref pr repo)
+                                               (oref pr number))
+                                nil
+                                :forge 'bitbucket
+                                :auth 'code-review
+                                :host code-review-bitbucket-host
+                                :noerror 'return
+                                :payload `((workspace . ,(oref pr owner))))))
          (when (string-equal (a-get res 'type) "error")
            (error (prin1-to-string res)))))
       ("COMMENT"))
@@ -244,16 +242,19 @@ An optionally provide a CALLBACK."
   "Submit replies to review comments inline given REPLIES and a CALLBACK fn."
   (let ((pr (oref replies pr)))
     (dolist (reply (oref replies replies))
-      (let ((res (code-review-bitbucket--ghub-post
-                  (format "/repositories/%s/%s/pullrequests/%s/comments"
-                          (oref pr owner)
-                          (oref pr repo)
-                          (oref pr number))
-                  `((content (raw . ,(oref reply body)))
-                    (parent (id . ,(oref reply reply-to-id)))))))
+      (let ((res (ghub-request "POST" (format "/repositories/%s/%s/pullrequests/%s/comments"
+                                              (oref pr owner)
+                                              (oref pr repo)
+                                              (oref pr number))
+                               nil
+                               :forge 'bitbucket
+                               :auth 'code-review
+                               :host code-review-bitbucket-host
+                               :noerror 'return
+                               :payload `((content (raw . ,(oref reply body)))
+                                          (parent (id . ,(oref reply reply-to-id)))))))
         (when (string-equal (a-get res 'type) "error")
           (error (prin1-to-string res)))))
-    (sit-for 0.5)
     (funcall callback)))
 
 ;;; fixes
