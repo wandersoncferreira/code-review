@@ -313,5 +313,73 @@ For internal usage only.")
           (a-get-in raw-infos (list 'reviews 'nodes)))))
     (a-assoc-in raw-infos (list 'reviews 'nodes) diff-comments)))
 
+;;; Core methods not implemented yet.
+
+(defun code-review-bitbucket-not-supported-message ()
+  "Default warning message."
+  (message "Not supported in Bitbucket yet.")
+  nil)
+
+(cl-defmethod code-review-get-assignable-users ((_bitbucket code-review-bitbucket-repo))
+  "Get a list of assignable users for current PR at BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-get-labels ((_bitbucket code-review-bitbucket-repo))
+  "Get labels for your pr at BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-labels ((_bitbucket code-review-bitbucket-repo) _callback)
+  "Set labels for your pr at BITBUCKET and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-get-assignees ((_bitbucket code-review-bitbucket-repo))
+  "Get assignees for your pr at BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-assignee ((_bitbucket code-review-bitbucket-repo) _callback)
+  "Set yourself as assignee in BITBUCKET and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-get-milestones ((_bitbucket code-review-bitbucket-repo))
+  "Get milestones for your pr at BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-milestone ((_bitbucket code-review-bitbucket-repo) _callback)
+  "Set milestone for your pr in BITBUCKET and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-title ((_bitbucket code-review-bitbucket-repo) _callback)
+  "Set title for your pr in BITBUCKET and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-description ((_bitbucket code-review-bitbucket-repo) _callback)
+  "Set description for your pr in BITBUCKET and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-merge ((_bitbucket code-review-bitbucket-repo) _strategy)
+  "Merge a pr in BITBUCKET using STRATEGY."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-send-reaction ((_bitbucket code-review-bitbucket-repo))
+  "Set reaction for your pr in BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-binary-file-url ((_bitbucket code-review-bitbucket-repo))
+  "Make the BITBUCKET url for the FILENAME.
+Return the blob URL if BLOB? is provided."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-binary-file ((bitbucket code-review-bitbucket-repo) filename)
+  "Get FILENAME from BITBUCKET."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-new-issue-comment ((bitbucket code-review-bitbucket-repo) comment-msg callback)
+  "Create a new comment issue for BITBUCKET sending the COMMENT-MSG and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
+(cl-defmethod code-review-new-code-comment ((bitbucket code-review-bitbucket-repo) local-comment callback)
+  "Creare a new code comment in BITBUCKET from a LOCAL-COMMENT and call CALLBACK."
+  (code-review-bitbucket-not-supported-message))
+
 (provide 'code-review-bitbucket)
 ;;; code-review-bitbucket.el ends here

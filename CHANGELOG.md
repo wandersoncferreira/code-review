@@ -9,6 +9,7 @@
 - [#150](https://github.com/wandersoncferreira/code-review/pull/150): fix broken indentation with Description heading
 - [#155](https://github.com/wandersoncferreira/code-review/pull/155): formal conversion between diff absolute position and diff line number.
 - [#156](https://github.com/wandersoncferreira/code-review/pull/156): bitbucket cloud basic workflow integration
+- [#157](https://github.com/wandersoncferreira/code-review/pull/157): bitbucket stubs for not implemented feature.
 
 # v0.0.5
 
