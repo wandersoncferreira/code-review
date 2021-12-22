@@ -772,20 +772,7 @@ INDENT count of spaces are added at the start of every line."
 (defclass code-review-files-report-section (magit-section)
   (()))
 
-(defun code-review-section-insert-files-report ()
-  "Insert files changed, added, deleted in the PR."
-  (when-let (files (a-get (code-review-db--pullreq-raw-infos) 'files))
-    (let-alist files
-      (magit-insert-section (code-review-files-report-section)
-        (insert (propertize (format "Files changed (%s files; %s additions, %s deletions)"
-                                    (length .nodes)
-                                    (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
-                                    (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))
-                            'font-lock-face
-                            'magit-section-heading))
-        (magit-insert-heading)))))
-
-;; -
+ ;; -
 
 (defclass code-review-base-comment-section (magit-section)
   ((state      :initarg :state
@@ -1475,8 +1462,21 @@ If you want to display a minibuffer MSG in the end."
                 (if commit-focus?
                     (magit-run-section-hook 'code-review-sections-commit-hook)
                   (magit-run-section-hook 'code-review-sections-hook)))
-              (magit-wash-sequence
-               (apply-partially #'magit-diff-wash-diff ())))
+              (let ((files (a-get (code-review-db--pullreq-raw-infos) 'files)))
+                (magit-insert-section (code-review-files-report-section)
+                  (let-alist files
+                    (insert (propertize
+                             (concat "Files changed"
+                                     (when files
+                                       (format " (%s files; %s additions, %s deletions)"
+                                               (length .nodes)
+                                               (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
+                                               (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))))
+                             'font-lock-face
+                             'magit-section-heading)))
+                  (magit-insert-heading)
+                  (magit-wash-sequence
+                   (apply-partially #'magit-diff-wash-diff ())))))
             (if window
                 (progn
                   (pop-to-buffer buff-name)
