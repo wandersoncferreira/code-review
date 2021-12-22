@@ -10,6 +10,7 @@
 - [#155](https://github.com/wandersoncferreira/code-review/pull/155): formal conversion between diff absolute position and diff line number.
 - [#156](https://github.com/wandersoncferreira/code-review/pull/156): bitbucket cloud basic workflow integration
 - [#157](https://github.com/wandersoncferreira/code-review/pull/157): bitbucket stubs for not implemented feature.
+- [#159](https://github.com/wandersoncferreira/code-review/pull/159): place diff under Files Changed section
 
 # v0.0.5
 
