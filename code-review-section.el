@@ -1108,7 +1108,7 @@ Optionally DELETE? flag must be set if you want to remove it."
   "Delete REACTION-ID for COMMENT-ID."
   (code-review-code-comment--add-or-delete-reaction comment-id reaction-id nil t))
 
-(defgeneric code-review-comment-insert-lines (obj)
+(cl-defgeneric code-review-comment-insert-lines (obj)
   "Insert comment lines in the code section based on section type denoted by OBJ.")
 
 (cl-defmethod code-review-comment-insert-lines ((obj code-review-local-comment-section))
