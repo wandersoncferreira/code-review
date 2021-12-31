@@ -224,7 +224,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
-  "Submit an Approve Review wiht a LGTM message."
+  "Submit an Approve Review with a LGTM message."
   (interactive)
   (code-review-submit-approve code-review-lgtm-message))
 
