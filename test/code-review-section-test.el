@@ -75,13 +75,13 @@ Verify if the buffer has anything written using BUFFER-NIL?."
 
   (describe "MILESTONE"
     (it "available raw-infos and should be added to the buffer."
-      (let ((obj (code-review-milestone-section :title "Milestone Title" :perc "50")))
+      (let ((obj (code-review-milestone-section :title "Milestone Title" :perc 50)))
         (code-review-db--pullreq-raw-infos-update `((milestone (title . "Milestone Title")
-                                                               (progressPercentage . "50"))))
+                                                               (progressPercentage . 50))))
         (with-written-section (lambda () (code-review-section-insert-milestone))
                               `(((type . code-review-milestone-section)
                                  (value . ,obj))))
-        (expect (code-review-pretty-milestone obj) :to-equal "Milestone Title (50%)")))
+        (expect (code-review-pretty-milestone obj) :to-equal "Milestone Title (50.00%)")))
 
     (it "if title is missing, add default msg"
       (let ((obj (code-review-milestone-section :title nil :perc "50")))
