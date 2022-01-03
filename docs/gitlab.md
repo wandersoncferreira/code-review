@@ -21,3 +21,14 @@ and token:
 ``` emacs-lisp
 machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
 ```
+
+
+## Approve Merge Request
+
+Gitlab's repository can require a password from users before approving a Merge
+Request (see details
+[here](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/settings.html#require-user-password-to-approve))
+and if this is enabled you will be prompted to type your username and password
+again.
+
+
