@@ -53,10 +53,7 @@
 (defclass code-review-gitlab-repo (code-review-db-pullreq)
   ((callback :initform nil)))
 
-;;; vars
-(defvar code-review-log-file)
-
-(defvar code-review-gitlab-line-diff-mapping nil
+ (defvar code-review-gitlab-line-diff-mapping nil
   "Hold structure to convert Line number position into diff positions.
 For internal usage only.")
 
@@ -72,7 +69,7 @@ For internal usage only.")
     (code-review-utils--log
      "code-review-gitlab-errback"
      (prin1-to-string m))
-    (message "Unknown error talking to Gitlab: %s" m)))
+    (error "Unknown error talking to Gitlab: %s" m)))
 
 (defun code-review-gitlab--graphql (graphql variables callback)
   "Make GRAPHQL call to GITLAB.
@@ -82,7 +79,8 @@ Optionally using VARIABLES.  Provide HOST and CALLBACK fn."
                                                   ,@(and variables `(("variables" ,@variables)))))
                 :auth 'code-review
                 :host code-review-gitlab-graphql-host
-                :callback callback))
+                :callback callback
+                :errorback #'code-review-gitlab-errback))
 
 ;;; Functions to standardize Gitlab returned datastructure to the ones used by
 ;;; Github, adopted as standard in the project conception :/.
@@ -421,6 +419,14 @@ Optionally sets FALLBACK? to get minimal query."
         (lambda (err)
           (message "Got an error from the Gitlab Reply API %S!" err))))))
 
+(defun code-review-gitlab--user ()
+  "Get the user in the authinfo file."
+  (-> (auth-source-search :host code-review-gitlab-host)
+      (car)
+      (plist-get :user)
+      (split-string "\\^")
+      (car)))
+
 (cl-defmethod code-review-send-review ((review code-review-submit-gitlab-review) callback)
   "Submit review comments given REVIEW and a CALLBACK fn."
   (let* ((pr (oref review pr))
@@ -452,8 +458,8 @@ Optionally sets FALLBACK? to get minimal query."
                   nil
                   :auth 'code-review
                   :host code-review-gitlab-host
-                  :callback (lambda (&rest _)
-                              (message "Approved!"))))
+                  :payload `((sha . ,(a-get-in infos (list 'diffRefs 'headSha))))
+                  :username (code-review-gitlab--user)))
       ("REQUEST_CHANGES"
        (error "Not supported in Gitlab"))
       ("COMMENT"))
@@ -567,7 +573,8 @@ Return the blob URL if BLOB? is provided."
                :host code-review-gitlab-host
                :payload (code-review-gitlab-fix-payload payload local-comment)
                :callback (lambda (&rest _)
-                           (message "Review Comments successfully!")))
+                           (message "Review Comments successfully!"))
+               :errorback #'code-review-gitlab-errback)
     (sit-for 0.5)
     (funcall callback)))
 
