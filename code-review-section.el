@@ -1182,13 +1182,14 @@ Optionally DELETE? flag must be set if you want to remove it."
       (add-face-text-property 0 (length heading) 'code-review-recent-comment-heading t heading)
       (magit-insert-heading heading)
       (magit-insert-section (code-review-code-comment-section obj)
-        (code-review--insert-html (oref obj msg) (* 3 code-review-section-indent-width))
+        (code-review--insert-html
+         (oref obj msg)
+         (* 3 code-review-section-indent-width))
         (when-let (reactions-obj (oref obj reactions))
           (code-review-comment-insert-reactions
            reactions-obj
            "code-comment"
-           (oref obj id)))
-        (insert ?\n)))))
+           (oref obj id)))))))
 
 (defun code-review-section-insert-outdated-comment (comments amount-loc)
   "Insert outdated COMMENTS in the buffer of PULLREQ-ID considering AMOUNT-LOC."
@@ -1235,8 +1236,10 @@ Optionally DELETE? flag must be set if you want to remove it."
               (oset outdated-section hidden t)
 
               (dolist (c (alist-get safe-hunk hunk-groups nil nil 'equal))
-                (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
-                       (amount-new-loc-outdated-partial (+ 2 written-loc))
+                (let* ((written-loc (code-review--html-written-loc
+                                     (oref c msg)
+                                     (* 3 code-review-section-indent-width)))
+                       (amount-new-loc-outdated-partial (+ 1 written-loc))
                        (amount-new-loc-outdated (if (oref c reactions)
                                                     (+ 2 amount-new-loc-outdated-partial)
                                                   amount-new-loc-outdated-partial)))
@@ -1255,7 +1258,9 @@ Optionally DELETE? flag must be set if you want to remove it."
                                                   (oref c author)
                                                   (oref c state)))
                     (magit-insert-section (code-review-outdated-comment-section c)
-                      (code-review--insert-html (oref c msg) (* 3 code-review-section-indent-width))
+                      (code-review--insert-html
+                       (oref c msg)
+                       (* 3 code-review-section-indent-width))
                       (when-let (reactions-obj (oref c reactions))
                         (code-review-comment-insert-reactions
                          reactions-obj

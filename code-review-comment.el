@@ -241,9 +241,6 @@ Optionally define a MSG."
   (let* ((reply-pos (- (+ (oref obj position)
                           (length (split-string (oref obj msg) "\n")))
                        2))
-         (buff-name (if code-review-comment-commit-buffer?
-                        code-review-commit-buffer-name
-                      code-review-buffer-name))
          (clean-msg (code-review-utils--comment-clean-msg
                      (oref obj msg)
                      default-buff-msg))
@@ -259,7 +256,7 @@ Optionally define a MSG."
                                           (local?)
                                           (reply? . t)))))))
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review--build-buffer buff-name)
+    (code-review--build-buffer)
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section) default-buff-msg)
