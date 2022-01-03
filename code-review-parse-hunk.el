@@ -5,7 +5,7 @@
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
 ;; Created: December 19, 2021
-;; Version: 0.0.5
+;; Version: 0.0.6
 ;;
 ;; This file is not part of GNU Emacs.
 
