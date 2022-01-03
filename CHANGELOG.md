@@ -14,6 +14,7 @@
 - [#162](https://github.com/wandersoncferreira/code-review/pull/162): fix obsolete defgeneric to cl-defgeneric.
 - [#166](https://github.com/wandersoncferreira/code-review/pull/166): github-related code refactor
 - [#167](https://github.com/wandersoncferreira/code-review/pull/167): gitlab-related code refactor
+- [#168](https://github.com/wandersoncferreira/code-review/pull/168): bitbucket-related code refactor
 
 # v0.0.5
 
