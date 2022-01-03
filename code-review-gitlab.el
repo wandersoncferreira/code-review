@@ -122,14 +122,54 @@ an object then we need to build the diff string ourselves here."
     ""
     pr-changes)))
 
-(defun code-review-gitlab-fix-review-comments (raw-comments)
-  "Format RAW-COMMENTS to be compatible with established shape in the package."
-  (let* ((review-comments (nreverse
-                           (-filter
-                            (lambda (c)
-                              (and (not (code-review-gitlab--regular-comment? c))
-                                   (not (a-get c 'system))))
-                            raw-comments)))
+(defun code-review-gitlab--review-comments (all-comments)
+  "Return only review comments from ALL-COMMENTS."
+  (nreverse
+   (-filter
+    (lambda (c)
+      (and (not (code-review-gitlab--regular-comment? c))
+           (not (a-get c 'system))))
+    raw-comments)))
+
+(defun code-review-gitlab--overview-comments (all-comments)
+  "Return only overview comments from ALL-COMMENTS."
+  (nreverse
+   (-filter
+    (lambda (c)
+      (code-review-gitlab--regular-comment? c))
+    comment-nodes)))
+
+(defun code-review-gitlab--review-comment->code-review-comment (comment)
+  "Transform a Gitlab review COMMENT into `code-review-comment' structure."
+  (let-alist comment
+    (let* ((path .position.oldPath)
+           (mapping  (alist-get .position.oldPath
+                                code-review-gitlab-line-diff-mapping
+                                nil nil 'equal))
+           (line-obj (if .position.oldLine
+                         `((old . t)
+                           (line-pos . ,.position.oldLine))
+                       `((new . t)
+                         (line-pos . ,.position.newLine))))
+           (discussion-id (-> .discussion.id
+                              (split-string "DiffDiscussion/")
+                              (-second-item)))
+           (diff-pos (code-review-parse-hunk-relative-pos mapping line-obj)))
+      `((author (login . ,.author.login))
+        (state . ,"")
+        (bodyHTML .,"")
+        (createdAt . ,.createdAt)
+        (updatedAt . ,.updatedAt)
+        (comments (nodes ((bodyHTML . ,.bodyHTML)
+                          (path . ,.position.oldPath)
+                          (position . ,diff-pos)
+                          (databaseId . ,discussion-id)
+                          (createdAt . ,.createdAt)
+                          (updatedAt . ,.updatedAt))))))))
+
+(defun code-review-gitlab-fix-review-comments (all-comments)
+  "Get `code-review-comment' structure out of ALL-COMMENTS to all review comments."
+  (let* ((review-comments (code-review-gitlab--review-comments all-comments))
          (grouped-comments (-group-by
                             (lambda (c)
                               (let ((line (or (a-get-in c (list 'position 'oldLine))
@@ -139,50 +179,30 @@ an object then we need to build the diff string ourselves here."
                                 ;; a positional line number to be possible to
                                 ;; place it in the diff. However, Gitlab's API
                                 ;; does not provide a good differentiation
-                                ;; between a Overview comment and a Diff comment
-                                ;; so the heuristic used here might be incomplete.
+                                ;; between an Overview comment and a Diff
+                                ;; comment so the heuristic used in
+                                ;; `code-review-gitlab--review-comments' might
+                                ;; be incomplete.
                                 (if (not (numberp line))
-                                    (throw 'gitlab-comment-without-line-number
-                                           "Review Comment
+                                    (error "Review Comment
                                     without position line number
                                     found! Possibly a bug in
                                     heuristic to identify Review
-                                    Comments.")
+                                    Comments")
                                   (concat path ":" (number-to-string line)))))
-                            review-comments))
-         (comment->code-review-comment
-          (lambda (c)
-            (let-alist c
-              (let* ((path .position.oldPath)
-                     (mapping  (alist-get .position.oldPath code-review-gitlab-line-diff-mapping
-                                          nil nil 'equal))
-                     (line-obj (if .position.oldLine
-                                   `((old . t)
-                                     (line-pos . ,.position.oldLine))
-                                 `((new . t)
-                                   (line-pos . ,.position.newLine))))
-                     (discussion-id (-second-item (split-string .discussion.id "DiffDiscussion/")))
-                     (diff-pos (code-review-parse-hunk-relative-pos mapping line-obj)))
-                `((author (login . ,.author.login))
-                  (state . ,"")
-                  (bodyHTML .,"")
-                  (createdAt . ,.createdAt)
-                  (updatedAt . ,.updatedAt)
-                  (comments (nodes ((bodyHTML . ,.bodyHTML)
-                                    (path . ,.position.oldPath)
-                                    (position . ,diff-pos)
-                                    (databaseId . ,discussion-id)
-                                    (createdAt . ,.createdAt)
-                                    (updatedAt . ,.updatedAt))))))))))
+                            review-comments)))
     (-reduce-from
      (lambda (acc k)
        (let* ((comments (alist-get k grouped-comments nil nil 'equal)))
          (if (> (length comments) 1)
-             (append acc (-map
-                          (lambda (c)
-                            (funcall comment->code-review-comment c))
-                          (nreverse comments)))
-           (cons (funcall comment->code-review-comment (-first-item comments)) acc))))
+             (append acc
+                     (-map
+                      (lambda (c)
+                        (code-review-gitlab--review-comment->code-review-comment c))
+                      (nreverse comments)))
+           (cons (code-review-gitlab--review-comment->code-review-comment
+                  (-first-item comments))
+                 acc))))
      nil
      (a-keys grouped-comments))))
 
@@ -195,23 +215,19 @@ an object then we need to build the diff string ourselves here."
 
 (defun code-review-gitlab-fix-infos (gitlab-infos)
   "Make GITLAB-INFOS structure compatible with GITHUB."
-  (let ((comment-nodes (a-get-in gitlab-infos (list 'comments 'nodes))))
-    (-> gitlab-infos
-        (a-assoc 'commits
-                 (a-alist 'totalCount (a-get gitlab-infos 'commitCount)
-                          'nodes (-map
-                                  (lambda (c)
-                                    (a-alist 'commit c))
-                                  (a-get-in gitlab-infos (list 'commitsWithoutMergeCommits 'nodes)))))
-        (a-assoc 'comments
-                 (a-alist 'nodes
-                          (nreverse
-                           (-filter
-                            (lambda (c)
-                              (code-review-gitlab--regular-comment? c))
-                            comment-nodes))))
-        (a-assoc 'reviews
-                 (a-alist 'nodes (code-review-gitlab-fix-review-comments comment-nodes))))))
+  (let ((all-comments (a-get-in gitlab-infos (list 'comments 'nodes))))
+    (let-alist gitlab-infos
+      (-> gitlab-infos
+          (a-assoc 'commits
+                   (a-alist 'totalCount .commitCount
+                            'nodes (-map
+                                    (lambda (c)
+                                      (a-alist 'commit c))
+                                    .commitsWithoutMergeCommits.nodes)))
+          (a-assoc 'comments
+                   (a-alist 'nodes (code-review-gitlab--overview-comments all-comments)))
+          (a-assoc 'reviews
+                   (a-alist 'nodes (code-review-gitlab-fix-review-comments all-comments)))))))
 
 (defun code-review-gitlab-fix-payload (payload comment)
   "Adjust the PAYLOAD based on the COMMENT.
