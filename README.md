@@ -76,15 +76,25 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 ### Code Review
 
-Set `code-review-fill-column` to define line wrap comment sections.
+Define line wrap in comment sections.
 
-If you want to use `code-review` in a full buffer you can change the function
-used to display the buffer at `code-review-new-buffer-window-strategy` e.g. you
-can set `(setq code-review-new-buffer-window-strategy #'switch-to-buffer)` to
-not open a new window.
+``` emacs-lisp
+(setq code-review-fill-column 80)
+```
 
-Set `code-review-download-dir` to change the place Code Review will download
-binary files in your pull request when you decide to visit them.
+Change how `code-review` splits the buffer when opening a new PR. Defaults to
+`#'switch-to-buffer-other-window`.
+
+``` emacs-lisp
+(setq code-review-new-buffer-window-strategy #'switch-to-buffer)
+```
+
+Change the destination where binary files is downloaded.
+
+``` emacs-lisp
+(setq code-review-download-dir "/tmp/code-review/")
+```
+
 
 ### Forge specific
 

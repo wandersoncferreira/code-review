@@ -1621,6 +1621,7 @@ If you want to display a minibuffer MSG in the end."
                         (baseRefName . ,.destination.branch.name)
                         (headRefName . ,.source.branch.name)
                         (comments (nodes . ,.comments.nodes))
+                        (commits . ,.commits)
                         (reviews (nodes . ,.reviews.nodes))))))
 
     ;; 1. save raw diff data
