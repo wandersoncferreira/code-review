@@ -185,7 +185,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                  (code-review--build-buffer
                   code-review-buffer-name
                   nil
-                  "Done submitting review and replies."))))))))))
+                  "Done submitting review and replies"))))))))))
 
 ;;;###autoload
 (defun code-review-submit-approve (&optional feedback)
@@ -199,7 +199,8 @@ Optionally set a FEEDBACK message."
     (if (code-review-github-repo-p pr)
         (let-alist last-commit
           (cond
-           ((string-equal .commit.statusCheckRollup.state "SUCCESS")
+           ((or (string-equal .commit.statusCheckRollup.state "SUCCESS")
+                (not .commit.statusCheckRollup))
             (code-review--submit "APPROVE" feedback))
            (code-review-always-restrict-approval?
             (message "PR have CI issues. You cannot approve it."))

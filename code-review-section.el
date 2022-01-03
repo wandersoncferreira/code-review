@@ -1573,7 +1573,7 @@ If you want to display a minibuffer MSG in the end."
 
     ;; 1.2 trigger renders
     (progress-reporter-update progress 5)
-    (code-review--trigger-hooks buff-name msg)
+    (code-review--trigger-hooks buff-name nil msg)
     (progress-reporter-done progress)))
 
 (cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
@@ -1603,7 +1603,7 @@ If you want to display a minibuffer MSG in the end."
 
   ;; 1.3. trigger renders
   (progress-reporter-update progress 6)
-  (code-review--trigger-hooks buff-name msg)
+  (code-review--trigger-hooks buff-name nil msg)
   (progress-reporter-done progress))
 
 (cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
@@ -1637,7 +1637,7 @@ If you want to display a minibuffer MSG in the end."
 
     ;; 1.3 trigger renders
     (progress-reporter-update progress 5)
-    (code-review--trigger-hooks buff-name msg)
+    (code-review--trigger-hooks buff-name nil msg)
     (progress-reporter-done progress)))
 
 (defcustom code-review-log-raw-request-responses nil
