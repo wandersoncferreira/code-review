@@ -86,69 +86,14 @@ not open a new window.
 Set `code-review-download-dir` to change the place Code Review will download
 binary files in your pull request when you decide to visit them.
 
-### Setup
+### Forge specific
 
-If you have trouble with the authinfo process below there is this nice
-[Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
-explaining a bit the setup!
+Follow the documentation to your version control provider to see more details
+for the setup and configuration.
 
-#### GitHub
-
-`code-review` needs a GitHub token to act on your behalf for fetching PRs and
-submitting reviews.
-
-1. [Create a personal access token using GitHub](https://github.com/settings/tokens)
-2. Set the `repo` scope as the subscope of repo
-3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
-
-For enterprise users do not forget to change the value of
-`code-review-github-host` to match the host of your private instance. The
-current recommended way to use the package with enterprise solution is through
-`code-review-forge-pr-at-point` we have a bug identifying enterprise URLs in `code-review-start` yet.
-
-##### Auth
-
-Add a line to your auth source files, usually `~/.authinfo.gpg`, with your login
-and token:
-
-```
-machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
-```
-
-#### Gitlab
-
-1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
-2. Choose the `api` scope
-
-For enterprise users do not forget to change the value of
-`code-review-gitlab-host` and `code-review-gitlab-graphql-host` to match the
-ones of your private instance. The current recommended way to use the package
-with enterprise solution is through `code-review-forge-pr-at-point` we have a
-bug identifying enterprise URLs in `code-review-start` yet.
-
-##### Auth
-
-Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
-and token:
-
-``` emacs-lisp
-machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
-```
-
-#### Bitbucket
-
-1. Create a personal access token using Bitbucket. Go to your Personal Settings -> App Password
-2. Choose the `pull_request:write` scope
-
-##### Auth
-
-Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
-and token:
-
-``` emacs-lisp
-machine api.bitbucket.org/2.0 login yourlogin^code-review password MYAPPPASSWORD
-```
-
+- [Github](./docs/github.md)
+- [Gitlab](./docs/gitlab.md)
+- [Bitbucket](./docs/bitbucket.md)
 
 # Keybindings
 
