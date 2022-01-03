@@ -268,7 +268,8 @@ The payload is used to send a MR review to Gitlab."
             :unpaginate t
             :host code-review-gitlab-host
             :auth 'code-review
-            :callback callback))
+            :callback callback
+            :errorback #'code-review-gitlab-errback))
 
 (cl-defmethod code-review-diff-deferred ((gitlab code-review-gitlab-repo))
   "Get DIFF from GITLAB."

@@ -45,77 +45,79 @@
 
 (defun code-review-parse-hunk-table (hunkstring)
   "Table with old line, new line, added/deleted line and relative pos from HUNKSTRING."
-  (let* ((difflines (split-string hunkstring "\n"))
-         (relative 0)
-         (del-counter 0)
-         (add-counter 0)
-         old-start
-         old-num-lines
-         new-start
-         new-num-lines
-         new-change
-         change
-         res)
-    (dolist (diffline difflines)
-      (cond
-       ((and (eq 0 relative)
-             (string-match code-review-parse--hunk-regex diffline))
-        (setq old-start (string-to-number (match-string 1 diffline))
-              old-num-lines (string-to-number (match-string 2 diffline))
-              new-start (string-to-number (match-string 3 diffline))
-              new-num-lines (string-to-number (match-string 4 diffline))
-              del-counter old-start
-              add-counter new-start
-              new-change nil))
+  (if (string-prefix-p "Binary files" hunkstring)
+      nil
+    (let* ((difflines (split-string hunkstring "\n"))
+           (relative 0)
+           (del-counter 0)
+           (add-counter 0)
+           old-start
+           old-num-lines
+           new-start
+           new-num-lines
+           new-change
+           change
+           res)
+      (dolist (diffline difflines)
+        (cond
+         ((and (eq 0 relative)
+               (string-match code-review-parse--hunk-regex diffline))
+          (setq old-start (string-to-number (match-string 1 diffline))
+                old-num-lines (string-to-number (match-string 2 diffline))
+                new-start (string-to-number (match-string 3 diffline))
+                new-num-lines (string-to-number (match-string 4 diffline))
+                del-counter old-start
+                add-counter new-start
+                new-change nil))
 
-       ((and (string-match code-review-parse--hunk-regex diffline)
-             (not (eq 0 relative)))
-        (setq relative (+ 1 relative))
-        (setq old-start (string-to-number (match-string 1 diffline))
-              old-num-lines (string-to-number (match-string 2 diffline))
-              new-start (string-to-number (match-string 3 diffline))
-              new-num-lines (string-to-number (match-string 4 diffline))
-              del-counter old-start
-              add-counter new-start
-              new-change nil))
+         ((and (string-match code-review-parse--hunk-regex diffline)
+               (not (eq 0 relative)))
+          (setq relative (+ 1 relative))
+          (setq old-start (string-to-number (match-string 1 diffline))
+                old-num-lines (string-to-number (match-string 2 diffline))
+                new-start (string-to-number (match-string 3 diffline))
+                new-num-lines (string-to-number (match-string 4 diffline))
+                del-counter old-start
+                add-counter new-start
+                new-change nil))
 
-       ((string-prefix-p "-" diffline)
-        (setq relative (+ 1 relative))
-        (setq change `((type . "del")
-                       (del . t)
-                       (ln . ,del-counter)
-                       (relative . ,relative))
-              old-num-lines (1- old-num-lines)
-              del-counter (1+ del-counter)
-              new-change t))
+         ((string-prefix-p "-" diffline)
+          (setq relative (+ 1 relative))
+          (setq change `((type . "del")
+                         (del . t)
+                         (ln . ,del-counter)
+                         (relative . ,relative))
+                old-num-lines (1- old-num-lines)
+                del-counter (1+ del-counter)
+                new-change t))
 
-       ((string-prefix-p "+" diffline)
-        (setq relative (+ 1 relative))
-        (setq change `((type . "add")
-                       (add . t)
-                       (ln . ,add-counter)
-                       (relative . ,relative))
-              new-num-lines (1- new-num-lines)
-              add-counter (1+ add-counter)
-              new-change t))
+         ((string-prefix-p "+" diffline)
+          (setq relative (+ 1 relative))
+          (setq change `((type . "add")
+                         (add . t)
+                         (ln . ,add-counter)
+                         (relative . ,relative))
+                new-num-lines (1- new-num-lines)
+                add-counter (1+ add-counter)
+                new-change t))
 
-       ((or (string-match-p "\s+" diffline)
-            (string-empty-p diffline))
-        (setq relative (+ 1 relative))
-        (setq change `((type . "normal")
-                       (normal . t)
-                       (ln1 . ,del-counter)
-                       (ln2 . ,add-counter)
-                       (relative . ,relative))
-              new-num-lines (1- new-num-lines)
-              add-counter (1+ add-counter)
-              del-counter (1+ del-counter)
-              new-change t)))
-      (when new-change
-        (if (not res)
-            (setq res (list change))
-          (setq res (append res (list change))))))
-    res))
+         ((or (string-match-p "\s+" diffline)
+              (string-empty-p diffline))
+          (setq relative (+ 1 relative))
+          (setq change `((type . "normal")
+                         (normal . t)
+                         (ln1 . ,del-counter)
+                         (ln2 . ,add-counter)
+                         (relative . ,relative))
+                new-num-lines (1- new-num-lines)
+                add-counter (1+ add-counter)
+                del-counter (1+ del-counter)
+                new-change t)))
+        (when new-change
+          (if (not res)
+              (setq res (list change))
+            (setq res (append res (list change))))))
+      res)))
 
 (defun code-review-parse-hunk-relative-pos (hunktable line-obj)
   "Given a HUNKTABLE (`code-review-parse-hunk-table') and LINE-OBJ return absolute diff pos."

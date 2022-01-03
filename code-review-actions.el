@@ -383,14 +383,22 @@ Optionally set a FEEDBACK message."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (setq code-review-comment-cursor-pos (point))
-    (setq code-review-comment-title? t)
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert (oref pr title))
-      (insert ?\n)
-      (switch-to-buffer-other-window buffer)
-      (code-review-comment-mode))))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (setq code-review-comment-title? t)
+          (with-current-buffer buffer
+            (erase-buffer)
+            (insert (oref pr title))
+            (insert ?\n)
+            (switch-to-buffer-other-window buffer)
+            (code-review-comment-mode)))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
 
 ;;;###autoload
 (defun code-review-set-label ()
@@ -449,19 +457,27 @@ If a valid ASSIGNEE is provided, use that instead."
   "Change the milestone for the current PR.  Sent immediately."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (if-let (options (code-review-get-milestones pr))
-        (let* ((choice (completing-read "Choose: " (a-keys options)))
-               (milestone `((title . ,choice)
-                            (perc . 0)
-                            (number .,(alist-get choice options nil nil 'equal)))))
-          (setq code-review-comment-cursor-pos (point))
-          (oset pr milestones milestone)
-          (code-review-send-milestone
-           pr
-           (lambda ()
-             (code-review-db-update pr)
-             (code-review--build-buffer))))
-      (message "No milestone found."))))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (if-let (options (code-review-get-milestones pr))
+              (let* ((choice (completing-read "Choose: " (a-keys options)))
+                     (milestone `((title . ,choice)
+                                  (perc . 0)
+                                  (number .,(alist-get choice options nil nil 'equal)))))
+                (setq code-review-comment-cursor-pos (point))
+                (oset pr milestones milestone)
+                (code-review-send-milestone
+                 pr
+                 (lambda ()
+                   (code-review-db-update pr)
+                   (code-review--build-buffer))))
+            (message "No milestone found.")))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
 
 ;;;###autoload
 (defun code-review-set-description ()
@@ -573,15 +589,24 @@ If a valid ASSIGNEE is provided, use that instead."
 (defun code-review-request-review-at-point ()
   "Request reviewer at point."
   (interactive)
-  (setq code-review-comment-cursor-pos (point))
-  (let* ((line (buffer-substring-no-properties
-                (line-beginning-position)
-                (line-end-position)))
-         (login (-> line
-                    (split-string "- @")
-                    (-second-item)
-                    (string-trim))))
-    (code-review-request-reviews login)))
+  (let ((pr (code-review-db-get-pullreq)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (let* ((line (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position)))
+                 (login (-> line
+                            (split-string "- @")
+                            (-second-item)
+                            (string-trim))))
+            (code-review-request-reviews login)))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
 
 ;;;###autoload
 (defun code-review-toggle-display-all-comments ()
