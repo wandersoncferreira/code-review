@@ -577,8 +577,7 @@ INDENT count of spaces are added at the start of every line."
                           (insert "\n"))))
                   (progn
                     (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
-                    (insert (oref obj msg))
-                    (insert ?\n)))))))
+                    (insert (oref obj msg))))))))
         (insert ?\n)))))
 
 ;; description
