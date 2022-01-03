@@ -1295,8 +1295,10 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                        code-review-section--display-diff-comments)
                   (and (code-review-code-comment-section-p c)
                        code-review-section--display-diff-comments))
-          (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
-                 (amount-loc-incr-partial (+ 2 written-loc))
+          (let* ((written-loc (code-review--html-written-loc
+                               (oref c msg)
+                               (* 3 code-review-section-indent-width)))
+                 (amount-loc-incr-partial (+ 1 written-loc))
                  (amount-loc-incr (if (oref c reactions)
                                       (+ 2 amount-loc-incr-partial)
                                     amount-loc-incr-partial)))

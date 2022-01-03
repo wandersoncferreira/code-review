@@ -185,7 +185,9 @@ Optionally define a MSG."
         (message "You can't add text over unspecified region.")
       (let* ((current-line (line-number-at-pos))
              (line (save-excursion
-                     (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+                     (buffer-substring-no-properties
+                      (line-beginning-position)
+                      (line-end-position))))
              (line-type (cond
                          ((string-prefix-p "-" line)
                           "REMOVED")
@@ -194,7 +196,8 @@ Optionally define a MSG."
                          (t
                           "UNCHANGED")))
              (amount-loc nil))
-        (while (and (not (looking-at "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
+        (while (and (not (looking-at
+                          "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
                     (not (equal (point) (point-min))))
           (forward-line -1))
         (let ((section (magit-current-section)))
