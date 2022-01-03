@@ -12,6 +12,7 @@
 - [#157](https://github.com/wandersoncferreira/code-review/pull/157): bitbucket stubs for not implemented feature.
 - [#159](https://github.com/wandersoncferreira/code-review/pull/159): place diff under Files Changed section
 - [#162](https://github.com/wandersoncferreira/code-review/pull/162): fix obsolete defgeneric to cl-defgeneric.
+- [#166](https://github.com/wandersoncferreira/code-review/pull/166): github-related code refactor
 
 # v0.0.5
 
