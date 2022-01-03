@@ -368,7 +368,7 @@ Optionally set a FEEDBACK message."
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
     (setq code-review-comment-feedback? t)
-    (setq code-review-comment-cursor-pos (point-min))
+    (setq code-review-comment-cursor-pos (point))
     (with-current-buffer buffer
       (erase-buffer)
       (insert (or (oref pr feedback) code-review-comment-feedback-msg))
@@ -382,7 +382,7 @@ Optionally set a FEEDBACK message."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (setq code-review-comment-cursor-pos (point-min))
+    (setq code-review-comment-cursor-pos (point))
     (setq code-review-comment-title? t)
     (with-current-buffer buffer
       (erase-buffer)
@@ -416,6 +416,7 @@ Rewrite all current labels with the options chosen here."
 (defun code-review--set-assignee-field (obj &optional assignee)
   "Change assignee header field given an OBJ.
 If a valid ASSIGNEE is provided, use that instead."
+  (setq code-review-comment-cursor-pos (point))
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)

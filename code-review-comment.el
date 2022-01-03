@@ -334,8 +334,11 @@ Optionally define a MSG."
                               (save-excursion
                                 (buffer-substring-no-properties (point-min) (point-max))))))
              (pr (code-review-db-get-pullreq)))
+
         (kill-buffer-and-window)
+
         (cond
+
          (code-review-comment-description?
           (oset pr raw-infos (-> (oref pr raw-infos)
                                  (a-assoc 'bodyText comment-text)
@@ -344,35 +347,42 @@ Optionally define a MSG."
            pr
            (lambda ()
              (code-review-db-update pr)
-             (code-review--build-buffer code-review-buffer-name))))
+             (code-review--build-buffer)
+             (code-review-comment-reset-global-vars))))
+
          (code-review-comment-title?
-          (setq code-review-comment-cursor-pos (point))
           (oset pr title comment-text)
           (code-review-send-title
            pr
            (lambda ()
              (code-review-db-update pr)
-             (code-review--build-buffer code-review-buffer-name))))
+             (code-review--build-buffer)
+             (code-review-comment-reset-global-vars))))
+
          (code-review-comment-feedback?
           (let ((msg
                  (code-review-utils--comment-clean-msg
                   comment-text
                   code-review-comment-feedback-msg)))
             (code-review-db--pullreq-feedback-update msg)
-            (code-review--build-buffer code-review-buffer-name)))
+            (code-review--build-buffer)
+            (code-review-comment-reset-global-vars)))
+
          (code-review-promote-comment-to-issue?
           (progn
             (oset code-review-comment-uncommitted buffer-text comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-buffer-msg)))
+             code-review-comment-buffer-msg)
+            (code-review-comment-reset-global-vars)))
 
          (code-review-comment-send?
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-single-comment-msg)))
+             code-review-comment-single-comment-msg)
+            (code-review-comment-reset-global-vars)))
 
          (code-review-comment-single-comment?
           (let ((msg
@@ -381,15 +391,16 @@ Optionally define a MSG."
                   code-review-comment-single-comment-msg))
                 (callback (lambda (&rest _)
                             (let ((code-review-section-full-refresh? t))
-                              (code-review--build-buffer code-review-buffer-name)))))
+                              (code-review--build-buffer)
+                              (code-review-comment-reset-global-vars)))))
             (code-review-new-issue-comment pr msg callback)))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-buffer-msg)))))
-    (code-review-comment-reset-global-vars)))
+             code-review-comment-buffer-msg)
+            (code-review-comment-reset-global-vars)))))))
 
 ;;; ----
 
