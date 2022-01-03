@@ -39,6 +39,14 @@
 (defclass code-review-bitbucket-repo (code-review-db-pullreq)
   ((callback            :initform nil)))
 
+(defun code-review-bitbucket-errback (&rest m)
+  "Error callback, displays the error message M."
+  (let-alist m
+    (code-review-utils--log
+     "code-review-bitbucket-errback"
+     (prin1-to-string m))
+    (error "Unknown error talking to Bitbucket: %s" m)))
+
 (defun code-review-bitbucket--ghub-post (url payload &optional callback)
   "Given URL and PAYLOAD perform a POST.
 An optionally provide a CALLBACK."
@@ -48,11 +56,11 @@ An optionally provide a CALLBACK."
                 :auth 'code-review
                 :host code-review-bitbucket-host
                 :payload payload
-                :callback callback))
+                :callback callback
+                :noerror 'return))
 
-(defun code-review-bitbucket--ghub-get (url &optional callback)
-  "Given URL and PAYLOAD perform a GET.
-An optionally provide a CALLBACK."
+(defun code-review-bitbucket--ghub-get (url callback)
+  "Given URL and CALLBACK perform an async GET."
   (ghub-request "GET" url
                 nil
                 :forge 'bitbucket
@@ -60,17 +68,30 @@ An optionally provide a CALLBACK."
                 :host code-review-bitbucket-host
                 :callback callback))
 
+(defun code-review-bitbucket--ghub-sync-get (url)
+  "Given URL perform a sync GET."
+  (ghub-request "GET" url
+                nil
+                :forge 'bitbucket
+                :auth 'code-review
+                :host code-review-bitbucket-host
+                :noerror 'return))
+
 (cl-defmethod code-review-pullreq-diff ((bitbucket code-review-bitbucket-repo) callback)
   "Get PR diff from BITBUCKET, run CALLBACK."
-  (let ((diff-url (let-alist (code-review-bitbucket--ghub-get
-                              (format "/repositories/%s/%s/pullrequests/%s"
-                                      (oref bitbucket owner)
-                                      (oref bitbucket repo)
-                                      (oref bitbucket number)))
-                    (-> .links.diff.href
-                        (split-string code-review-bitbucket-host)
-                        (-second-item)))))
-    (code-review-bitbucket--ghub-get diff-url callback)))
+  (let ((pr-infos
+         (code-review-bitbucket--ghub-sync-get
+          (format "/repositories/%s/%s/pullrequests/%s"
+                  (oref bitbucket owner)
+                  (oref bitbucket repo)
+                  (oref bitbucket number)))))
+    (if (string-equal (a-get pr-infos 'type) "error")
+        (prin1 pr-infos)
+      (let ((diff-url (let-alist pr-infos
+                        (-> .links.diff.href
+                            (split-string code-review-bitbucket-host)
+                            (-second-item)))))
+        (code-review-bitbucket--ghub-get diff-url callback)))))
 
 (cl-defmethod code-review-diff-deferred ((bitbucket code-review-bitbucket-repo))
   "Get PR diff from BITBUCKET using deferred lib."
@@ -127,24 +148,29 @@ An optionally provide a CALLBACK."
 
 (cl-defmethod code-review-pullreq-infos ((bitbucket code-review-bitbucket-repo) callback)
   "Get PR infos from BITBUCKET, run CALLBACK."
-  (let* ((res (code-review-bitbucket--ghub-get
-               (format "/repositories/%s/%s/pullrequests/%s"
-                       (oref bitbucket owner)
-                       (oref bitbucket repo)
-                       (oref bitbucket number))))
-         (comments (->> (code-review-bitbucket--ghub-get
-                         (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=100"
-                                 (oref bitbucket owner)
-                                 (oref bitbucket repo)
-                                 (oref bitbucket number)))
-                        (-remove
-                         (lambda (it)
-                           (a-get it 'deleted)))))
-         (top-level-comments (code-review-bitbucket--top-level-comments comments))
-         (diff-comments (code-review-bitbucket--diff-comments comments)))
-    (funcall callback (-> res
-                          (a-assoc-in (list 'comments 'nodes) top-level-comments)
-                          (a-assoc-in (list 'reviews 'nodes) diff-comments)))))
+  (let ((res (code-review-bitbucket--ghub-sync-get
+              (format "/repositories/%s/%s/pullrequests/%s"
+                      (oref bitbucket owner)
+                      (oref bitbucket repo)
+                      (oref bitbucket number)))))
+    (if (string-equal (a-get res 'type) "error")
+        (prin1 res)
+      (let ((raw-comments (code-review-bitbucket--ghub-sync-get
+                           (format "/repositories/%s/%s/pullrequests/%s/comments?q=deleted=false&pagelen=100"
+                                   (oref bitbucket owner)
+                                   (oref bitbucket repo)
+                                   (oref bitbucket number)))))
+        (if (string-equal (a-get raw-comments 'type) "error")
+            (prin1 raw-comments)
+          (let* ((comments (-remove
+                            (lambda (it)
+                              (a-get it 'deleted))
+                            raw-comments))
+                 (top-level-comments (code-review-bitbucket--top-level-comments comments))
+                 (diff-comments (code-review-bitbucket--diff-comments comments)))
+            (funcall callback (-> res
+                                  (a-assoc-in (list 'comments 'nodes) top-level-comments)
+                                  (a-assoc-in (list 'reviews 'nodes) diff-comments)))))))))
 
 (cl-defmethod code-review-infos-deferred ((bitbucket code-review-bitbucket-repo))
   "GET PR infos from BITBUCKET using deferred lib."
