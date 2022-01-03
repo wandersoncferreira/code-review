@@ -329,10 +329,21 @@ INDENT count of spaces are added at the start of every line."
     map)
   "Keymaps for code-comment sections.")
 
+(defun code-review--distinct-labels (labels)
+  "Distinct LABELS."
+  (let (res)
+    (-filter
+     (lambda (it)
+       (when (not (-contains-p res (a-get it 'name)))
+         (progn
+           (setq res (append res (list (a-get it 'name))))
+           t)))
+     labels)))
+
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."
   (let* ((infos (code-review-db--pullreq-raw-infos))
-         (labels (-distinct
+         (labels (code-review--distinct-labels
                   (append (code-review-db--pullreq-labels)
                           (a-get-in infos (list 'labels 'nodes)))))
          (obj (code-review-labels-section :labels labels)))
@@ -373,9 +384,11 @@ INDENT count of spaces are added at the start of every line."
   (let* ((infos (code-review-db--pullreq-assignees))
          (assignee-names (-map
                           (lambda (a)
-                            (format "%s (@%s)"
-                                    (a-get a 'name)
-                                    (a-get a 'login)))
+                            (if (a-get a 'name)
+                                (format "%s (@%s)"
+                                        (a-get a 'name)
+                                        (a-get a 'login))
+                              (format "@%s" (a-get a 'login))))
                           infos))
          (assignees (if assignee-names
                         (string-join assignee-names ", ")
@@ -932,7 +945,7 @@ INDENT count of spaces are added at the start of every line."
   "Get the pretty version of milestone for a given OBJ."
   (cond
    ((and (oref obj title) (oref obj perc))
-    (format "%s (%s%%)"
+    (format "%s (%0.2f%%)"
             (oref obj title)
             (oref obj perc)))
    ((oref obj title)
@@ -1282,8 +1295,10 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                        code-review-section--display-diff-comments)
                   (and (code-review-code-comment-section-p c)
                        code-review-section--display-diff-comments))
-          (let* ((written-loc (code-review--html-written-loc (oref c msg) (* 3 code-review-section-indent-width)))
-                 (amount-loc-incr-partial (+ 2 written-loc))
+          (let* ((written-loc (code-review--html-written-loc
+                               (oref c msg)
+                               (* 3 code-review-section-indent-width)))
+                 (amount-loc-incr-partial (+ 1 written-loc))
                  (amount-loc-incr (if (oref c reactions)
                                       (+ 2 amount-loc-incr-partial)
                                     amount-loc-incr-partial)))
@@ -1514,7 +1529,7 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--auth-token-set? (obj res)
   "Default catch all unknown values passed to this function as OBJ and RES."
-  (code-review--log
+  (code-review-utils--log
    "code-review--auth-token-set?"
    (string-join (list
                  (prin1-to-string obj)
@@ -1533,16 +1548,16 @@ If you want to display a minibuffer MSG in the end."
             raw-infos-complete)))
 
     (when errors-complete-query
-      (code-review--log "code-review--internal-build"
+      (code-review-utils--log "code-review--internal-build"
                         (format "Data returned by GraphQL API: \n %s" (prin1-to-string res)))
       (message "GraphQL Github data contains errors. See `code-review-log-file' for details."))
 
     ;; verify must have value!
     (let-alist raw-infos
       (when (not .headRefOid)
-        (code-review--log "code-review--internal-build"
+        (code-review-utils--log "code-review--internal-build"
                           "Commit SHA not returned by GraphQL Github API. See `code-review-log-file' for details")
-        (code-review--log "code-review--internal-build"
+        (code-review-utils--log "code-review--internal-build"
                           (format "Data returned by GraphQL API: \n %s" (prin1-to-string res)))
         (error "Missing required data")))
 
@@ -1558,14 +1573,14 @@ If you want to display a minibuffer MSG in the end."
 
     ;; 1.2 trigger renders
     (progress-reporter-update progress 5)
-    (code-review--trigger-hooks buff-name msg)
+    (code-review--trigger-hooks buff-name nil msg)
     (progress-reporter-done progress)))
 
 (cl-defmethod code-review--internal-build ((_gitlab code-review-gitlab-repo) progress res &optional buff-name msg)
   "Helper function to build process for GITLAB based on the fetched RES informing PROGRESS."
 
   (when-let (err (a-get (-second-item res) 'errors))
-    (code-review--log
+    (code-review-utils--log
      "code-review--internal-build"
      (format "Data returned by GraphQL API: \n%s" (prin1-to-string err))))
 
@@ -1588,7 +1603,7 @@ If you want to display a minibuffer MSG in the end."
 
   ;; 1.3. trigger renders
   (progress-reporter-update progress 6)
-  (code-review--trigger-hooks buff-name msg)
+  (code-review--trigger-hooks buff-name nil msg)
   (progress-reporter-done progress))
 
 (cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
@@ -1622,7 +1637,7 @@ If you want to display a minibuffer MSG in the end."
 
     ;; 1.3 trigger renders
     (progress-reporter-update progress 5)
-    (code-review--trigger-hooks buff-name msg)
+    (code-review--trigger-hooks buff-name nil msg)
     (progress-reporter-done progress)))
 
 (defcustom code-review-log-raw-request-responses nil
