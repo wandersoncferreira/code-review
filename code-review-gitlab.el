@@ -124,12 +124,14 @@ an object then we need to build the diff string ourselves here."
 
 (defun code-review-gitlab--review-comments (all-comments)
   "Return only review comments from ALL-COMMENTS."
-  (nreverse
+  (--sort
+   (> (time-to-seconds (date-to-time (a-get it 'createdAt)))
+      (time-to-seconds (date-to-time (a-get other 'createdAt))))
    (-filter
     (lambda (c)
       (and (not (code-review-gitlab--regular-comment? c))
            (not (a-get c 'system))))
-    raw-comments)))
+    all-comments)))
 
 (defun code-review-gitlab--overview-comments (all-comments)
   "Return only overview comments from ALL-COMMENTS."
@@ -137,7 +139,7 @@ an object then we need to build the diff string ourselves here."
    (-filter
     (lambda (c)
       (code-review-gitlab--regular-comment? c))
-    comment-nodes)))
+    all-comments)))
 
 (defun code-review-gitlab--review-comment->code-review-comment (comment)
   "Transform a Gitlab review COMMENT into `code-review-comment' structure."
@@ -433,7 +435,7 @@ Optionally sets FALLBACK? to get minimal query."
 
       (deferred:error it
         (lambda (err)
-          (message "Got an error from the Gitlab Reply API %S!" err))))))
+          (error "Got an error from the Gitlab Reply API %S!" err))))))
 
 (defun code-review-gitlab--user ()
   "Get the user in the authinfo file."
@@ -589,10 +591,10 @@ Return the blob URL if BLOB? is provided."
                :host code-review-gitlab-host
                :payload (code-review-gitlab-fix-payload payload local-comment)
                :callback (lambda (&rest _)
-                           (message "Review Comments successfully!"))
-               :errorback #'code-review-gitlab-errback)
-    (sit-for 0.5)
-    (funcall callback)))
+                           (message "Review Comments successfully!")
+                           (sit-for 0.5)
+                           (funcall callback))
+               :errorback #'code-review-gitlab-errback)))
 
 (provide 'code-review-gitlab)
 ;;; code-review-gitlab.el ends here
