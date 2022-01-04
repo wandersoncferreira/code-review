@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- [#169](https://github.com/wandersoncferreira/code-review/pull/169): [gitlab] set labels command
+
 # v0.0.6
 
 - [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
