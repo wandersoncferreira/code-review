@@ -8,7 +8,7 @@ Features supported by each integrated forge:
 | Reply to comment               | x            | x      | x         |
 | Send only replies              | x            | x      | x         |
 | Send review with comments      | x            | x      | x         |
-| Set labels                     | x            |        |           |
+| Set labels                     | x            | x      |           |
 | Set assignee                   | x            |        |           |
 | Set milestone                  | x            |        |           |
 | Edit PR title                  | x            |        |           |
