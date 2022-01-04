@@ -400,6 +400,18 @@ Optionally set a FEEDBACK message."
                 ((code-review-bitbucket-repo-p pr)
                  "Bitbucket"))))))
 
+(defun code-review--labels-to-send (pr choices)
+  "The PR has a list of CHOICES for labels that should be send.
+This function will make sure we clean the list of labels and/or disable all of them upstream."
+  (when (not (-contains-p choices "<clean all labels>"))
+    (code-review--distinct-labels
+     (append
+      (-map (lambda (x)
+              `((name . ,x)
+                (color . "0075ca")))
+            choices)
+      (oref pr labels)))))
+
 ;;;###autoload
 (defun code-review-set-label ()
   "Change the labels of current PR.  Sent immediately.
@@ -407,13 +419,10 @@ Rewrite all current labels with the options chosen here."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (when-let (options (code-review-get-labels pr))
-      (let* ((choices (completing-read-multiple "Choose: " options))
-             (labels (append
-                      (-map (lambda (x)
-                              `((name . ,x)
-                                (color . "0075ca")))
-                            choices)
-                      (oref pr labels))))
+      (let* ((choices (completing-read-multiple "Choose: " (append
+                                                            options
+                                                            (list "<clean all labels>"))))
+             (labels (code-review--labels-to-send pr choices)))
         (setq code-review-comment-cursor-pos (point))
         (oset pr labels labels)
         (code-review-send-labels

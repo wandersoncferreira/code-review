@@ -329,17 +329,6 @@ INDENT count of spaces are added at the start of every line."
     map)
   "Keymaps for code-comment sections.")
 
-(defun code-review--distinct-labels (labels)
-  "Distinct LABELS."
-  (let (res)
-    (-filter
-     (lambda (it)
-       (when (not (-contains-p res (a-get it 'name)))
-         (progn
-           (setq res (append res (list (a-get it 'name))))
-           t)))
-     labels)))
-
 (defun code-review-section-insert-labels ()
   "Insert the labels of the header buffer."
   (let* ((infos (code-review-db--pullreq-raw-infos))

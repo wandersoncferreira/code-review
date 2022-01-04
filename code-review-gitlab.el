@@ -498,13 +498,34 @@ Optionally sets FALLBACK? to get minimal query."
   "Get a list of assignable users for current PR at GITLAB."
 (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-get-labels ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-get-labels ((gitlab code-review-gitlab-repo))
   "Get labels for your pr at GITLAB."
-  (code-review-gitlab-not-supported-message))
+  (let ((res (glab-get (format "/v4/projects/%s/labels"
+                               (code-review-gitlab--project-id gitlab))
+                       nil
+                       :unpaginate t
+                       :host code-review-gitlab-host
+                       :auth 'code-review
+                       :noerror 'return)))
+    (if (a-get res 'error)
+        (error (prin1-to-string res))
+      (-map
+       (lambda (it)
+         (a-get it 'name))
+       res))))
 
-(cl-defmethod code-review-send-labels ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-labels ((gitlab code-review-gitlab-repo) callback)
   "Set labels for your pr at GITLAB and call CALLBACK."
-  (code-review-gitlab-not-supported-message))
+  (let* ((labels (-map (lambda (it) (a-get it 'name)) (oref gitlab labels)))
+         (labels-str (string-join labels ",")))
+    (glab-put (format "/v4/projects/%s/merge_requests/%s"
+                      (code-review-gitlab--project-id gitlab)
+                      (oref gitlab number))
+              nil
+              :auth 'code-review
+              :host code-review-gitlab-host
+              :payload `((labels .,labels-str))
+              :callback (lambda (&rest _) (funcall callback)))))
 
 (cl-defmethod code-review-get-assignees ((_gitlab code-review-gitlab-repo))
   "Get assignees for your pr at GITLAB."

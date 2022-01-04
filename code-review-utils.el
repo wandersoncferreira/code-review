@@ -511,5 +511,16 @@ Expect the same output as `git diff --no-prefix`"
                             headers url output)))
       output)))
 
+(defun code-review--distinct-labels (labels)
+  "Distinct LABELS."
+  (let (res)
+    (-filter
+     (lambda (it)
+       (when (not (-contains-p res (a-get it 'name)))
+         (progn
+           (setq res (append res (list (a-get it 'name))))
+           t)))
+     labels)))
+
 (provide 'code-review-utils)
 ;;; code-review-utils.el ends here
