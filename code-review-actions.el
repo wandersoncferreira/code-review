@@ -448,7 +448,7 @@ If a valid ASSIGNEE is provided, use that instead."
        (closql-insert (code-review-db) obj t)
        (code-review--build-buffer)))))
 
-(defun code-review-set-assignee ()
+(defun code-review-set-assignee (&rest _)
   "Change assignee for the current PR.  Sent immediately.."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))

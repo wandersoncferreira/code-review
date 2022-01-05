@@ -358,6 +358,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
         nodes {
           name
           login
+          url
         }
       }
       projectCards(first: 10) {

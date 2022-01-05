@@ -394,26 +394,73 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-assignees-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-set-assignee)
+    (define-key map [mouse-2] 'code-review-set-assignee)
+    (define-key map [follow-link] 'code-review-set-assignee)
     map)
   "Keymaps for code-comment sections.")
+
+(defclass code-review-assignee-section (magit-section)
+  ((keymap :initform 'code-review-assignee-section-map)
+   (name :initarg :name)
+   (url :initarg :url)))
+
+(defun code-review-assignee-visit-at-remote (&rest _)
+  (interactive)
+  (with-slots (value) (magit-current-section)
+    (let ((url (oref value url)))
+      (if url
+          (browse-url url)
+        (message "Can't visit the user in remote. Missing profile URL.")))))
+
+(defvar code-review-assignee-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-assignee-visit-at-remote)
+    (define-key map [mouse-2] 'code-review-assignee-visit-at-remote)
+    (define-key map [follow-link] 'code-review-assignee-visit-at-remote)
+    map)
+  "Keymaps for assignee section")
 
 (defun code-review-section-insert-assignee ()
   "Insert the assignee of the header buffer."
   (let* ((infos (code-review-db--pullreq-assignees))
          (assignee-names (-map
                           (lambda (a)
-                            (if (a-get a 'name)
-                                (format "%s (@%s)"
-                                        (a-get a 'name)
-                                        (a-get a 'login))
-                              (format "@%s" (a-get a 'login))))
-                          infos))
-         (assignees (if assignee-names
-                        (string-join assignee-names ", ")
-                      (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed)))
-         (obj (code-review-assignees-section :assignees assignees)))
-    (magit-insert-section (code-review-assignees-section obj)
-      (insert (format "%-17s" "Assignees: ") assignees)
+                            (let ((name
+                                   (if (a-get a 'name)
+                                       (format "%s (@%s)"
+                                               (a-get a 'name)
+                                               (a-get a 'login))
+                                     (format "@%s" (a-get a 'login)))))
+                              `((name . ,name)
+                                (url . ,(a-get a 'url)))))
+                          infos)))
+    (magit-insert-section (code-review-assignees-section)
+      (insert (format "%-17s" "Assignees: "))
+      (if (not assignee-names)
+          (insert (propertize "No one — Assign yourself"
+                              'font-lock-face 'code-review-dimmed
+                              'mouse-face 'highlight
+                              'help-echo "Set new assignee"
+                              'keymap 'code-review-assignees-section-map))
+        (progn
+          (insert (propertize "Set new assignee"
+                              'font-lock-face 'code-review-dimmed
+                              'mouse-face 'highlight
+                              'help-echo "Set new assignee"
+                              'keymap 'code-review-assignees-section-map))
+          (insert ?\n)
+          (dolist (assignee assignee-names)
+            (let-alist assignee
+              (let ((assignee-obj (code-review-assignee-section
+                                   :name .name
+                                   :url .url)))
+                (magit-insert-section (code-review-assignee-section assignee-obj)
+                  (insert (propertize .name
+                                      'face 'code-review-author-header-face
+                                      'mouse-face 'highlight
+                                      'help-echo "Visit author's page"
+                                      'keymap 'code-review-assignee-section-map))))))
+          (insert ?\n)))
       (insert ?\n))))
 
 (defclass code-review-project-section (magit-section)
