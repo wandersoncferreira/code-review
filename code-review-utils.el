@@ -467,15 +467,23 @@ Expect the same output as `git diff --no-prefix`"
                             (let-alist r
                               `((code-owner? . ,.asCodeOwner)
                                 (login . ,.requestedReviewer.login)
+                                (url . ,.requestedReviewer.url)
                                 (at))))
-                          .reviewRequests.nodes)
+                          (-distinct .reviewRequests.nodes))
                groups)
       (mapc (lambda (o)
               (let-alist o
-                (push `((code-owner?)
-                        (login . ,.author.login)
-                        (at . ,.createdAt))
-                      (gethash .state groups))))
+                (let ((current-data (gethash .state groups)))
+                  (when (not (-contains-p (-map
+                                           (lambda (it)
+                                             (a-get it 'login))
+                                           current-data)
+                                          .author.login))
+                    (push `((code-owner?)
+                            (login . ,.author.login)
+                            (url . ,.author.url)
+                            (at . ,.createdAt))
+                          (gethash .state groups))))))
             .latestOpinionatedReviews.nodes)
       groups)))
 
@@ -485,7 +493,7 @@ Expect the same output as `git diff --no-prefix`"
   (with-slots (value) (magit-current-section)
     (browse-url (oref value url))))
 
-(defun code-review-utils--visit-binary-file-at-point ()
+(defun code-review-utils--visit-binary-file-at-point (&rest _)
   "Visit binary file at point."
   (interactive)
   (let ((section (magit-current-section))
@@ -497,7 +505,7 @@ Expect the same output as `git diff --no-prefix`"
             (message "Fetch binary file error! Try to view in the Forge using C-c C-v")
           (dired-at-point dired-url))))))
 
-(defun code-review-utils--visit-binary-file-at-remote ()
+(defun code-review-utils--visit-binary-file-at-remote (&rest _)
   "Visit binary file in the forge."
   (interactive)
   (let ((section (magit-current-section))

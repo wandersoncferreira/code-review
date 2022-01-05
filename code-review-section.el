@@ -394,26 +394,73 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-assignees-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-set-assignee)
+    (define-key map [mouse-2] 'code-review-set-assignee)
+    (define-key map [follow-link] 'code-review-set-assignee)
     map)
   "Keymaps for code-comment sections.")
+
+(defclass code-review-assignee-section (magit-section)
+  ((keymap :initform 'code-review-assignee-section-map)
+   (name :initarg :name)
+   (url :initarg :url)))
+
+(defun code-review-assignee-visit-at-remote (&rest _)
+  (interactive)
+  (with-slots (value) (magit-current-section)
+    (let ((url (oref value url)))
+      (if url
+          (browse-url url)
+        (message "Can't visit the user in remote. Missing profile URL.")))))
+
+(defvar code-review-assignee-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-assignee-visit-at-remote)
+    (define-key map [mouse-2] 'code-review-assignee-visit-at-remote)
+    (define-key map [follow-link] 'code-review-assignee-visit-at-remote)
+    map)
+  "Keymaps for assignee section")
 
 (defun code-review-section-insert-assignee ()
   "Insert the assignee of the header buffer."
   (let* ((infos (code-review-db--pullreq-assignees))
          (assignee-names (-map
                           (lambda (a)
-                            (if (a-get a 'name)
-                                (format "%s (@%s)"
-                                        (a-get a 'name)
-                                        (a-get a 'login))
-                              (format "@%s" (a-get a 'login))))
-                          infos))
-         (assignees (if assignee-names
-                        (string-join assignee-names ", ")
-                      (propertize "No one — Assign yourself" 'font-lock-face 'magit-dimmed)))
-         (obj (code-review-assignees-section :assignees assignees)))
-    (magit-insert-section (code-review-assignees-section obj)
-      (insert (format "%-17s" "Assignees: ") assignees)
+                            (let ((name
+                                   (if (a-get a 'name)
+                                       (format "%s (@%s)"
+                                               (a-get a 'name)
+                                               (a-get a 'login))
+                                     (format "@%s" (a-get a 'login)))))
+                              `((name . ,name)
+                                (url . ,(a-get a 'url)))))
+                          infos)))
+    (magit-insert-section (code-review-assignees-section)
+      (insert (format "%-17s" "Assignees: "))
+      (if (not assignee-names)
+          (insert (propertize "No one — Assign yourself"
+                              'font-lock-face 'code-review-dimmed
+                              'mouse-face 'highlight
+                              'help-echo "Set new assignee"
+                              'keymap 'code-review-assignees-section-map))
+        (progn
+          (insert (propertize "Set new assignee"
+                              'font-lock-face 'code-review-dimmed
+                              'mouse-face 'highlight
+                              'help-echo "Set new assignee"
+                              'keymap 'code-review-assignees-section-map))
+          (insert ?\n)
+          (dolist (assignee assignee-names)
+            (let-alist assignee
+              (let ((assignee-obj (code-review-assignee-section
+                                   :name .name
+                                   :url .url)))
+                (magit-insert-section (code-review-assignee-section assignee-obj)
+                  (insert (propertize .name
+                                      'face 'code-review-author-header-face
+                                      'mouse-face 'highlight
+                                      'help-echo "Visit author's page"
+                                      'keymap 'code-review-assignee-section-map))))))
+          (insert ?\n)))
       (insert ?\n))))
 
 (defclass code-review-project-section (magit-section)
@@ -451,6 +498,8 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-suggested-reviewers-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-request-review-at-point)
+    (define-key map [mouse-2] 'code-review-request-review-at-point)
+    (define-key map [follow-link] 'code-review-request-review-at-point)
     map)
   "Keymaps for suggested reviewers section.")
 
@@ -485,13 +534,37 @@ INDENT count of spaces are added at the start of every line."
               (insert " " suggested-reviewers)
             (dolist (sr suggested-reviewers)
               (insert ?\n)
-              (insert (propertize "Request Review" 'face 'code-review-request-review-face))
+              (insert (propertize "Request Review"
+                                  'face 'code-review-request-review-face
+                                  'mouse-face 'highlight
+                                  'help-echo "Request review from reviewe"
+                                  'keymap 'code-review-suggested-reviewers-section-map))
               (insert " - ")
               (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
           (insert ?\n))))))
 
 (defclass code-review-reviewers-section (magit-section)
   (()))
+
+(defclass code-review-reviewer-section (magit-section)
+  ((keymap :initform 'code-review-reviewer-section-map)
+   (login :initarg :login)
+   (url :initarg :url)))
+
+(defvar code-review-reviewer-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-2] 'code-review-reviewer-visit-at-remote)
+    (define-key map [follow-link] 'code-review-reviewer-visit-at-remote)
+    map)
+  "Keymaps for reviewer section.")
+
+(defun code-review-reviewer-visit-at-remote (&rest _)
+  (interactive)
+  (with-slots (value) (magit-current-section)
+    (let ((url (oref value url)))
+      (if url
+          (browse-url url)
+        (message "Can't visit the user in remote. Missing profile URL.")))))
 
 (defun code-review-section-insert-reviewers ()
   "Insert the reviewers section."
@@ -502,14 +575,22 @@ INDENT count of spaces are added at the start of every line."
       (maphash (lambda (status users-objs)
                  (dolist (user-o users-objs)
                    (let-alist user-o
-                     (insert (code-review--propertize-keyword status))
-                     (insert " - ")
-                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
-                     (when .code-owner?
-                       (insert " as CODE OWNER"))
-                     (when .at
-                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
-                   (insert ?\n)))
+                     (let ((obj (code-review-reviewer-section
+                                 :login .login
+                                 :url .url)))
+                       (magit-insert-section (code-review-reviewer-section obj)
+                         (insert (code-review--propertize-keyword status))
+                         (insert " - ")
+                         (insert (propertize (concat "@" .login)
+                                             'face 'code-review-author-face
+                                             'mouse-face 'highlight
+                                             'help-echo "Visit user profile"
+                                             'keymap 'code-review-reviewer-section-map))
+                         (when .code-owner?
+                           (insert " as CODE OWNER"))
+                         (when .at
+                           (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
+                       (insert ?\n)))))
                groups)
       (insert ?\n))))
 
@@ -543,6 +624,8 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-commit-check-detail-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-commit-goto-check-at-remote)
+    (define-key map [mouse-2] 'code-review-commit-goto-check-at-remote)
+    (define-key map [follow-link] 'code-review-commit-goto-check-at-remote)
     map)
   "Keymaps for commit check section.")
 
@@ -561,13 +644,14 @@ INDENT count of spaces are added at the start of every line."
               (magit-insert-section commit-section (code-review-commit-section obj)
                 (if (and (code-review-github-repo-p pr) .commit.statusCheckRollup.contexts.nodes)
                     (progn
-                      (insert (format "%s%s %s %s"
+                      (insert (format "%s%s %s "
                                       (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
                                       (oref obj msg)
                                       (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
                                           ":white_check_mark:"
-                                        ":x:")
-                                      (propertize "Details:" 'font-lock-face 'code-review-checker-detail-face)))
+                                        ":x:")))
+                      (insert
+                       (propertize "Expand for Details:" 'font-lock-face 'code-review-checker-detail-face))
                       (oset commit-section hidden t)
                       (magit-insert-heading)
                       (dolist (check .commit.statusCheckRollup.contexts.nodes)
@@ -583,7 +667,10 @@ INDENT count of spaces are added at the start of every line."
                                                                                (code-review-utils--elapsed-time .completedAt .startedAt)))
                                                         'font-lock-face 'magit-dimmed))
                                     (insert (propertize ":white_check_mark: Details"
-                                                        'font-lock-face 'code-review-checker-detail-face)))
+                                                        'font-lock-face 'code-review-checker-detail-face
+                                                        'mouse-face 'highlight
+                                                        'help-echo "Visit the page for details"
+                                                        'keymap 'code-review-commit-check-detail-section-map)))
                                 (progn
                                   (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .title)
                                                       'font-lock-face 'code-review-checker-name-face))
@@ -591,11 +678,15 @@ INDENT count of spaces are added at the start of every line."
                                   (insert (propertize (format "%s  " .summary)
                                                       'font-lock-face 'magit-dimmed))
                                   (insert (propertize ":x: Details"
-                                                      'font-lock-face 'code-review-checker-detail-face))))))
+                                                      'font-lock-face 'code-review-checker-detail-face
+                                                      'mouse-face 'highlight
+                                                      'help-echo "Visit the page for details"
+                                                      'keymap 'code-review-commit-check-detail-section-map))))))
                           (insert "\n"))))
                   (progn
                     (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
-                    (insert (oref obj msg))))))))
+                    (insert (oref obj msg))
+                    (insert ?\n)))))))
         (insert ?\n)))))
 
 ;; description
@@ -923,6 +1014,9 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-binary-file-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [mouse-2] 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [follow-link] 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [mouse-3] 'code-review-utils--visit-binary-file-at-remote)
     (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
     map)
   "Keymaps for binary files sections.")
@@ -969,7 +1063,7 @@ INDENT count of spaces are added at the start of every line."
    (t
     "No milestone")))
 
-(defun code-review-commit-goto-check-at-remote ()
+(defun code-review-commit-goto-check-at-remote (&rest _)
   "Visit the details of the check at point in the remote."
   (interactive)
   (let ((section (magit-current-section)))
@@ -1372,7 +1466,11 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (magit-insert-heading)))
     (when (string-match-p "Binary files.*" header)
       (magit-insert-section (code-review-binary-file-section file)
-        (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n")))
+        (insert (propertize "Visit file"
+                            'face 'code-review-request-review-face
+                            'mouse-face 'highlight
+                            'help-echo "Visit the file in Dired buffer"
+                            'keymap 'code-review-binary-file-section-map) "\n")))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun code-review-section--magit-diff-wash-hunk ()

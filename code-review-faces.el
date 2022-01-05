@@ -147,5 +147,17 @@
   "Face for outdated comments."
   :group 'code-review)
 
+(defface code-review-dimmed
+  '((((class color) (background light))
+     :foreground "grey50"
+     :slant italic
+     :underline t)
+    (((class color) (background  dark))
+     :foreground "grey50"
+     :slant italic
+     :underline t))
+  "Face for text that shouldn't stand out."
+  :group 'magit-faces)
+
 (provide 'code-review-faces)
 ;;; code-review-faces.el ends here

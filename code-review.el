@@ -59,9 +59,9 @@
     code-review-section-insert-ref
     code-review-section-insert-milestone
     code-review-section-insert-labels
-    code-review-section-insert-assignee
     code-review-section-insert-project
     code-review-section-insert-is-draft
+    code-review-section-insert-assignee
     code-review-section-insert-suggested-reviewers
     code-review-section-insert-reviewers)
   "Hook run to insert headers into the code review buffer."

@@ -5,6 +5,7 @@
 - [#169](https://github.com/wandersoncferreira/code-review/pull/169): [gitlab] set labels command
 - [#175](https://github.com/wandersoncferreira/code-review/pull/175): display PR author in the header. Click/RET to follow
 - [#176](https://github.com/wandersoncferreira/code-review/pull/176): [gitlab] fix nested namespaces when it comes from forge
+- [#177](https://github.com/wandersoncferreira/code-review/pull/177): [github] support clicability to links
 
 # v0.0.6
 
