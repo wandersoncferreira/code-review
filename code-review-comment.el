@@ -4,7 +4,7 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Version: 0.0.5
+;; Version: 0.0.6
 ;; Homepage: https://github.com/wandersoncferreira/code-review
 ;;
 ;; This file is not part of GNU Emacs.
@@ -185,7 +185,9 @@ Optionally define a MSG."
         (message "You can't add text over unspecified region.")
       (let* ((current-line (line-number-at-pos))
              (line (save-excursion
-                     (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+                     (buffer-substring-no-properties
+                      (line-beginning-position)
+                      (line-end-position))))
              (line-type (cond
                          ((string-prefix-p "-" line)
                           "REMOVED")
@@ -194,7 +196,8 @@ Optionally define a MSG."
                          (t
                           "UNCHANGED")))
              (amount-loc nil))
-        (while (and (not (looking-at "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
+        (while (and (not (looking-at
+                          "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
                     (not (equal (point) (point-min))))
           (forward-line -1))
         (let ((section (magit-current-section)))
@@ -238,9 +241,6 @@ Optionally define a MSG."
   (let* ((reply-pos (- (+ (oref obj position)
                           (length (split-string (oref obj msg) "\n")))
                        2))
-         (buff-name (if code-review-comment-commit-buffer?
-                        code-review-commit-buffer-name
-                      code-review-buffer-name))
          (clean-msg (code-review-utils--comment-clean-msg
                      (oref obj msg)
                      default-buff-msg))
@@ -256,7 +256,7 @@ Optionally define a MSG."
                                           (local?)
                                           (reply? . t)))))))
     (code-review-db--pullreq-raw-comments-update raw-comment)
-    (code-review--build-buffer buff-name)
+    (code-review--build-buffer)
     (setq code-review-comment-uncommitted nil)))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-local-comment-section) default-buff-msg)
@@ -334,8 +334,11 @@ Optionally define a MSG."
                               (save-excursion
                                 (buffer-substring-no-properties (point-min) (point-max))))))
              (pr (code-review-db-get-pullreq)))
+
         (kill-buffer-and-window)
+
         (cond
+
          (code-review-comment-description?
           (oset pr raw-infos (-> (oref pr raw-infos)
                                  (a-assoc 'bodyText comment-text)
@@ -344,35 +347,42 @@ Optionally define a MSG."
            pr
            (lambda ()
              (code-review-db-update pr)
-             (code-review--build-buffer code-review-buffer-name))))
+             (code-review--build-buffer)
+             (code-review-comment-reset-global-vars))))
+
          (code-review-comment-title?
-          (setq code-review-comment-cursor-pos (point))
           (oset pr title comment-text)
           (code-review-send-title
            pr
            (lambda ()
              (code-review-db-update pr)
-             (code-review--build-buffer code-review-buffer-name))))
+             (code-review--build-buffer)
+             (code-review-comment-reset-global-vars))))
+
          (code-review-comment-feedback?
           (let ((msg
                  (code-review-utils--comment-clean-msg
                   comment-text
                   code-review-comment-feedback-msg)))
             (code-review-db--pullreq-feedback-update msg)
-            (code-review--build-buffer code-review-buffer-name)))
+            (code-review--build-buffer)
+            (code-review-comment-reset-global-vars)))
+
          (code-review-promote-comment-to-issue?
           (progn
             (oset code-review-comment-uncommitted buffer-text comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-buffer-msg)))
+             code-review-comment-buffer-msg)
+            (code-review-comment-reset-global-vars)))
 
          (code-review-comment-send?
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-single-comment-msg)))
+             code-review-comment-single-comment-msg)
+            (code-review-comment-reset-global-vars)))
 
          (code-review-comment-single-comment?
           (let ((msg
@@ -381,15 +391,16 @@ Optionally define a MSG."
                   code-review-comment-single-comment-msg))
                 (callback (lambda (&rest _)
                             (let ((code-review-section-full-refresh? t))
-                              (code-review--build-buffer code-review-buffer-name)))))
+                              (code-review--build-buffer)
+                              (code-review-comment-reset-global-vars)))))
             (code-review-new-issue-comment pr msg callback)))
          (t
           (progn
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-buffer-msg)))))
-    (code-review-comment-reset-global-vars)))
+             code-review-comment-buffer-msg)
+            (code-review-comment-reset-global-vars)))))))
 
 ;;; ----
 

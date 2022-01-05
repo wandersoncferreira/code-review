@@ -1,11 +1,14 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](https://melpa.org/packages/code-review-badge.svg)](https://melpa.org/#/code-review)
 ![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
+[![Chat on IRC](https://badgen.net/badge/irc/%23code-review-emacs/green)](https://web.libera.chat/gamja/?channels=#code-review-emacs)
+[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dbartuka%26type%3Dpatrons&style=flat)](https://patreon.com/bartuka)
+
 
 # Code Review
 
 Package to help you perform code reviews from your VC provider. Currently
-supports Github and basic Gitlab workflow.
+supports Github and basic Gitlab and Bitbucket workflows.
 
 ![Demo of code review package](./docs/code_review_demo.png)
 
@@ -73,64 +76,34 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 ### Code Review
 
-Set `code-review-fill-column` to define line wrap comment sections.
-
-If you want to use `code-review` in a full buffer you can change the function
-used to display the buffer at `code-review-new-buffer-window-strategy` e.g. you
-can set `(setq code-review-new-buffer-window-strategy #'switch-to-buffer)` to
-not open a new window.
-
-Set `code-review-download-dir` to change the place Code Review will download
-binary files in your pull request when you decide to visit them.
-
-### Setup
-
-If you have trouble with the authinfo process below there is this nice
-[Tweet](https://twitter.com/iLemming/status/1463599279457673220) from @agzam
-explaining a bit the setup!
-
-#### GitHub
-
-`code-review` needs a GitHub token to act on your behalf for fetching PRs and
-submitting reviews.
-
-1. [Create a personal access token using GitHub](https://github.com/settings/tokens)
-2. Set the `repo` scope as the subscope of repo
-3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
-
-For enterprise users do not forget to change the value of
-`code-review-github-host` to match the host of your private instance. The
-current recommended way to use the package with enterprise solution is through
-`code-review-forge-pr-at-point` we have a bug identifying enterprise URLs in `code-review-start` yet.
-
-##### Auth
-
-Add a line to your auth source files, usually `~/.authinfo.gpg`, with your login
-and token:
-
-```
-machine api.github.com login yourlogin^code-review password MYTOKENGOESHERE
-```
-
-#### Gitlab
-
-1. [Create a personal access token using Gitlab](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
-2. Choose the `api` scope
-
-For enterprise users do not forget to change the value of
-`code-review-gitlab-host` and `code-review-gitlab-graphql-host` to match the
-ones of your private instance. The current recommended way to use the package
-with enterprise solution is through `code-review-forge-pr-at-point` we have a
-bug identifying enterprise URLs in `code-review-start` yet.
-
-##### Auth
-
-Add a line to your auth source file, usually `~/.authinfo.gpg`, with your login
-and token:
+Define line wrap in comment sections.
 
 ``` emacs-lisp
-machine gitlab.com/api login yourlogin^code-review password MYTOKENGOESHERE
+(setq code-review-fill-column 80)
 ```
+
+Change how `code-review` splits the buffer when opening a new PR. Defaults to
+`#'switch-to-buffer-other-window`.
+
+``` emacs-lisp
+(setq code-review-new-buffer-window-strategy #'switch-to-buffer)
+```
+
+Change the destination where binary files is downloaded.
+
+``` emacs-lisp
+(setq code-review-download-dir "/tmp/code-review/")
+```
+
+
+### Forge specific
+
+Follow the documentation to your version control provider to see more details
+for the setup and configuration.
+
+- [Github](./docs/github.md)
+- [Gitlab](./docs/gitlab.md)
+- [Bitbucket](./docs/bitbucket.md)
 
 # Keybindings
 

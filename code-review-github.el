@@ -4,7 +4,7 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Version: 0.0.5
+;; Version: 0.0.6
 ;; Homepage: https://github.com/wandersoncferreira/code-review
 ;;
 ;; This file is not part of GNU Emacs.
@@ -54,33 +54,10 @@
 (defconst code-review-github-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
-(defconst code-review-github-token-scopes '(repo)
-  "Only repo scope needed to read PRs and submit reviews.")
-
-;; vars
-(defvar code-review-log-file)
-
-(defun code-review--log (origin msg)
-  "Log MSG from ORIGIN to error file."
-  (with-temp-file code-review-log-file
-    (when (not (file-exists-p code-review-log-file))
-      (write-file code-review-log-file))
-    (insert-file-contents code-review-log-file)
-    (goto-char (point-max))
-    (insert ?\n)
-    (insert (current-time-string))
-    (insert " - ")
-    (insert origin)
-    (insert " - ")
-    (insert msg)
-    (insert ?\n)))
-
 (defun code-review-github-errback (&rest m)
   "Error callback, displays the error message M."
+  (code-review-utils--log "code-review-github-errback" (prin1-to-string m))
   (let-alist m
-    (code-review--log
-     "code-review-github-errback"
-     (prin1-to-string m))
     (let* ((status (-second-item .error)))
       (cond
        ((= status 422)
@@ -154,6 +131,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
+      author {
+        login
+        url
+      }
       headRefOid
       baseRefName
       headRefName
@@ -323,6 +304,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
+      author {
+        login
+        url
+      }
       headRefOid
       baseRefName
       headRefName
@@ -335,6 +320,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
          nodes {
            author {
              login
+             url
            }
            createdAt
            state
@@ -348,6 +334,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              ... on User {
                login
                name
+               url
              }
            }
          }
@@ -373,6 +360,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
         nodes {
           name
           login
+          url
         }
       }
       projectCards(first: 10) {
@@ -497,16 +485,16 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   "Get PR details from GITHUB, use FALLBACK? to choose minimal query and dispatch to CALLBACK."
   (let* ((repo (oref github repo))
          (owner (oref github owner))
-         (num (oref github number))
+         (num (if (numberp (oref github number))
+                  (oref github number)
+                (string-to-number (oref github number))))
          (query
           (format (if fallback?
                       code-review-github-graphql-fallback
                     code-review-github-graphql-complete)
                   repo
                   owner
-                  (if (numberp num)
-                      num
-                    (string-to-number num)))))
+                  num)))
     (ghub-graphql query
                   nil
                   :auth 'code-review
@@ -533,11 +521,15 @@ Optionally ask for the FALLBACK? query."
                            (oref github owner)
                            (oref github repo))
                    nil
-                   :auth 'code-review)))
-    (-map
-     (lambda (l)
-       (a-get l 'name))
-     resp)))
+                   :auth 'code-review
+                   :host code-review-github-host
+                   :noerror 'return)))
+    (if (eq (car (-first-item resp)) 'message)
+        (error (prin1-to-string resp))
+      (-map
+       (lambda (l)
+         (a-get l 'name))
+       resp))))
 
 (cl-defmethod code-review-send-labels ((github code-review-github-repo) callback)
   "Set labels for your pr at GITHUB and call CALLBACK."
@@ -548,6 +540,7 @@ Optionally ask for the FALLBACK? query."
         (req-fn (if (oref github labels)
                     #'ghub-post
                   #'ghub-put)))
+    (message "Sending new labels...")
     (funcall req-fn url
              nil
              :payload (a-alist 'labels (or (-map (lambda (x)
@@ -555,6 +548,7 @@ Optionally ask for the FALLBACK? query."
                                                  (oref github labels))
                                            []))
              :auth 'code-review
+             :host code-review-github-host
              :errorback #'code-review-github-errback
              :callback (lambda (&rest _) (funcall callback)))))
 
@@ -565,20 +559,26 @@ Optionally ask for the FALLBACK? query."
                            (oref github owner)
                            (oref github repo))
                    nil
-                   :auth 'code-review)))
-    (-map
-     (lambda (l)
-       (a-get l 'login))
-     resp)))
+                   :auth 'code-review
+                   :host code-review-github-host
+                   :noerror 'return)))
+    (if (eq (car (-first-item resp)) 'message)
+        (error (prin1-to-string resp))
+      (-map
+       (lambda (l)
+         (a-get l 'login))
+       resp))))
 
 (cl-defmethod code-review-send-assignee ((github code-review-github-repo) callback)
   "Set assignee to your PR in GITHUB and call CALLBACK."
+  (message "Sending new assignee...")
   (ghub-post (format "/repos/%s/%s/issues/%s/assignees"
                      (oref github owner)
                      (oref github repo)
                      (oref github number))
              nil
              :auth 'code-review
+             :host code-review-github-host
              :payload (a-alist 'assignees (-map (lambda (it)
                                                   (a-get it 'login))
                                                 (oref github assignees)))
@@ -592,20 +592,26 @@ Optionally ask for the FALLBACK? query."
                            (oref github owner)
                            (oref github repo))
                    nil
-                   :auth 'code-review)))
-    (-map
-     (lambda (l)
-       `(,(a-get l 'title) . ,(a-get l 'number)))
-     resp)))
+                   :auth 'code-review
+                   :host code-review-github-host
+                   :noerror 'return)))
+    (if (eq (car (-first-item resp)) 'message)
+        (error (prin1-to-string resp))
+      (-map
+       (lambda (l)
+         `(,(a-get l 'title) . ,(a-get l 'number)))
+       resp))))
 
 (cl-defmethod code-review-send-milestone ((github code-review-github-repo) callback)
   "Set milestone for a pullreq in GITHUB and call CALLBACK."
+  (message "Sending new milestone...")
   (ghub-patch (format "/repos/%s/%s/issues/%s"
                       (oref github owner)
                       (oref github repo)
                       (oref github number))
               nil
               :auth 'code-review
+              :host code-review-github-host
               :payload (a-alist 'milestone (a-get (oref github milestones) 'number))
               :errorback #'code-review-github-errback
               :callback (lambda (res &rest _)
@@ -615,24 +621,28 @@ Optionally ask for the FALLBACK? query."
 
 (cl-defmethod code-review-send-title ((github code-review-github-repo) callback)
   "Set title for a pullreq in GITHUB and call CALLBACK."
+  (message "Sending new title...")
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
                       (oref github repo)
                       (oref github number))
               nil
               :auth 'code-review
+              :host code-review-github-host
               :payload (a-alist 'title (oref github title))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
 
 (cl-defmethod code-review-send-description ((github code-review-github-repo) callback)
   "Set description for a pullreq in GITHUB and call CALLBACK."
+  (message "Sending new description...")
   (ghub-patch (format "/repos/%s/%s/pulls/%s"
                       (oref github owner)
                       (oref github repo)
                       (oref github number))
               nil
               :auth 'code-review
+              :host code-review-github-host
               :payload (a-alist 'body (a-get (oref github raw-infos) 'bodyText))
               :errorback #'code-review-github-errback
               :callback (lambda (&rest _) (funcall callback))))
@@ -645,6 +655,7 @@ Optionally ask for the FALLBACK? query."
                     (oref github number))
             nil
             :auth 'code-review
+            :host code-review-github-host
             :payload (a-alist 'commit_title (oref github title)
                               'commit_message (oref github description)
                               'sha (oref github sha)
@@ -666,12 +677,14 @@ Optionally ask for the FALLBACK? query."
              ("thumbs_up" "+1")
              ("thumbs_down" "-1")
              (_ reaction))))
+    (message "Sending new reaction...")
     (ghub-post (format "/repos/%s/%s/%s"
                        (oref github owner)
                        (oref github repo)
                        path)
                nil
                :auth 'code-review
+               :host code-review-github-host
                :payload (a-alist 'content r))))
 
 (cl-defmethod code-review-delete-reaction ((github code-review-github-repo) context-name comment-id reaction-id)
@@ -688,7 +701,8 @@ Optionally ask for the FALLBACK? query."
                          (oref github repo)
                          path)
                  nil
-                 :auth 'code-review)))
+                 :auth 'code-review
+                 :host code-review-github-host)))
 
 (defclass code-review-submit-github-replies ()
   ((pr      :initform nil)
@@ -831,6 +845,7 @@ Optionally ask for the FALLBACK? query."
                      (oref github repo))
              nil
              :auth 'code-review
+             :host code-review-github-host
              :payload (a-alist 'body body 'title title)
              :errorback #'code-review-github-errback
              :callback callback))

@@ -2,18 +2,37 @@
 
 # Unreleased
 
-- [#138](https://github.com/wandersoncferreira/code-review/pull/138): Fix bug rendering suggested change block
+- [#169](https://github.com/wandersoncferreira/code-review/pull/169): [gitlab] set labels command
+- [#175](https://github.com/wandersoncferreira/code-review/pull/175): display PR author in the header. Click/RET to follow
+- [#176](https://github.com/wandersoncferreira/code-review/pull/176): [gitlab] fix nested namespaces when it comes from forge
+- [#177](https://github.com/wandersoncferreira/code-review/pull/177): [github] support clicability to links
+
+# v0.0.6
+
+- [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
+- [#142](https://github.com/wandersoncferreira/code-review/pull/142): add `code-review-toggle-display-*-comments` functions.
+- [#143](https://github.com/wandersoncferreira/code-review/pull/143): add db migration scheme to introduce new columns in the future
+- [#148](https://github.com/wandersoncferreira/code-review/pull/148): fix UI heading bug [#145](https://github.com/wandersoncferreira/code-review/issues/145).
+- [#150](https://github.com/wandersoncferreira/code-review/pull/150): fix broken indentation with Description heading
+- [#155](https://github.com/wandersoncferreira/code-review/pull/155): formal conversion between diff absolute position and diff line number.
+- [#156](https://github.com/wandersoncferreira/code-review/pull/156): bitbucket cloud basic workflow integration
+- [#157](https://github.com/wandersoncferreira/code-review/pull/157): bitbucket stubs for not implemented feature.
+- [#159](https://github.com/wandersoncferreira/code-review/pull/159): place diff under Files Changed section
+- [#162](https://github.com/wandersoncferreira/code-review/pull/162): fix obsolete defgeneric to cl-defgeneric.
+- [#166](https://github.com/wandersoncferreira/code-review/pull/166): github-related code refactor
+- [#167](https://github.com/wandersoncferreira/code-review/pull/167): gitlab-related code refactor
+- [#168](https://github.com/wandersoncferreira/code-review/pull/168): bitbucket-related code refactor
 
 # v0.0.5
 
 - [#126](https://github.com/wandersoncferreira/code-review/pull/126): remove `ignore-error` and improve message on `code-review-start`
 - [#127](https://github.com/wandersoncferreira/code-review/pull/127): introduce `code-review-github-graphql-host` variable
 - [#128](https://github.com/wandersoncferreira/code-review/pull/128): Gitlab support for URLs with subgroups
-- [#130](https://github.com/wandersoncferreira/code-review/pull/130): Mention user with `C-c @` in comment buffer
-- [#131](https://github.com/wandersoncferreira/code-review/pull/131): Support Github Enterprise 3.0 by fallback to simpler query in graphql
-- [#132](https://github.com/wandersoncferreira/code-review/pull/132): Get pr latest SHA even if the branch was already deleted
-- [#134](https://github.com/wandersoncferreira/code-review/pull/134): Support making single diff comment without review
-- [#135](https://github.com/wandersoncferreira/code-review/pull/135): Improve package reliability, error messaging, more sane function names
+- [#130](https://github.com/wandersoncferreira/code-review/pull/130): mention user with `C-c @` in comment buffer
+- [#131](https://github.com/wandersoncferreira/code-review/pull/131): support Github Enterprise 3.0 by fallback to simpler query in graphql
+- [#132](https://github.com/wandersoncferreira/code-review/pull/132): get pr latest SHA even if the branch was already deleted
+- [#134](https://github.com/wandersoncferreira/code-review/pull/134): support making single diff comment without review
+- [#135](https://github.com/wandersoncferreira/code-review/pull/135): improve package reliability, error messaging, more sane function names
 
 # v0.0.4
 

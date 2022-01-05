@@ -4,7 +4,7 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Version: 0.0.5
+;; Version: 0.0.6
 ;; Homepage: https://github.com/wandersoncferreira/code-review
 ;;
 ;; This file is not part of GNU Emacs.
@@ -30,6 +30,7 @@
 
 (require 'code-review-comment)
 (require 'code-review-db)
+(require 'code-review-bitbucket)
 (require 'code-review-gitlab)
 (require 'code-review-github)
 (require 'let-alist)
@@ -103,15 +104,15 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                        (code-review-submit-github-review))
                       ((code-review-gitlab-repo-p pr)
                        (code-review-submit-gitlab-review))
-                      (t
-                       (code-review-submit-review))))
+                      ((code-review-bitbucket-repo-p pr)
+                       (code-review-submit-bitbucket-review))))
          (replies-obj (cond
                        ((code-review-github-repo-p pr)
                         (code-review-submit-github-replies))
                        ((code-review-gitlab-repo-p pr)
                         (code-review-submit-gitlab-replies))
-                       (t
-                        (code-review-submit-replies)))))
+                       ((code-review-bitbucket-repo-p pr)
+                        (code-review-submit-bitbucket-replies)))))
 
     (oset review-obj state event)
     (oset review-obj pr pr)
@@ -184,7 +185,7 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
                  (code-review--build-buffer
                   code-review-buffer-name
                   nil
-                  "Done submitting review and replies."))))))))))
+                  "Done submitting review and replies"))))))))))
 
 ;;;###autoload
 (defun code-review-submit-approve (&optional feedback)
@@ -195,17 +196,20 @@ Optionally set a FEEDBACK message."
          (last-commit (-> (oref pr raw-infos)
                           (a-get-in (list 'commits 'nodes))
                           (-last-item))))
-    (let-alist last-commit
-      (cond
-       ((string-equal .commit.statusCheckRollup.state "SUCCESS")
-        (code-review--submit "APPROVE" feedback))
-       (code-review-always-restrict-approval?
-        (message "PR have CI issues. You cannot approve it."))
-       (t
-        (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
-          (if res
-              (code-review--submit "APPROVE" feedback)
-            (message "Approval process canceled."))))))))
+    (if (code-review-github-repo-p pr)
+        (let-alist last-commit
+          (cond
+           ((or (string-equal .commit.statusCheckRollup.state "SUCCESS")
+                (not .commit.statusCheckRollup))
+            (code-review--submit "APPROVE" feedback))
+           (code-review-always-restrict-approval?
+            (message "PR have CI issues. You cannot approve it."))
+           (t
+            (let ((res (y-or-n-p "PR have CI issues.  Do you want to proceed? ")))
+              (if res
+                  (code-review--submit "APPROVE" feedback)
+                (message "Approval process canceled."))))))
+      (code-review--submit "APPROVE" feedback))))
 
 ;;;###autoload
 (defun code-review-submit-comments ()
@@ -221,7 +225,7 @@ Optionally set a FEEDBACK message."
 
 ;;;###autoload
 (defun code-review-submit-lgtm ()
-  "Submit an Approve Review wiht a LGTM message."
+  "Submit an Approve Review with a LGTM message."
   (interactive)
   (code-review-submit-approve code-review-lgtm-message))
 
@@ -365,7 +369,7 @@ Optionally set a FEEDBACK message."
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
     (setq code-review-comment-feedback? t)
-    (setq code-review-comment-cursor-pos (point-min))
+    (setq code-review-comment-cursor-pos (point))
     (with-current-buffer buffer
       (erase-buffer)
       (insert (or (oref pr feedback) code-review-comment-feedback-msg))
@@ -379,14 +383,34 @@ Optionally set a FEEDBACK message."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (setq code-review-comment-cursor-pos (point-min))
-    (setq code-review-comment-title? t)
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert (oref pr title))
-      (insert ?\n)
-      (switch-to-buffer-other-window buffer)
-      (code-review-comment-mode))))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (setq code-review-comment-title? t)
+          (with-current-buffer buffer
+            (erase-buffer)
+            (insert (oref pr title))
+            (insert ?\n)
+            (switch-to-buffer-other-window buffer)
+            (code-review-comment-mode)))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
+
+(defun code-review--labels-to-send (pr choices)
+  "The PR has a list of CHOICES for labels that should be send.
+This function will make sure we clean the list of labels and/or disable all of them upstream."
+  (when (not (-contains-p choices "<clean all labels>"))
+    (code-review--distinct-labels
+     (append
+      (-map (lambda (x)
+              `((name . ,x)
+                (color . "0075ca")))
+            choices)
+      (oref pr labels)))))
 
 ;;;###autoload
 (defun code-review-set-label ()
@@ -395,13 +419,10 @@ Rewrite all current labels with the options chosen here."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
     (when-let (options (code-review-get-labels pr))
-      (let* ((choices (completing-read-multiple "Choose: " options))
-             (labels (append
-                      (-map (lambda (x)
-                              `((name . ,x)
-                                (color . "0075ca")))
-                            choices)
-                      (oref pr labels))))
+      (let* ((choices (completing-read-multiple "Choose: " (append
+                                                            options
+                                                            (list "<clean all labels>"))))
+             (labels (code-review--labels-to-send pr choices)))
         (setq code-review-comment-cursor-pos (point))
         (oset pr labels labels)
         (code-review-send-labels
@@ -413,6 +434,7 @@ Rewrite all current labels with the options chosen here."
 (defun code-review--set-assignee-field (obj &optional assignee)
   "Change assignee header field given an OBJ.
 If a valid ASSIGNEE is provided, use that instead."
+  (setq code-review-comment-cursor-pos (point))
   (let ((candidate nil))
     (if assignee
         (setq candidate assignee)
@@ -426,7 +448,7 @@ If a valid ASSIGNEE is provided, use that instead."
        (closql-insert (code-review-db) obj t)
        (code-review--build-buffer)))))
 
-(defun code-review-set-assignee ()
+(defun code-review-set-assignee (&rest _)
   "Change assignee for the current PR.  Sent immediately.."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
@@ -444,19 +466,27 @@ If a valid ASSIGNEE is provided, use that instead."
   "Change the milestone for the current PR.  Sent immediately."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (if-let (options (code-review-get-milestones pr))
-        (let* ((choice (completing-read "Choose: " (a-keys options)))
-               (milestone `((title . ,choice)
-                            (perc . 0)
-                            (number .,(alist-get choice options nil nil 'equal)))))
-          (setq code-review-comment-cursor-pos (point))
-          (oset pr milestones milestone)
-          (code-review-send-milestone
-           pr
-           (lambda ()
-             (code-review-db-update pr)
-             (code-review--build-buffer))))
-      (message "No milestone found."))))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (if-let (options (code-review-get-milestones pr))
+              (let* ((choice (completing-read "Choose: " (a-keys options)))
+                     (milestone `((title . ,choice)
+                                  (perc . 0)
+                                  (number .,(alist-get choice options nil nil 'equal)))))
+                (setq code-review-comment-cursor-pos (point))
+                (oset pr milestones milestone)
+                (code-review-send-milestone
+                 pr
+                 (lambda ()
+                   (code-review-db-update pr)
+                   (code-review--build-buffer))))
+            (message "No milestone found.")))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
 
 ;;;###autoload
 (defun code-review-set-description ()
@@ -497,6 +527,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
          (code-review-section-full-refresh? t))
+    (setq code-review-comment-cursor-pos (point))
     (if pr
         (progn
           (let ((choice (y-or-n-p "You will lose all your local comments.  Do you need to proceed? ")))
@@ -565,18 +596,55 @@ If a valid ASSIGNEE is provided, use that instead."
          (code-review--build-buffer))))))
 
 ;;;###autoload
-(defun code-review-request-review-at-point ()
+(defun code-review-request-review-at-point (&rest _)
   "Request reviewer at point."
   (interactive)
-  (setq code-review-comment-cursor-pos (point))
-  (let* ((line (buffer-substring-no-properties
-                (line-beginning-position)
-                (line-end-position)))
-         (login (-> line
-                    (split-string "- @")
-                    (-second-item)
-                    (string-trim))))
-    (code-review-request-reviews login)))
+  (let ((pr (code-review-db-get-pullreq)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (let* ((line (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position)))
+                 (login (-> line
+                            (split-string "- @")
+                            (-second-item)
+                            (string-trim))))
+            (code-review-request-reviews login)))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
+
+;;;###autoload
+(defun code-review-toggle-display-all-comments ()
+  "Toggle display comments."
+  (interactive)
+  (let ((flag (not code-review-section--display-all-comments)))
+    (setq code-review-section--display-all-comments flag
+          code-review-section--display-diff-comments flag
+          code-review-section--display-top-level-comments flag))
+  (code-review--build-buffer))
+
+;;;###autoload
+(defun code-review-toggle-display-top-level-comments ()
+  "Toggle display the top level comments."
+  (interactive)
+  (setq code-review-section--display-top-level-comments
+        (not code-review-section--display-top-level-comments))
+  (code-review--build-buffer))
+
+;;;###autoload
+(defun code-review-toggle-display-diff-comments ()
+  "Toggle display the top level comments."
+  (interactive)
+  (setq
+   code-review-section--display-all-comments t
+   code-review-section--display-diff-comments
+   (not code-review-section--display-diff-comments))
+  (code-review--build-buffer))
 
 ;;;
 ;;;; * Commit actions

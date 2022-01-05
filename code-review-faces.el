@@ -4,7 +4,7 @@
 ;;
 ;; Author: Wanderson Ferreira <https://github.com/wandersoncferreira>
 ;; Maintainer: Wanderson Ferreira <wand@hey.com>
-;; Version: 0.0.5
+;; Version: 0.0.6
 ;; Homepage: https://github.com/wandersoncferreira/code-review-faces
 ;;
 ;; This file is not part of GNU Emacs.
@@ -84,6 +84,13 @@
   "Face used for author names."
   :group 'code-review)
 
+(defface code-review-author-header-face
+  '((t :inherit font-lock-keyword-face
+       :slant italic
+       :underline t))
+  "Face used for author name in the header."
+  :group 'code-review)
+
 (defface code-review-error-state-face
   '((t :inherit font-lock-warning-face :weight bold))
   "Face used for error state (e.g. changes requested)."
@@ -139,6 +146,18 @@
     (t                     :inherit magit-cherry-equivalent :inverse-video t))
   "Face for outdated comments."
   :group 'code-review)
+
+(defface code-review-dimmed
+  '((((class color) (background light))
+     :foreground "grey50"
+     :slant italic
+     :underline t)
+    (((class color) (background  dark))
+     :foreground "grey50"
+     :slant italic
+     :underline t))
+  "Face for text that shouldn't stand out."
+  :group 'magit-faces)
 
 (provide 'code-review-faces)
 ;;; code-review-faces.el ends here
