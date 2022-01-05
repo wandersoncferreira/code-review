@@ -527,6 +527,7 @@ If a valid ASSIGNEE is provided, use that instead."
   (interactive)
   (let* ((pr (code-review-db-get-pullreq))
          (code-review-section-full-refresh? t))
+    (setq code-review-comment-cursor-pos (point))
     (if pr
         (progn
           (let ((choice (y-or-n-p "You will lose all your local comments.  Do you need to proceed? ")))
