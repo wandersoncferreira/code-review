@@ -131,6 +131,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
+      author {
+        login
+        url
+      }
       headRefOid
       baseRefName
       headRefName
@@ -300,6 +304,10 @@ https://github.com/wandersoncferreira/code-review#configuration"))
   repository(name: \"%s\", owner: \"%s\") {
     pullRequest(number:%s){
       id
+      author {
+        login
+        url
+      }
       headRefOid
       baseRefName
       headRefName

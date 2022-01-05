@@ -309,6 +309,10 @@ The payload is used to send a MR review to Gitlab."
 repository:project(fullPath: \"%s\") {
     pullRequest:mergeRequest(iid: \"%s\") {
       id
+      author {
+        login:username
+        url:webUrl
+      }
       comments:notes(first: 50){
         nodes {
           databaseId:id
