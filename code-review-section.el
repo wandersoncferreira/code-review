@@ -498,6 +498,8 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-suggested-reviewers-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-request-review-at-point)
+    (define-key map [mouse-2] 'code-review-request-review-at-point)
+    (define-key map [follow-link] 'code-review-request-review-at-point)
     map)
   "Keymaps for suggested reviewers section.")
 
@@ -532,7 +534,11 @@ INDENT count of spaces are added at the start of every line."
               (insert " " suggested-reviewers)
             (dolist (sr suggested-reviewers)
               (insert ?\n)
-              (insert (propertize "Request Review" 'face 'code-review-request-review-face))
+              (insert (propertize "Request Review"
+                                  'face 'code-review-request-review-face
+                                  'mouse-face 'highlight
+                                  'help-echo "Request review from reviewe"
+                                  'keymap 'code-review-suggested-reviewers-section-map))
               (insert " - ")
               (insert (propertize (concat "@" sr) 'face 'code-review-author-face))))
           (insert ?\n))))))

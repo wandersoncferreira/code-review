@@ -595,7 +595,7 @@ If a valid ASSIGNEE is provided, use that instead."
          (code-review--build-buffer))))))
 
 ;;;###autoload
-(defun code-review-request-review-at-point ()
+(defun code-review-request-review-at-point (&rest _)
   "Request reviewer at point."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
