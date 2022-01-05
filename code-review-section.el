@@ -543,6 +543,8 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-commit-check-detail-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-commit-goto-check-at-remote)
+    (define-key map [mouse-2] 'code-review-commit-goto-check-at-remote)
+    (define-key map [follow-link] 'code-review-commit-goto-check-at-remote)
     map)
   "Keymaps for commit check section.")
 
@@ -561,13 +563,14 @@ INDENT count of spaces are added at the start of every line."
               (magit-insert-section commit-section (code-review-commit-section obj)
                 (if (and (code-review-github-repo-p pr) .commit.statusCheckRollup.contexts.nodes)
                     (progn
-                      (insert (format "%s%s %s %s"
+                      (insert (format "%s%s %s "
                                       (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
                                       (oref obj msg)
                                       (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
                                           ":white_check_mark:"
-                                        ":x:")
-                                      (propertize "Details:" 'font-lock-face 'code-review-checker-detail-face)))
+                                        ":x:")))
+                      (insert
+                       (propertize "Expand for Details:" 'font-lock-face 'code-review-checker-detail-face))
                       (oset commit-section hidden t)
                       (magit-insert-heading)
                       (dolist (check .commit.statusCheckRollup.contexts.nodes)
@@ -583,7 +586,10 @@ INDENT count of spaces are added at the start of every line."
                                                                                (code-review-utils--elapsed-time .completedAt .startedAt)))
                                                         'font-lock-face 'magit-dimmed))
                                     (insert (propertize ":white_check_mark: Details"
-                                                        'font-lock-face 'code-review-checker-detail-face)))
+                                                        'font-lock-face 'code-review-checker-detail-face
+                                                        'mouse-face 'highlight
+                                                        'help-echo "Visit the page for details"
+                                                        'keymap 'code-review-commit-check-detail-section-map)))
                                 (progn
                                   (insert (propertize (format "%-7s %s / %s" "" .checkSuite.workflowRun.workflow.name .title)
                                                       'font-lock-face 'code-review-checker-name-face))
@@ -591,7 +597,10 @@ INDENT count of spaces are added at the start of every line."
                                   (insert (propertize (format "%s  " .summary)
                                                       'font-lock-face 'magit-dimmed))
                                   (insert (propertize ":x: Details"
-                                                      'font-lock-face 'code-review-checker-detail-face))))))
+                                                      'font-lock-face 'code-review-checker-detail-face
+                                                      'mouse-face 'highlight
+                                                      'help-echo "Visit the page for details"
+                                                      'keymap 'code-review-commit-check-detail-section-map))))))
                           (insert "\n"))))
                   (progn
                     (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
@@ -923,6 +932,9 @@ INDENT count of spaces are added at the start of every line."
 (defvar code-review-binary-file-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [mouse-2] 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [follow-link] 'code-review-utils--visit-binary-file-at-point)
+    (define-key map [mouse-3] 'code-review-utils--visit-binary-file-at-remote)
     (define-key map (kbd "C-c C-v") 'code-review-utils--visit-binary-file-at-remote)
     map)
   "Keymaps for binary files sections.")
@@ -969,7 +981,7 @@ INDENT count of spaces are added at the start of every line."
    (t
     "No milestone")))
 
-(defun code-review-commit-goto-check-at-remote ()
+(defun code-review-commit-goto-check-at-remote (&rest _)
   "Visit the details of the check at point in the remote."
   (interactive)
   (let ((section (magit-current-section)))
@@ -1372,7 +1384,11 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
         (magit-insert-heading)))
     (when (string-match-p "Binary files.*" header)
       (magit-insert-section (code-review-binary-file-section file)
-        (insert (propertize "Visit file" 'face 'code-review-request-review-face) "\n")))
+        (insert (propertize "Visit file"
+                            'face 'code-review-request-review-face
+                            'mouse-face 'highlight
+                            'help-echo "Visit the file in Dired buffer"
+                            'keymap 'code-review-binary-file-section-map) "\n")))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun code-review-section--magit-diff-wash-hunk ()
