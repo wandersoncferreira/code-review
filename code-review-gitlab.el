@@ -61,7 +61,8 @@ For internal usage only.")
 
 (defun code-review-gitlab--project-id (pr)
   "Return the project ID for a PR."
-  (format "%s%%2F%s" (oref pr owner) (oref pr repo)))
+  (let ((owner (replace-regexp-in-string "/" "%2F" (oref pr owner))))
+    (format "%s%%2F%s" owner (oref pr repo))))
 
 (defun code-review-gitlab-errback (&rest m)
   "Error callback, displays the error message M."
