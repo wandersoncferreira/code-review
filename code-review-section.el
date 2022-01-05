@@ -237,7 +237,36 @@ INDENT count of spaces are added at the start of every line."
 
 ;; headers
 
-(defclass code-review-title-section (magit-section)
+(defclass code-review-author-section (magit-section)
+  ((keymap :initform 'code-review-author-section-map)
+   (login :initarg :login)
+   (url :initarg :url)))
+
+(defvar code-review-author-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'code-review-utils--visit-author-at-point)
+    (define-key map [mouse-2] 'code-review-utils--visit-author-at-point)
+    (define-key map [follow-link] 'code-review-utils--visit-author-at-point)
+    map)
+  "Keymaps for header author section.")
+
+(defun code-review-section-insert-author ()
+  "Insert the author of the PR in the buffer."
+  (let-alist (code-review-db--pullreq-raw-infos)
+    (when .author.login
+      (let ((obj (code-review-author-section
+                  :login .author.login
+                  :url .author.url)))
+        (magit-insert-section (code-review-author-section obj)
+          (insert (format "%-17s" "Author: "))
+          (insert (propertize (format "@%s" .author.login)
+                              'face 'code-review-author-header-face
+                              'mouse-face 'highlight
+                              'help-echo "Visit author's page"
+                              'keymap 'code-review-author-section-map))
+          (insert ?\n))))))
+
+ (defclass code-review-title-section (magit-section)
   ((keymap  :initform 'code-review-title-section-map)
    (title  :initform nil
            :type (or null string))))
@@ -862,7 +891,6 @@ INDENT count of spaces are added at the start of every line."
 
 (defclass code-review-binary-file-section (magit-section)
   ((keymap :initform 'code-review-binary-file-section-map)))
-
 
 (defvar code-review-code-comment-section-map
   (let ((map (make-sparse-keymap)))
@@ -1601,8 +1629,13 @@ If you want to display a minibuffer MSG in the end."
 
 (cl-defmethod code-review--internal-build ((_bitbucket code-review-bitbucket-repo) progress res &optional buff-name msg)
   "Helper function to build process for BITBUCKET based on the fetched RES informing PROGRESS."
+  (prin1 (format "RESULT:%s\n" (-second-item res)))
   (let* ((raw-infos (let-alist (-second-item res)
                       `((title . ,.title)
+                        (author . ((login . ,.author.nickname)
+                                   (url . ,(format "https://%s/%s"
+                                                   code-review-bitbucket-base-url
+                                                   .author.nickname))))
                         (number . ,.id)
                         (state . ,.state)
                         (bodyHTML . ,.rendered.description.html)

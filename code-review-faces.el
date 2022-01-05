@@ -84,6 +84,13 @@
   "Face used for author names."
   :group 'code-review)
 
+(defface code-review-author-header-face
+  '((t :inherit font-lock-keyword-face
+       :slant italic
+       :underline t))
+  "Face used for author name in the header."
+  :group 'code-review)
+
 (defface code-review-error-state-face
   '((t :inherit font-lock-warning-face :weight bold))
   "Face used for error state (e.g. changes requested)."

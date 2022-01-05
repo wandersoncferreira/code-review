@@ -479,6 +479,12 @@ Expect the same output as `git diff --no-prefix`"
             .latestOpinionatedReviews.nodes)
       groups)))
 
+(defun code-review-utils--visit-author-at-point (&rest _)
+  "Visit author at point."
+  (interactive)
+  (with-slots (value) (magit-current-section)
+    (browse-url (oref value url))))
+
 (defun code-review-utils--visit-binary-file-at-point ()
   "Visit binary file at point."
   (interactive)
