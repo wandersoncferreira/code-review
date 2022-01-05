@@ -320,6 +320,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
          nodes {
            author {
              login
+             url
            }
            createdAt
            state
@@ -333,6 +334,7 @@ https://github.com/wandersoncferreira/code-review#configuration"))
              ... on User {
                login
                name
+               url
              }
            }
          }

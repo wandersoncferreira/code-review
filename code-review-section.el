@@ -546,6 +546,26 @@ INDENT count of spaces are added at the start of every line."
 (defclass code-review-reviewers-section (magit-section)
   (()))
 
+(defclass code-review-reviewer-section (magit-section)
+  ((keymap :initform 'code-review-reviewer-section-map)
+   (login :initarg :login)
+   (url :initarg :url)))
+
+(defvar code-review-reviewer-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-2] 'code-review-reviewer-visit-at-remote)
+    (define-key map [follow-link] 'code-review-reviewer-visit-at-remote)
+    map)
+  "Keymaps for reviewer section.")
+
+(defun code-review-reviewer-visit-at-remote (&rest _)
+  (interactive)
+  (with-slots (value) (magit-current-section)
+    (let ((url (oref value url)))
+      (if url
+          (browse-url url)
+        (message "Can't visit the user in remote. Missing profile URL.")))))
+
 (defun code-review-section-insert-reviewers ()
   "Insert the reviewers section."
   (let* ((infos (code-review-db--pullreq-raw-infos))
@@ -555,14 +575,22 @@ INDENT count of spaces are added at the start of every line."
       (maphash (lambda (status users-objs)
                  (dolist (user-o users-objs)
                    (let-alist user-o
-                     (insert (code-review--propertize-keyword status))
-                     (insert " - ")
-                     (insert (propertize (concat "@" .login) 'face 'code-review-author-face))
-                     (when .code-owner?
-                       (insert " as CODE OWNER"))
-                     (when .at
-                       (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
-                   (insert ?\n)))
+                     (let ((obj (code-review-reviewer-section
+                                 :login .login
+                                 :url .url)))
+                       (magit-insert-section (code-review-reviewer-section obj)
+                         (insert (code-review--propertize-keyword status))
+                         (insert " - ")
+                         (insert (propertize (concat "@" .login)
+                                             'face 'code-review-author-face
+                                             'mouse-face 'highlight
+                                             'help-echo "Visit user profile"
+                                             'keymap 'code-review-reviewer-section-map))
+                         (when .code-owner?
+                           (insert " as CODE OWNER"))
+                         (when .at
+                           (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
+                       (insert ?\n)))))
                groups)
       (insert ?\n))))
 
@@ -657,7 +685,8 @@ INDENT count of spaces are added at the start of every line."
                           (insert "\n"))))
                   (progn
                     (insert (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash))
-                    (insert (oref obj msg))))))))
+                    (insert (oref obj msg))
+                    (insert ?\n)))))))
         (insert ?\n)))))
 
 ;; description

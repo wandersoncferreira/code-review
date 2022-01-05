@@ -467,15 +467,23 @@ Expect the same output as `git diff --no-prefix`"
                             (let-alist r
                               `((code-owner? . ,.asCodeOwner)
                                 (login . ,.requestedReviewer.login)
+                                (url . ,.requestedReviewer.url)
                                 (at))))
-                          .reviewRequests.nodes)
+                          (-distinct .reviewRequests.nodes))
                groups)
       (mapc (lambda (o)
               (let-alist o
-                (push `((code-owner?)
-                        (login . ,.author.login)
-                        (at . ,.createdAt))
-                      (gethash .state groups))))
+                (let ((current-data (gethash .state groups)))
+                  (when (not (-contains-p (-map
+                                           (lambda (it)
+                                             (a-get it 'login))
+                                           current-data)
+                                          .author.login))
+                    (push `((code-owner?)
+                            (login . ,.author.login)
+                            (url . ,.author.url)
+                            (at . ,.createdAt))
+                          (gethash .state groups))))))
             .latestOpinionatedReviews.nodes)
       groups)))
 
