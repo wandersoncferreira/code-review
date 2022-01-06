@@ -7,6 +7,7 @@
 - [#176](https://github.com/wandersoncferreira/code-review/pull/176): [gitlab] fix nested namespaces when it comes from forge
 - [#177](https://github.com/wandersoncferreira/code-review/pull/177): [github] support clicability to links
 - [#182](https://github.com/wandersoncferreira/code-review/pull/182): fix send single diff comment void section
+- [#183](https://github.com/wandersoncferreira/code-review/pull/183): fix cursor moving in unexpected way during comment add/delete 
 
 # v0.0.6
 
