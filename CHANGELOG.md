@@ -8,7 +8,8 @@
 - [#177](https://github.com/wandersoncferreira/code-review/pull/177): [github] support clicability to links
 - [#182](https://github.com/wandersoncferreira/code-review/pull/182): fix send single diff comment void section
 - [#183](https://github.com/wandersoncferreira/code-review/pull/183): fix cursor moving in unexpected way during comment add/delete
-- [#184](https://github.com/wandersoncferreira/code-review/pull/184): [gitlab] remove requirement for feedback to send only comments 
+- [#184](https://github.com/wandersoncferreira/code-review/pull/184): [gitlab] remove requirement for feedback to send only comments
+- [4ccad8c](https://github.com/wandersoncferreira/code-review/commit/4ccad8cb89ad38075a23023affbac1eb545a99ab): [gitlab] send feedback comment. Sorry commit on master, too tired :/
 
 # v0.0.6
 
