@@ -196,43 +196,43 @@ Optionally define a MSG."
                          (t
                           "UNCHANGED")))
              (amount-loc nil))
-        (while (and (not (looking-at
-                          "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
-                    (not (equal (point) (point-min))))
-          (forward-line -1))
-        (let ((section (magit-current-section)))
-          (if (not section)
-              (setq amount-loc 0)
-            (with-slots (type value) section
-              (if (equal type 'file)
-                  (setq amount-loc 0)
-                (setq amount-loc (or (oref value amount-loc) 0)))))
+        (save-excursion
+          (while (and (not (looking-at
+                            "Comment by\\|Reviewed by\\|Reply by\\|modified\\|new file\\|deleted"))
+                      (not (equal (point) (point-min))))
+            (forward-line -1))
+          (let ((section (magit-current-section)))
+            (if (not section)
+                (setq amount-loc 0)
+              (with-slots (type value) section
+                (if (equal type 'file)
+                    (setq amount-loc 0)
+                  (setq amount-loc (or (oref value amount-loc) 0)))))))
 
-          (let* ((diff-pos (+ 1 (- current-line
-                                   amount-loc
-                                   (a-get obj 'head-pos))))
-                 (local-comment (code-review-local-comment-section
-                                 :state "LOCAL COMMENT"
-                                 :author (code-review-utils--git-get-user)
-                                 :path (a-get obj 'path)
-                                 :position diff-pos
-                                 :line-type line-type
-                                 :send? code-review-comment-send?)))
-            (setq code-review-comment-uncommitted local-comment)
-            (code-review-comment-add)))))))
+        (let* ((diff-pos (+ 1 (- current-line
+                                 amount-loc
+                                 (a-get obj 'head-pos))))
+               (local-comment (code-review-local-comment-section
+                               :state "LOCAL COMMENT"
+                               :author (code-review-utils--git-get-user)
+                               :path (a-get obj 'path)
+                               :position diff-pos
+                               :line-type line-type
+                               :send? code-review-comment-send?)))
+          (setq code-review-comment-uncommitted local-comment)
+          (code-review-comment-add))))))
 
 ;;;###autoload
 (defun code-review-comment-add-or-edit ()
   "Add or edit comment depending on context."
   (interactive)
   (let ((section (magit-current-section)))
-    (with-slots (value) section
-      (if (code-review-reactions-section-p section)
-          (code-review-reactions-reaction-at-point)
-        (progn
-          (setq code-review-comment-cursor-pos (point))
+    (with-current-buffer (get-buffer code-review-buffer-name)
+      (setq code-review-comment-cursor-pos (point))
+      (with-slots (value) section
+        (if (code-review-reactions-section-p section)
+            (code-review-reactions-reaction-at-point)
           (code-review-comment-handler-add-or-edit value))))))
-
 
 ;;; handlers COMMIT
 
@@ -295,8 +295,7 @@ Optionally define a MSG."
                (code-review--build-buffer buff-name)))))
       (progn
         (code-review-db--pullreq-raw-comments-update raw-comment)
-        (code-review--build-buffer buff-name)))
-    (setq code-review-comment-uncommitted nil)))
+        (code-review--build-buffer buff-name)))))
 
 (cl-defmethod code-review-comment-handler-commit ((obj code-review-comment-promote-to-issue) _default-buff-msg)
   "Commit the promotion of comment OBJ to new issue and clean the DEFAULT-BUFF-MSG from the text if any."
@@ -422,8 +421,10 @@ Optionally define a MSG."
 (defun code-review-comment-quit ()
   "Quit the comment window."
   (interactive)
-  (code-review-comment-reset-global-vars)
-  (kill-buffer-and-window))
+  (kill-buffer-and-window)
+  (with-current-buffer (get-buffer code-review-buffer-name)
+    (goto-char code-review-comment-cursor-pos)
+    (code-review-comment-reset-global-vars)))
 
 (defvar code-review-comment-mode-map
   (let ((map (copy-keymap markdown-mode-map)))

@@ -1614,18 +1614,14 @@ If you want to display a minibuffer MSG in the end."
             (if window
                 (progn
                   (pop-to-buffer buff-name)
-                  (set-window-start window ws)
-                  (when code-review-comment-cursor-pos
-                    (goto-char code-review-comment-cursor-pos)))
+                  (set-window-start window ws))
               (progn
                 (funcall code-review-new-buffer-window-strategy buff-name)
                 (goto-char (point-min))))
-            (if commit-focus?
-                (progn
-                  (code-review-mode)
-                  (code-review-commit-minor-mode))
-              (code-review-mode))
+            (code-review-mode)
             (code-review-section-insert-header-title)
+            (when code-review-comment-cursor-pos
+              (goto-char code-review-comment-cursor-pos))
             (when msg
               (message nil)
               (message msg)))))
@@ -1830,12 +1826,11 @@ If you want to provide a MSG for the end of the process."
 (defun code-review-section-delete-comment ()
   "Delete a local comment."
   (interactive)
-  (let ((buff-name (if code-review-comment-commit-buffer?
-                       code-review-commit-buffer-name
-                     code-review-buffer-name)))
-    (with-slots (value start end) (magit-current-section)
+  (with-current-buffer code-review-buffer-name
+    (setq code-review-comment-cursor-pos (point))
+    (with-slots (value) (magit-current-section)
       (code-review-db-delete-raw-comment (oref value internalId))
-      (code-review--build-buffer buff-name))))
+      (code-review--build-buffer))))
 
 (provide 'code-review-section)
 ;;; code-review-section.el ends here
