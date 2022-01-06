@@ -91,6 +91,12 @@
                             previous-obj)
                       current-id))))
 
+(defun code-review--submit-feedback-required? (review-obj)
+  (and (not (oref review-obj feedback))
+       (not (string-equal (oref review-obj state) "APPROVE"))
+       (not (and (string-equal (oref review-obj state) "COMMENT")
+                 (code-review-gitlab-repo-p (oref review-obj pr))))))
+
 ;;;###autoload
 (defun code-review--submit (event &optional feedback only-reply?)
   "Submit your review with a final verdict (EVENT).
@@ -159,9 +165,8 @@ If you want only to submit replies, use ONLY-REPLY? as non-nil."
       (oset replies-obj replies replies)
       (oset review-obj local-comments local-comments)
 
-      (if (and (not (oref review-obj feedback))
-               (not only-reply?)
-               (not (string-equal event "APPROVE")))
+      (if (and (code-review--submit-feedback-required? review-obj)
+               (not only-reply?))
           (message "You must provide a feedback msg before submit your Review.")
         (progn
           (when (not only-reply?)
