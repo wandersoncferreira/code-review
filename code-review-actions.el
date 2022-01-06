@@ -247,14 +247,15 @@ Optionally set a FEEDBACK message."
 (defun code-review-submit-single-diff-comment-at-point ()
   "Submit a single diff comment without an attached Review."
   (interactive)
-  (with-slots (value) section
-    (if (magit-hunk-section-p section)
-        (progn
-          (setq code-review-comment-send? t)
-          (let ((code-review-comment-buffer-msg
-                 code-review-comment-single-comment-msg))
-            (code-review-comment-add-or-edit)))
-      (error "Single diff comment at point only available in hunk sections"))))
+  (let ((section (magit-current-section)))
+    (with-slots (value) section
+      (if (magit-hunk-section-p section)
+          (progn
+            (setq code-review-comment-send? t)
+            (let ((code-review-comment-buffer-msg
+                   code-review-comment-single-comment-msg))
+              (code-review-comment-add-or-edit)))
+        (error "Single diff comment at point only available in hunk sections")))))
 
 ;;;
 ;;;; * Save/Record unfinished Review
