@@ -10,6 +10,7 @@
 - [#183](https://github.com/wandersoncferreira/code-review/pull/183): fix cursor moving in unexpected way during comment add/delete
 - [#184](https://github.com/wandersoncferreira/code-review/pull/184): [gitlab] remove requirement for feedback to send only comments
 - [4ccad8c](https://github.com/wandersoncferreira/code-review/commit/4ccad8cb89ad38075a23023affbac1eb545a99ab): [gitlab] send feedback comment. Sorry commit on master, too tired :/
+- [#185](https://github.com/wandersoncferreira/code-review/pull/185): [gitlab] set title
 
 # v0.0.6
 
