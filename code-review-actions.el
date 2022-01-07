@@ -671,6 +671,44 @@ If a valid ASSIGNEE is provided, use that instead."
                 ((code-review-bitbucket-repo-p pr)
                  "Bitbucket"))))))
 
+;;;###autoload
+(defun code-review-comment-jump-forward ()
+  "Go to next comment in the buffer."
+  (interactive)
+  (let ((initial-point (point)))
+    (with-current-buffer (get-buffer code-review-buffer-name)
+      (let ((comment-position))
+        (save-excursion
+          (forward-line)
+          (while (not (or (eobp)
+                          (looking-at
+                           "Comment by\\|Reviewed by\\|Reply by")))
+            (forward-line))
+          (beginning-of-line)
+          (setq comment-position (point)))
+        (goto-char comment-position)
+        (when (equal initial-point comment-position)
+          (message "No more comments going forward."))))))
+
+;;;###autoload
+(defun code-review-comment-jump-backward ()
+  "Go to previous comment in the buffer."
+  (interactive)
+  (let ((initial-point (point)))
+    (with-current-buffer (get-buffer code-review-buffer-name)
+      (let ((comment-position))
+        (save-excursion
+          (forward-line -1)
+          (while (not (or (bobp)
+                          (looking-at
+                           "Comment by\\|Reviewed by\\|Reply by")))
+            (forward-line -1))
+          (beginning-of-line)
+          (setq comment-position (point)))
+        (goto-char comment-position)
+        (when (equal initial-point comment-position)
+          (message "No more comments going backward."))))))
+
 ;;;
 ;;;; * Commit actions
 ;;;
