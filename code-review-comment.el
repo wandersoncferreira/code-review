@@ -52,6 +52,11 @@
   :group 'code-review
   :type 'string)
 
+(defcustom code-review-comment-suggestion-msg ";;; Type C-c C-c to include your comment locally\n;;; Type C-c C-k to abort"
+  "Default text to suggestion code in comment buffer."
+  :group 'code-review
+  :type 'string)
+
 ;;; internal vars
 
 (defvar code-review-comment-cursor-pos nil
@@ -90,6 +95,10 @@ For internal usage only.")
   "Toggle if we should send the local comment immediately.
 For internal usage only.")
 
+(defvar code-review-comment-suggestion? nil
+  "Are you writing a code suggestion?.
+For internal usage only.")
+
 ;; remove free variable warnings
 (defvar code-review-comment-buffer-name)
 (defvar code-review-commit-buffer-name)
@@ -107,7 +116,8 @@ For internal usage only.")
         code-review-comment-uncommitted nil
         code-review-comment-commit-buffer? nil
         code-review-comment-single-comment? nil
-        code-review-comment-send? nil))
+        code-review-comment-send? nil
+        code-review-comment-suggestion? nil))
 
 ;;; Comment C_UD
 
@@ -195,6 +205,10 @@ Optionally define a MSG."
                           "ADDED")
                          (t
                           "UNCHANGED")))
+             (suggestion
+              (format "%s\n\n```suggestion\n %s\n"
+                      code-review-comment-suggestion-msg
+                      (substring line 1)))
              (amount-loc nil))
         (save-excursion
           (while (and (not (looking-at
@@ -220,15 +234,23 @@ Optionally define a MSG."
                                :line-type line-type
                                :send? code-review-comment-send?)))
           (setq code-review-comment-uncommitted local-comment)
-          (code-review-comment-add))))))
+          (if code-review-comment-suggestion?
+              (progn
+                (code-review-comment-add suggestion)
+                (with-current-buffer (get-buffer code-review-comment-buffer-name)
+                  (forward-line -2)))
+            (code-review-comment-add)))))))
+
 
 ;;;###autoload
-(defun code-review-comment-add-or-edit ()
-  "Add or edit comment depending on context."
+(defun code-review-comment-add-or-edit (&optional suggestion-code?)
+  "Add or edit comment depending on context.
+Inform if a SUGGESTION-CODE? is being proposed."
   (interactive)
   (let ((section (magit-current-section)))
     (with-current-buffer (get-buffer code-review-buffer-name)
-      (setq code-review-comment-cursor-pos (point))
+      (setq code-review-comment-cursor-pos (point)
+            code-review-comment-suggestion? suggestion-code?)
       (with-slots (value) section
         (if (code-review-reactions-section-p section)
             (code-review-reactions-reaction-at-point)
@@ -398,7 +420,9 @@ Optionally define a MSG."
             (oset code-review-comment-uncommitted msg comment-text)
             (code-review-comment-handler-commit
              code-review-comment-uncommitted
-             code-review-comment-buffer-msg)
+             (if code-review-comment-suggestion?
+                 code-review-comment-suggestion-msg
+               code-review-comment-buffer-msg))
             (code-review-comment-reset-global-vars)))))))
 
 ;;; ----
