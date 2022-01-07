@@ -651,6 +651,26 @@ If a valid ASSIGNEE is provided, use that instead."
    (not code-review-section--display-diff-comments))
   (code-review--build-buffer))
 
+;;;###autoload
+(defun code-review-comment-code-suggestion ()
+  "Add code suggestion box."
+  (interactive)
+  (let ((section (magit-current-section))
+        (pr (code-review-db-get-pullreq)))
+    (if (code-review-github-repo-p pr)
+        (progn
+          (setq code-review-comment-cursor-pos (point))
+          (with-slots (value type) section
+            (if (string-equal type "hunk")
+                (code-review-comment-add-or-edit t)
+              (message "Suggested not supported in this section."))))
+      (message "Not supported in %s yet."
+               (cond
+                ((code-review-gitlab-repo-p pr)
+                 "Gitlab")
+                ((code-review-bitbucket-repo-p pr)
+                 "Bitbucket"))))))
+
 ;;;
 ;;;; * Commit actions
 ;;;
