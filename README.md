@@ -143,6 +143,13 @@ local comment or feedback at point.
 (define-key code-review-reply-comment-section-map (kbd "k") 'code-review-section-delete-comment)
 ```
 
+Move between comments using `C-c C-n` and `C-c C-p`
+
+``` emacs-lisp
+(define-key code-review-mode-map (kbd "C-c C-n") 'code-review-comment-jump-next)
+(define-key code-review-mode-map (kbd "C-c C-p") 'code-review-comment-jump-previous)
+```
+
 # Extension to other forges
 
 The package allows you to write integration with other forges to leverage these

@@ -672,7 +672,7 @@ If a valid ASSIGNEE is provided, use that instead."
                  "Bitbucket"))))))
 
 ;;;###autoload
-(defun code-review-comment-jump-forward ()
+(defun code-review-comment-jump-next ()
   "Go to next comment in the buffer."
   (interactive)
   (let ((initial-point (point)))
@@ -691,7 +691,7 @@ If a valid ASSIGNEE is provided, use that instead."
           (message "No more comments going forward."))))))
 
 ;;;###autoload
-(defun code-review-comment-jump-backward ()
+(defun code-review-comment-jump-previous ()
   "Go to previous comment in the buffer."
   (interactive)
   (let ((initial-point (point)))
