@@ -12,6 +12,7 @@
 - [4ccad8c](https://github.com/wandersoncferreira/code-review/commit/4ccad8cb89ad38075a23023affbac1eb545a99ab): [gitlab] send feedback comment. Sorry commit on master, too tired :/
 - [#185](https://github.com/wandersoncferreira/code-review/pull/185): [gitlab] set title
 - [#187](https://github.com/wandersoncferreira/code-review/pull/187): [github] feature add - suggestion box bound to `C-c C-s`
+- [#188](https://github.com/wandersoncferreira/code-review/pull/188): commands to jump to comments forward and backwards 
 
 # v0.0.6
 
