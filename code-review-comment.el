@@ -95,7 +95,9 @@ For internal usage only.")
   "Toggle if we should send the local comment immediately.
 For internal usage only.")
 
-(defvar code-review-comment-suggestion? nil)
+(defvar code-review-comment-suggestion? nil
+  "Are you writing a code suggestion?.
+For internal usage only.")
 
 ;; remove free variable warnings
 (defvar code-review-comment-buffer-name)
