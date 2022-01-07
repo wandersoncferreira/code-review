@@ -556,9 +556,16 @@ Optionally sets FALLBACK? to get minimal query."
   "Set milestone for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-send-title ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-title ((gitlab code-review-gitlab-repo) callback)
   "Set title for your pr in GITLAB and call CALLBACK."
-  (code-review-gitlab-not-supported-message))
+  (glab-put (format "/v4/projects/%s/merge_requests/%s"
+                    (code-review-gitlab--project-id gitlab)
+                    (oref gitlab number))
+            nil
+            :auth 'code-review
+            :host code-review-gitlab-host
+            :payload `((title .,(oref gitlab title)))
+            :callback (lambda (&rest _) (funcall callback))))
 
 (cl-defmethod code-review-send-description ((_gitlab code-review-gitlab-repo) _callback)
   "Set description for your pr in GITLAB and call CALLBACK."
