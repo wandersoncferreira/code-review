@@ -389,7 +389,8 @@ Optionally set a FEEDBACK message."
   (interactive)
   (let ((buffer (get-buffer-create code-review-comment-buffer-name))
         (pr (code-review-db-get-pullreq)))
-    (if (code-review-github-repo-p pr)
+    (if (or (code-review-github-repo-p pr)
+            (code-review-gitlab-repo-p pr))
         (progn
           (setq code-review-comment-cursor-pos (point))
           (setq code-review-comment-title? t)
@@ -401,8 +402,6 @@ Optionally set a FEEDBACK message."
             (code-review-comment-mode)))
       (message "Not supported in %s yet."
                (cond
-                ((code-review-gitlab-repo-p pr)
-                 "Gitlab")
                 ((code-review-bitbucket-repo-p pr)
                  "Bitbucket"))))))
 
