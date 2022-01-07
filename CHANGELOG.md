@@ -13,6 +13,7 @@
 - [#185](https://github.com/wandersoncferreira/code-review/pull/185): [gitlab] set title
 - [#187](https://github.com/wandersoncferreira/code-review/pull/187): [github] feature add - suggestion box bound to `C-c C-s`
 - [#188](https://github.com/wandersoncferreira/code-review/pull/188): commands to jump to comments forward and backwards 
+- [#189](https://github.com/wandersoncferreira/code-review/pull/190): Github: Ability to review a PR without leaving a feedback message
 
 # v0.0.6
 
