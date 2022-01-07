@@ -95,7 +95,8 @@
   (and (not (oref review-obj feedback))
        (not (string-equal (oref review-obj state) "APPROVE"))
        (not (and (string-equal (oref review-obj state) "COMMENT")
-                 (code-review-gitlab-repo-p (oref review-obj pr))))))
+                 (or (code-review-github-repo-p (oref review-obj pr))
+                     (code-review-gitlab-repo-p (oref review-obj pr)))))))
 
 ;;;###autoload
 (defun code-review--submit (event &optional feedback only-reply?)
