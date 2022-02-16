@@ -12,8 +12,9 @@
 - [4ccad8c](https://github.com/wandersoncferreira/code-review/commit/4ccad8cb89ad38075a23023affbac1eb545a99ab): [gitlab] send feedback comment. Sorry commit on master, too tired :/
 - [#185](https://github.com/wandersoncferreira/code-review/pull/185): [gitlab] set title
 - [#187](https://github.com/wandersoncferreira/code-review/pull/187): [github] feature add - suggestion box bound to `C-c C-s`
-- [#188](https://github.com/wandersoncferreira/code-review/pull/188): commands to jump to comments forward and backwards 
+- [#188](https://github.com/wandersoncferreira/code-review/pull/188): commands to jump to comments forward and backwards
 - [#189](https://github.com/wandersoncferreira/code-review/pull/190): Github: Ability to review a PR without leaving a feedback message
+- [#198](https://github.com/wandersoncferreira/code-review/pull/198): [github] clarify docs
 
 # v0.0.6
 
@@ -71,7 +72,6 @@
 - [#86](https://github.com/wandersoncferreira/code-review/pull/86): allow users to define function to open Code Review buffer.
 - [#90](https://github.com/wandersoncferreira/code-review/pull/90): support visit binary files on Dired (`RET`) or Remote (`C-c C-v`)
 - [#93](https://github.com/wandersoncferreira/code-review/pull/93): add single top level comment in the PR page without a review attached
-
 
 # v0.0.2
 

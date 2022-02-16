@@ -22,6 +22,7 @@ Names below are sorted alphabetically.
 - Michael Eliachevitch <m.eliachevitch@posteo.de>
 - Ethan Leba <ethanleba5@gmail.com>
 - Kevin Fleming <kvnflm@gmail.com>
+- Luis Osa <luis.osa.gdc@gmail.com>
 
 # I would like to join this list. How can I help the project?
 
