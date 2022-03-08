@@ -295,7 +295,7 @@ Optionally set a FEEDBACK message."
   "Choose an unfinished Review from the previous unfinished list."
   (interactive)
   (let* ((objs (code-review-db-all-unfinished))
-         (choice (completing-read "Unifinished Reviews: "
+         (choice (completing-read "Unfinished Reviews: "
                                   (-map
                                    (lambda (o)
                                      (format "%s/%s - %s - %s"
