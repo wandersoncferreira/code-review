@@ -15,7 +15,9 @@
 - [#188](https://github.com/wandersoncferreira/code-review/pull/188): commands to jump to comments forward and backwards
 - [#189](https://github.com/wandersoncferreira/code-review/pull/190): Github: Ability to review a PR without leaving a feedback message
 - [#198](https://github.com/wandersoncferreira/code-review/pull/198): [github] clarify docs
+- [a7e3d7b](https://github.com/luskwater/code-review/commit/a7e3d7b39d6e442690295767944cb7e42b7a3757): fix minor typo in prompt for unfinished reviews
 - [#199](https://github.com/wandersoncferreira/code-review/pull/199): [github] clarify configuration for *GitHub Enterprise*
+
 # v0.0.6
 
 - [#138](https://github.com/wandersoncferreira/code-review/pull/138): fix bug rendering suggested change block
