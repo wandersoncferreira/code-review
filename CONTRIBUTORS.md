@@ -24,6 +24,7 @@ Names below are sorted alphabetically.
 - Kevin Fleming <kvnflm@gmail.com>
 - Luis Osa <luis.osa.gdc@gmail.com>
 - Ron Lusk <ronlusk@gmail.com>
+- Brian Leung <leungbk@posteo.net>
 
 # I would like to join this list. How can I help the project?
 
