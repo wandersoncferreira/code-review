@@ -739,35 +739,31 @@ If a valid ASSIGNEE is provided, use that instead."
 ;;; * Handle deprecated commands
 ;;; all these commands were renamed and you should use the new version
 
-(defvar code-review-actions--renamed
-  '((code-review-approve . code-review-submit-approve)
-    (code-review-comments . code-review-submit-comments)
-    (code-review-request-changes . code-review-submit-request-changes)
-    (code-review-choose-unfinished-review . code-review-open-unfinished-review)
-    (code-review-add-single-diff-comment . code-review-submit-single-diff-comment-at-point)
-    (code-review-submit-single-diff-comment . code-review-submit-single-diff-comment-at-point)
-    (code-review-add-single-comment . code-review-submit-single-top-level-comment)
-    (code-review-comment-set-feedback . code-review-set-feedback)
-    (code-review--set-assignee-yourself . code-review-set-yourself-assignee)
-    (code-review--set-assignee . code-review-set-assignee)
-    (code-review--set-milestone . code-review-set-milestone)
-    (code-review--set-label . code-review-set-label)
-    (code-review-comment-set-title . code-review-set-title)
-    (code-review-comment-set-description . code-review-set-description)
-    (code-review-promote-comment-to-new-issue . code-review-promote-comment-at-point-to-new-issue))
-  "Functions renamed in release 0.0.5.")
-
-(defun code-review--define-obsolete-fns (old-name new-fn)
-  `(progn
-     (defun ,old-name () (interactive) (funcall ,new-fn))
-     (define-obsolete-function-alias ',old-name ',new-fn "v0.0.5")))
+(eval-and-compile
+  (defvar code-review-actions--renamed
+    '((code-review-approve . code-review-submit-approve)
+      (code-review-comments . code-review-submit-comments)
+      (code-review-request-changes . code-review-submit-request-changes)
+      (code-review-choose-unfinished-review . code-review-open-unfinished-review)
+      (code-review-add-single-diff-comment . code-review-submit-single-diff-comment-at-point)
+      (code-review-submit-single-diff-comment . code-review-submit-single-diff-comment-at-point)
+      (code-review-add-single-comment . code-review-submit-single-top-level-comment)
+      (code-review-comment-set-feedback . code-review-set-feedback)
+      (code-review--set-assignee-yourself . code-review-set-yourself-assignee)
+      (code-review--set-assignee . code-review-set-assignee)
+      (code-review--set-milestone . code-review-set-milestone)
+      (code-review--set-label . code-review-set-label)
+      (code-review-comment-set-title . code-review-set-title)
+      (code-review-comment-set-description . code-review-set-description)
+      (code-review-promote-comment-to-new-issue . code-review-promote-comment-at-point-to-new-issue))
+    "Functions renamed in release 0.0.5."))
 
 (defmacro code-review-set-obsolete-fns ()
   "Make functions in `code-review-actions--renamed' list obsolete."
   `(progn
      ,@(-map
-        (lambda (f)
-          (code-review--define-obsolete-fns (car f) (cdr f)))
+        (pcase-lambda (`(,old-name . ,new-name))
+          `(define-obsolete-function-alias ',old-name ',new-name "v0.0.5"))
         code-review-actions--renamed)))
 
 (code-review-set-obsolete-fns)
