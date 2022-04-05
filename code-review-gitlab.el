@@ -78,7 +78,7 @@ Optionally using VARIABLES.  Provide HOST and CALLBACK fn."
   (glab-request "POST" "/graphql" nil :payload (json-encode
                                                 `(("query" . ,graphql)
                                                   ,@(and variables `(("variables" ,@variables)))))
-                :auth 'code-review
+                :auth code-review-auth-login-marker
                 :host code-review-gitlab-graphql-host
                 :callback callback
                 :errorback #'code-review-gitlab-errback))
@@ -284,7 +284,7 @@ The payload is used to send a MR review to Gitlab."
             nil
             :unpaginate t
             :host code-review-gitlab-host
-            :auth 'code-review
+            :auth code-review-auth-login-marker
             :callback callback
             :errorback #'code-review-gitlab-errback))
 
@@ -426,7 +426,7 @@ Optionally sets FALLBACK? to get minimal query."
                                 (oref reply reply-to-id))
                         nil
                         :payload (a-alist 'body (oref reply body))
-                        :auth 'code-review
+                        :auth code-review-auth-login-marker
                         :host code-review-gitlab-host
                         :errorback #'code-review-gitlab-errback
                         :callback (lambda (&rest _)))))
@@ -467,7 +467,7 @@ Optionally sets FALLBACK? to get minimal query."
                            (code-review-gitlab--project-id pr)
                            (oref pr number))
                    nil
-                   :auth 'code-review
+                   :auth code-review-auth-login-marker
                    :host code-review-gitlab-host
                    :payload (code-review-gitlab-fix-payload payload c)
                    :callback (lambda (&rest _)
@@ -479,7 +479,7 @@ Optionally sets FALLBACK? to get minimal query."
                           (code-review-gitlab--project-id pr)
                           (oref pr number))
                   nil
-                  :auth 'code-review
+                  :auth code-review-auth-login-marker
                   :host code-review-gitlab-host
                   :payload `((sha . ,(a-get-in infos (list 'diffRefs 'headSha))))
                   :username (code-review-gitlab--user)))
@@ -490,7 +490,7 @@ Optionally sets FALLBACK? to get minimal query."
                           (code-review-gitlab--project-id pr)
                           (oref pr number))
                   nil
-                  :auth 'code-review
+                  :auth code-review-auth-login-marker
                   :host code-review-gitlab-host
                   :payload `((body . ,(oref review feedback))))
        (message "Review Comment successfully sent!")))
@@ -518,7 +518,7 @@ Optionally sets FALLBACK? to get minimal query."
                        nil
                        :unpaginate t
                        :host code-review-gitlab-host
-                       :auth 'code-review
+                       :auth code-review-auth-login-marker
                        :noerror 'return)))
     (if (a-get res 'error)
         (error (prin1-to-string res))
@@ -535,7 +535,7 @@ Optionally sets FALLBACK? to get minimal query."
                       (code-review-gitlab--project-id gitlab)
                       (oref gitlab number))
               nil
-              :auth 'code-review
+              :auth code-review-auth-login-marker
               :host code-review-gitlab-host
               :payload `((labels .,labels-str))
               :callback (lambda (&rest _) (funcall callback)))))
@@ -562,7 +562,7 @@ Optionally sets FALLBACK? to get minimal query."
                     (code-review-gitlab--project-id gitlab)
                     (oref gitlab number))
             nil
-            :auth 'code-review
+            :auth code-review-auth-login-marker
             :host code-review-gitlab-host
             :payload `((title .,(oref gitlab title)))
             :callback (lambda (&rest _) (funcall callback))))
@@ -608,7 +608,7 @@ Return the blob URL if BLOB? is provided."
                      (code-review-gitlab--project-id gitlab)
                      (oref gitlab number))
              nil
-             :auth 'code-review
+             :auth code-review-auth-login-marker
              :host code-review-gitlab-host
              :payload (a-alist 'body comment-msg)
              :callback callback
@@ -628,7 +628,7 @@ Return the blob URL if BLOB? is provided."
                        (code-review-gitlab--project-id gitlab)
                        (oref gitlab number))
                nil
-               :auth 'code-review
+               :auth code-review-auth-login-marker
                :host code-review-gitlab-host
                :payload (code-review-gitlab-fix-payload payload local-comment)
                :callback (lambda (&rest _)

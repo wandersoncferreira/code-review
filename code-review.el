@@ -88,6 +88,16 @@
   "Do not warn on auth source search because it messes with progress reporter."
   (setq-local auth-source-debug (lambda (&rest _))))
 
+(defcustom code-review-auth-login-marker
+  'code-review
+  "Symbol for looking up the github, gitlab and bitbucket login
+data in auth-sources (e.g. ~/.authinfo.gpg). By default, it is
+set to 'code-review, but if you have already configured the
+logins for magit forge, you can use these by setting this option
+to 'forge."
+  :group 'code-review
+  :type 'symbol)
+
 ;;; Entrypoint
 
 ;;;###autoload

@@ -53,7 +53,7 @@ An optionally provide a CALLBACK."
   (ghub-request "POST" url
                 nil
                 :forge 'bitbucket
-                :auth 'code-review
+                :auth code-review-auth-login-marker
                 :host code-review-bitbucket-host
                 :payload payload
                 :callback callback
@@ -64,7 +64,7 @@ An optionally provide a CALLBACK."
   (ghub-request "GET" url
                 nil
                 :forge 'bitbucket
-                :auth 'code-review
+                :auth code-review-auth-login-marker
                 :host code-review-bitbucket-host
                 :callback callback))
 
@@ -73,7 +73,7 @@ An optionally provide a CALLBACK."
   (ghub-request "GET" url
                 nil
                 :forge 'bitbucket
-                :auth 'code-review
+                :auth code-review-auth-login-marker
                 :host code-review-bitbucket-host
                 :noerror 'return))
 
