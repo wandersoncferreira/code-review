@@ -95,6 +95,15 @@ Change the destination where binary files is downloaded.
 ```
 
 
+#### Experimental
+
+Use passwords configured for forge. The default is `'code-review`.
+
+``` emacs-lisp
+(setq code-review-auth-login-marker 'forge)
+```
+
+
 ### Forge specific
 
 Follow the documentation to your version control provider to see more details
