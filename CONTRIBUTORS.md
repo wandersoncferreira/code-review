@@ -25,6 +25,7 @@ Names below are sorted alphabetically.
 - Luis Osa <luis.osa.gdc@gmail.com>
 - Ron Lusk <ronlusk@gmail.com>
 - Brian Leung <leungbk@posteo.net>
+- Harald Judt <h.judt@gmx.at>
 
 # I would like to join this list. How can I help the project?
 
