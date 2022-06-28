@@ -646,7 +646,7 @@ INDENT count of spaces are added at the start of every line."
                     (progn
                       (insert (format "%s%s %s "
                                       (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
-                                      (oref obj msg)
+                                      (car (split-string (oref obj msg) "\n"))
                                       (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
                                           ":white_check_mark:"
                                         ":x:")))
