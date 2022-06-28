@@ -206,7 +206,7 @@ Optionally define a MSG."
                          (t
                           "UNCHANGED")))
              (suggestion
-              (format "%s\n\n```suggestion\n %s\n"
+              (format "%s\n\n```suggestion\n%s\n```\n"
                       code-review-comment-suggestion-msg
                       (substring line 1)))
              (amount-loc nil))
