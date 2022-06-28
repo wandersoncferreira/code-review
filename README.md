@@ -73,6 +73,12 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 ### Code Review
 
+If you want to see pretty symbols enable `emojify` package:
+
+``` emacs-lisp
+(add-hook 'code-review-mode-hook #'emojify-mode)
+```
+
 Define line wrap in comment sections.
 
 ``` emacs-lisp

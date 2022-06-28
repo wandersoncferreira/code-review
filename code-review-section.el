@@ -654,6 +654,9 @@ INDENT count of spaces are added at the start of every line."
                        (propertize "Expand for Details:" 'font-lock-face 'code-review-checker-detail-face))
                       (oset commit-section hidden t)
                       (magit-insert-heading)
+                      (when (> (length (split-string (oref obj msg) "\n")) 1)
+                        (insert (oref obj msg))
+                        (insert "\n"))
                       (dolist (check .commit.statusCheckRollup.contexts.nodes)
                         (let-alist check
                           (let ((obj (code-review-commit-check-detail-section :check check :details .detailsUrl)))
