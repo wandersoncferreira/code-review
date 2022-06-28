@@ -101,6 +101,19 @@ Use passwords configured for forge. The default is `'code-review`.
 (setq code-review-auth-login-marker 'forge)
 ```
 
+#### Doom Emacs users
+
+I've noticed that `*Code Review*` buffer is not added into the current workspace
+in Doom emacs. If you have `workspaces` in your `$DOOMDIR/init.el` file,
+consider the following snippet:
+
+``` emacs-lisp
+(add-hook 'code-review-mode-hook
+          (lambda ()
+            ;; include *Code-Review* buffer into current workspace
+            (persp-add-buffer (current-buffer))))
+```
+
 
 ### Forge specific
 
