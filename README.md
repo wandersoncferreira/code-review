@@ -1,8 +1,6 @@
 [![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](https://melpa.org/packages/code-review-badge.svg)](https://melpa.org/#/code-review)
 ![Tests](https://github.com/wandersoncferreira/code-review/actions/workflows/ci.yml/badge.svg)
-[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dbartuka%26type%3Dpatrons&style=flat)](https://patreon.com/bartuka)
-
 
 # Code Review
 
