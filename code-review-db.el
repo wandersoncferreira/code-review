@@ -540,7 +540,7 @@ Very Bad Performance!."
        (let* ((comments (oref path comments))
               (comment (if (eieio-object-p comments) comments (-first-item comments))))
          (if written?
-             written?
+             t
            (when comment
              (-contains-p (oref comment identifiers) identifier)))))
      nil
