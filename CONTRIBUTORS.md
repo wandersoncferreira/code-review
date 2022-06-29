@@ -26,6 +26,7 @@ Names below are sorted alphabetically.
 - Ron Lusk <ronlusk@gmail.com>
 - Brian Leung <leungbk@posteo.net>
 - Harald Judt <h.judt@gmx.at>
+- [@RagnarGrootKoerkamp](https://github.com/RagnarGrootKoerkamp)
 
 # I would like to join this list. How can I help the project?
 
