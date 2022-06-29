@@ -2,6 +2,10 @@
 
 # Unreleased
 
+- [#218](https://github.com/wandersoncferreira/code-review/pull/218): fix section toggle on files changed, small UI issues, fix CI, organize code
+- [#217](https://github.com/wandersoncferreira/code-review/pull/217): fix suggestion code block
+- [#213](https://github.com/wandersoncferreira/code-review/pull/213): Make auth login marker configurable
+
 # v0.0.7
 
 - [#169](https://github.com/wandersoncferreira/code-review/pull/169): [gitlab] set labels command
@@ -19,7 +23,6 @@
 - [#198](https://github.com/wandersoncferreira/code-review/pull/198): [github] clarify docs
 - [a7e3d7b](https://github.com/luskwater/code-review/commit/a7e3d7b39d6e442690295767944cb7e42b7a3757): fix minor typo in prompt for unfinished reviews
 - [#199](https://github.com/wandersoncferreira/code-review/pull/199): [github] clarify configuration for *GitHub Enterprise*
-- [#213](https://github.com/wandersoncferreira/code-review/pull/213): Make auth login marker configurable
 
 # v0.0.6
 

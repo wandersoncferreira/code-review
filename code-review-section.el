@@ -591,8 +591,7 @@ INDENT count of spaces are added at the start of every line."
                          (when .at
                            (insert " " (propertize (code-review-utils--format-timestamp .at) 'face 'code-review-timestamp-face))))
                        (insert ?\n)))))
-               groups)
-      (insert ?\n))))
+               groups))))
 
 ;; headers hook definition
 
@@ -646,7 +645,7 @@ INDENT count of spaces are added at the start of every line."
                     (progn
                       (insert (format "%s%s %s "
                                       (propertize (format "%-6s " (oref obj sha)) 'font-lock-face 'magit-hash)
-                                      (oref obj msg)
+                                      (car (split-string (oref obj msg) "\n"))
                                       (if (string-equal .commit.statusCheckRollup.state "SUCCESS")
                                           ":white_check_mark:"
                                         ":x:")))
@@ -654,6 +653,9 @@ INDENT count of spaces are added at the start of every line."
                        (propertize "Expand for Details:" 'font-lock-face 'code-review-checker-detail-face))
                       (oset commit-section hidden t)
                       (magit-insert-heading)
+                      (when (> (length (split-string (oref obj msg) "\n")) 1)
+                        (insert (oref obj msg))
+                        (insert "\n"))
                       (dolist (check .commit.statusCheckRollup.contexts.nodes)
                         (let-alist check
                           (let ((obj (code-review-commit-check-detail-section :check check :details .detailsUrl)))
@@ -801,6 +803,10 @@ INDENT count of spaces are added at the start of every line."
                                  (--sort
                                   (< (time-to-seconds (date-to-time (a-get it 'createdAt)))
                                      (time-to-seconds (date-to-time (a-get other 'createdAt))))))))
+      (when (not list-of-comments)
+        (insert (propertize "No conversation found." 'font-lock-face 'magit-dimmed))
+        (insert ?\n))
+
       (dolist (c list-of-comments)
         (let* ((reactions (a-get-in c (list 'reactions 'nodes)))
                (reaction-objs (when reactions
@@ -829,7 +835,8 @@ INDENT count of spaces are added at the start of every line."
                reaction-objs
                "comment"
                (a-get c 'databaseId)))
-            (insert ?\n)))))))
+            (insert ?\n))))
+      (insert ?\n))))
 
 (cl-defmethod code-review--insert-conversation-section ((gitlab code-review-gitlab-repo))
   "Function to insert conversation section for GITLAB PRs."
@@ -1427,6 +1434,20 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
                    amount-loc-incr))
             (code-review-comment-insert-lines c)))))))
 
+(defun code-review-section-insert-files-changed ()
+  (let ((files (a-get (code-review-db--pullreq-raw-infos) 'files)))
+    (let-alist files
+      (insert (propertize
+               (concat "Files changed"
+                       (when files
+                         (format " (%s files; %s additions, %s deletions)"
+                                 (length .nodes)
+                                 (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
+                                 (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))))
+               'font-lock-face
+               'magit-section-heading)))
+    (magit-insert-heading)))
+
 (defun code-review-section--magit-diff-insert-file-section
     (file orig status modes rename header &optional long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE.
@@ -1441,7 +1462,7 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
                        raw-path-name)))
     (code-review-db--curr-path-update clean-path))
     ;;; --- end -- code-review specific code.
-
+  (insert ?\n)
   (magit-insert-section section
     (file file (or (equal status "deleted")
                    (derived-mode-p 'magit-status-mode)))
@@ -1470,7 +1491,8 @@ ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the origina
                             'face 'code-review-request-review-face
                             'mouse-face 'highlight
                             'help-echo "Visit the file in Dired buffer"
-                            'keymap 'code-review-binary-file-section-map) "\n")))
+                            'keymap 'code-review-binary-file-section-map))
+        (magit-insert-heading)))
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun code-review-section--magit-diff-wash-hunk ()
@@ -1486,7 +1508,7 @@ Argument GROUPED-COMMENTS comments grouped by path and diff position."
            (path-name (oref path name))
            (head-pos (oref path head-pos)))
       (when (not head-pos)
-        (let ((adjusted-pos (+ 1 (code-review--line-number-at-pos))))
+        (let ((adjusted-pos (+ (code-review--line-number-at-pos) 1)))
           (code-review-db--curr-path-head-pos-update path-name adjusted-pos)
           (setq head-pos adjusted-pos)
           (setq path-name path-name)))
@@ -1567,6 +1589,9 @@ Please Report this Bug" path-name))
 
 ;;; * build buffer
 
+(defclass code-review--root-section (magit-section)
+  ((body :initform nil)))
+
 (defun code-review--trigger-hooks (buff-name &optional commit-focus? msg)
   "Trigger magit section hooks and draw BUFF-NAME.
 Run code review commit buffer hook when COMMIT-FOCUS? is non-nil.
@@ -1591,24 +1616,12 @@ If you want to display a minibuffer MSG in the end."
               (erase-buffer)
               (insert (code-review-db--pullreq-raw-diff))
               (insert ?\n))
-            (magit-insert-section (review-buffer)
+            (magit-insert-section section (code-review--root-section)
               (magit-insert-section (code-review)
-                (if commit-focus?
-                    (magit-run-section-hook 'code-review-sections-commit-hook)
-                  (magit-run-section-hook 'code-review-sections-hook)))
-              (let ((files (a-get (code-review-db--pullreq-raw-infos) 'files)))
-                (magit-insert-section (code-review-files-report-section)
-                  (let-alist files
-                    (insert (propertize
-                             (concat "Files changed"
-                                     (when files
-                                       (format " (%s files; %s additions, %s deletions)"
-                                               (length .nodes)
-                                               (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .nodes))
-                                               (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .nodes)))))
-                             'font-lock-face
-                             'magit-section-heading)))
-                  (magit-insert-heading)
+                (magit-run-section-hook 'code-review-sections-hook))
+              (magit-insert-section (code-review-files-report-section)
+                (code-review-section-insert-files-changed)
+                (magit-insert-section (code-review-files-chnged)
                   (magit-wash-sequence
                    (apply-partially #'magit-diff-wash-diff ())))))
             (if window

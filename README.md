@@ -73,6 +73,12 @@ code-review-forge-pr-at-point` if you are in a forge buffer over a PR.
 
 ### Code Review
 
+If you want to see pretty symbols enable `emojify` package:
+
+``` emacs-lisp
+(add-hook 'code-review-mode-hook #'emojify-mode)
+```
+
 Define line wrap in comment sections.
 
 ``` emacs-lisp
@@ -99,6 +105,19 @@ Use passwords configured for forge. The default is `'code-review`.
 
 ``` emacs-lisp
 (setq code-review-auth-login-marker 'forge)
+```
+
+#### Doom Emacs users
+
+I've noticed that `*Code Review*` buffer is not added into the current workspace
+in Doom emacs. If you have `workspaces` in your `$DOOMDIR/init.el` file,
+consider the following snippet:
+
+``` emacs-lisp
+(add-hook 'code-review-mode-hook
+          (lambda ()
+            ;; include *Code-Review* buffer into current workspace
+            (persp-add-buffer (current-buffer))))
 ```
 
 

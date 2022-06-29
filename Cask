@@ -4,6 +4,7 @@
 (depends-on "emacs" "25.1")
 (depends-on "closql" "1.2.0")
 (depends-on "magit" "3.0.0")
+(depends-on "transient" "0.3.7")
 (depends-on "a" "1.0.0")
 (depends-on "ghub" "3.5.1")
 (depends-on "uuidgen" "1.2")
