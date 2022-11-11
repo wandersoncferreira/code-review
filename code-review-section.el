@@ -1449,9 +1449,9 @@ A quite good assumption: every comment in an outdated hunk will be outdated."
     (magit-insert-heading)))
 
 (defun code-review-section--magit-diff-insert-file-section
-    (file orig status modes rename header &optional long-status)
+    (file orig status modes rename header binary long-status)
   "Overwrite the original Magit function on `magit-diff.el' FILE.
-ORIG, STATUS, MODES, RENAME, HEADER and LONG-STATUS are arguments of the original fn."
+ORIG, STATUS, MODES, RENAME, HEADER, BINARY and LONG-STATUS are arguments of the original fn."
 
   ;;; --- beg -- code-review specific code.
   ;;; I need to set a reference point for the first hunk header
