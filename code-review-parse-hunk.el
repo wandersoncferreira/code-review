@@ -35,12 +35,12 @@
 (defvar code-review-parse--hunk-regex
   (rx "@@ -"
       (group-n 1 (one-or-more digit))
-      ","
-      (group-n 2 (one-or-more digit))
+      (opt ","
+           (group-n 2 (one-or-more digit)))
       " +"
       (group-n 3 (one-or-more digit))
-      ","
-      (group-n 4 (one-or-more digit)))
+      (opt","
+          (group-n 4 (one-or-more digit))))
   "Regex to identify hunk sections.")
 
 (defun code-review-parse-hunk-table (hunkstring)
@@ -63,9 +63,9 @@
          ((and (eq 0 relative)
                (string-match code-review-parse--hunk-regex diffline))
           (setq old-start (string-to-number (match-string 1 diffline))
-                old-num-lines (string-to-number (match-string 2 diffline))
+                old-num-lines (string-to-number (or (match-string 2 diffline) "0"))
                 new-start (string-to-number (match-string 3 diffline))
-                new-num-lines (string-to-number (match-string 4 diffline))
+                new-num-lines (string-to-number (or (match-string 4 diffline) "0"))
                 del-counter old-start
                 add-counter new-start
                 new-change nil))
@@ -74,9 +74,9 @@
                (not (eq 0 relative)))
           (setq relative (+ 1 relative))
           (setq old-start (string-to-number (match-string 1 diffline))
-                old-num-lines (string-to-number (match-string 2 diffline))
+                old-num-lines (string-to-number (or (match-string 2 diffline) "0"))
                 new-start (string-to-number (match-string 3 diffline))
-                new-num-lines (string-to-number (match-string 4 diffline))
+                new-num-lines (string-to-number (or (match-string 4 diffline) "0"))
                 del-counter old-start
                 add-counter new-start
                 new-change nil))
