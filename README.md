@@ -120,6 +120,13 @@ consider the following snippet:
             (persp-add-buffer (current-buffer))))
 ```
 
+#### Insecure private instances
+
+If your private instance is https not https, then you need to add the host to the following variable.
+
+```emacs-lisp
+(setq ghub-insecure-hosts '("hostname.com"))
+```
 
 ### Forge specific
 
