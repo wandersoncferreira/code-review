@@ -356,7 +356,10 @@ Inform if a SUGGESTION-CODE? is being proposed."
                                 (buffer-substring-no-properties (point-min) (point-max))))))
              (pr (code-review-db-get-pullreq)))
 
-        (kill-buffer-and-window)
+        (kill-buffer (current-buffer))
+        (if (= 1 (length (window-list (window-frame (selected-window)))))
+            (delete-frame (window-frame (selected-window)))
+          (delete-window (selected-window)))
 
         (cond
 
@@ -445,7 +448,10 @@ Inform if a SUGGESTION-CODE? is being proposed."
 (defun code-review-comment-quit ()
   "Quit the comment window."
   (interactive)
-  (kill-buffer-and-window)
+  (kill-buffer (current-buffer))
+  (if (= 1 (length (window-list (window-frame (selected-window)))))
+      (delete-frame (window-frame (selected-window)))
+    (delete-window (selected-window)))
   (with-current-buffer (get-buffer code-review-buffer-name)
     (goto-char code-review-comment-cursor-pos)
     (code-review-comment-reset-global-vars)))
