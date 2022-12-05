@@ -29,6 +29,7 @@ Names below are sorted alphabetically.
 - [@RagnarGrootKoerkamp](https://github.com/RagnarGrootKoerkamp)
 - Damien Merenne <dam@cosinux.org>
 - Ben Matasar <ben@matasar.org>
+- Björn Bidar <bjorn.bidar@thaodan.de>
 
 # I would like to join this list. How can I help the project?
 
