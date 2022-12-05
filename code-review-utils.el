@@ -256,37 +256,41 @@ using COMMENTS."
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
-  (cond
-   ((string-prefix-p (format "https://%s" code-review-gitlab-base-url) url)
-    (save-match-data
-      (and (string-match (format "https://%s/\\([^/]*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)"
-                                 code-review-gitlab-base-url)
-                         url)
-           (a-alist 'num (match-string 3 url)
-                    'repo (replace-regexp-in-string "/" "%2F" (match-string 2 url))
-                    'owner (match-string 1 url)
-                    'forge 'gitlab
-                    'url url))))
-   ((string-prefix-p (format "https://%s" code-review-github-base-url) url)
-    (save-match-data
-      (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)"
-                                 code-review-github-base-url)
-                         url)
-           (a-alist 'num   (match-string 3 url)
-                    'repo  (match-string 2 url)
-                    'owner (match-string 1 url)
-                    'forge 'github
-                    'url url))))
-   ((string-prefix-p (format "https://%s" code-review-bitbucket-base-url) url)
-    (save-match-data
-      (and (string-match (format "https://%s/\\(.*\\)/\\(.*\\)/pull-requests/\\([0-9]+\\)"
-                                 code-review-bitbucket-base-url)
-                         url)
-           (a-alist 'num   (match-string 3 url)
-                    'repo  (match-string 2 url)
-                    'owner (match-string 1 url)
-                    'forge 'bitbucket
-                    'url url))))))
+  (let ((http-or-https (lambda (url) (if (member url ghub-insecure-hosts) "http://%s" "https://%s")))
+	(gitlab-http (http-or-https code-review-gitlab-base-url))
+	(github-http (http-or-https code-review-github-base-url))
+	(bitbucket-http (http-or-https code-review-bitbucket-base-url)))
+    (cond
+     ((string-prefix-p (format gitlab-http code-review-gitlab-base-url) url)
+      (save-match-data
+	(and (string-match (format (concat gitlab-http "/\\([^/]*\\)/\\(.*\\)/-/merge_requests/\\([0-9]+\\)")
+                                   code-review-gitlab-base-url)
+                           url)
+             (a-alist 'num (match-string 3 url)
+                      'repo (replace-regexp-in-string "/" "%2F" (match-string 2 url))
+                      'owner (match-string 1 url)
+                      'forge 'gitlab
+                      'url url))))
+     ((string-prefix-p (format github-http code-review-github-base-url) url)
+      (save-match-data
+	(and (string-match (format (concat github-http "/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)")
+                                   code-review-github-base-url)
+                           url)
+             (a-alist 'num   (match-string 3 url)
+                      'repo  (match-string 2 url)
+                      'owner (match-string 1 url)
+                      'forge 'github
+                      'url url))))
+     ((string-prefix-p (format bitbucket-http code-review-bitbucket-base-url) url)
+      (save-match-data
+	(and (string-match (format (concat bitbucket-http "/\\(.*\\)/\\(.*\\)/pull-requests/\\([0-9]+\\)")
+                                   code-review-bitbucket-base-url)
+                           url)
+             (a-alist 'num   (match-string 3 url)
+                      'repo  (match-string 2 url)
+                      'owner (match-string 1 url)
+                      'forge 'bitbucket
+                      'url url)))))))
 
 (defun code-review-utils-build-obj (pr-alist)
   "Return obj from PR-ALIST."
