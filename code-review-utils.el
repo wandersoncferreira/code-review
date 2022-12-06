@@ -256,10 +256,10 @@ using COMMENTS."
 
 (defun code-review-utils-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
-  (let ((http-or-https (lambda (url) (if (member url ghub-insecure-hosts) "http://%s" "https://%s")))
-	(gitlab-http (http-or-https code-review-gitlab-base-url))
-	(github-http (http-or-https code-review-github-base-url))
-	(bitbucket-http (http-or-https code-review-bitbucket-base-url)))
+  (let* ((http-or-https (lambda (url) (if (member url ghub-insecure-hosts) "http://%s" "https://%s")))
+	 (gitlab-http (funcall http-or-https code-review-gitlab-base-url))
+	 (github-http (funcall http-or-https code-review-github-base-url))
+	 (bitbucket-http (funcall http-or-https code-review-bitbucket-base-url)))
     (cond
      ((string-prefix-p (format gitlab-http code-review-gitlab-base-url) url)
       (save-match-data
