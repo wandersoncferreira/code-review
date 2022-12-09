@@ -122,7 +122,7 @@ consider the following snippet:
 
 #### Insecure private instances
 
-If your private instance is https not https, then you need to add the host to the following variable.
+If your private instance is HTTP not HTTPS, then you need to add the host to the following variable.
 
 ```emacs-lisp
 (setq ghub-insecure-hosts '("hostname.com"))
