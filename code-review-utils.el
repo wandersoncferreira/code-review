@@ -348,13 +348,87 @@ Return a value between 0 and 1."
 
 ;; Copy of `rainbow-color-luminance'.
 ;; Also see https://en.wikipedia.org/wiki/Relative_luminance.
-(defun code-review-utils--color-luminance (red green blue)
   "Calculate the luminance of color composed of RED, GREEN and BLUE.
+(defun code-review-utils--color-luminance (red green blue)
 Return a value between 0 and 1."
   (/ (+ (* .2126 red) (* .7152 green) (* .0722 blue)) 256))
 
 
 ;;; Forge interface
+(defmacro code-review-ediff-buffers (quit &rest spec)
+  (declare (indent 1))
+  (let ((fn (if (= (length spec) 3) 'ediff-buffers3 'ediff-buffers))
+        (char ?@)
+        get make kill)
+    (pcase-dolist (`(,g ,m) spec)
+      (let ((b (intern (format "buf%c" (cl-incf char)))))
+        (push `(,b ,g) get)
+        (push `(if ,b
+                   (if magit-ediff-use-indirect-buffers
+                       (prog1
+                           (make-indirect-buffer
+                            ,b (generate-new-buffer-name (buffer-name ,b)) t)
+                         (setq ,b nil))
+                     ,b)
+                 ,m)
+              make)
+        (push `(unless ,b
+                 (ediff-kill-buffer-carefully
+                  ,(intern (format "ediff-buffer-%c" char))))
+              kill)))
+    (setq get  (nreverse get))
+    (setq make (nreverse make))
+    (setq kill (nreverse kill))
+    `(let ((conf (current-window-configuration))
+           ,@get)
+       (,fn
+        ,@make
+        (list (lambda ()
+                (setq-local
+                 ediff-quit-hook
+                 (list ,@(and quit (list quit))
+                       (lambda ()
+                         ,@kill
+                         (let ((magit-ediff-previous-winconf conf))
+                           (run-hooks 'magit-ediff-quit-hook)))))))
+        ',fn))))
+
+(defun code-review-ediff-compare (revA revB fileA fileB)
+  "Compare REVA:FILEA with REVB:FILEB using Ediff.
+
+FILEA and FILEB have to be relative to the top directory of the
+repository.  If REVA or REVB is nil, then this stands for the
+working tree state.
+
+If the region is active, use the revisions on the first and last
+line of the region.  With a prefix argument, instead of diffing
+the revisions, choose a revision to view changes along, starting
+at the common ancestor of both revisions (i.e., use a \"...\"
+range)."
+  (interactive)
+  (code-review-ediff-buffers nil
+    ((if revA (magit-get-revision-buffer revA fileA) (get-file-buffer    fileA))
+     (if revA (magit-find-file-noselect  revA fileA) (find-file-noselect fileA)))
+    ((if revB (magit-get-revision-buffer revB fileB) (get-file-buffer    fileB))
+     (if revB (magit-find-file-noselect  revB fileB) (find-file-noselect fileB)))))
+
+(defun code-review-ediff-compare-file-at-point ()
+  (interactive)
+  (let* ((forge-pr
+          (-first-item
+           (mapcar
+            (lambda (row)
+              (closql--remake-instance 'forge-pullreq (forge-db) row))
+            (forge-sql
+             [:select $i1 :from pullreq
+              :join repository :on (= repository:id pullreq:repository)
+              :where (and (= repository:owner "eval-all-software")
+                          (= repository:name "tempo")
+                          (= pullreq:number 107))]
+             (vconcat (closql--table-columns (forge-db) 'pullreq t))))))
+         (default-directory "~/code/tempo"))
+    (forge-checkout-pullreq forge-pr)
+    (code-review-ediff-compare "main" "pr-test" "docker-compose.yml" "docker-compose.yml")))
 
 (defun code-review-utils--alist-forge-at-point ()
   "Start from forge at point."
