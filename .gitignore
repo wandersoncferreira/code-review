@@ -4,4 +4,5 @@
 tmp/
 
 *.elc
+*autoloads*
 .cask
