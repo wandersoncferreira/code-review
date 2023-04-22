@@ -511,7 +511,7 @@ Very Bad Performance!."
          (if written?
              t
            (when comment
-             (-contains-p (oref comment identifiers) identifier)))))
+             (and (-contains-p (oref comment identifiers) identifier) t)))))
      nil
      paths)))
 
