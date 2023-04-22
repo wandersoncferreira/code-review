@@ -35,18 +35,11 @@
 (require 'uuidgen)
 (require 'dash)
 
-(defcustom code-review-db-database-connector 'sqlite
-  "The database connector."
-  :group 'code-review
-  :type 'keyword)
-
 (defcustom code-review-db-database-file
   (expand-file-name "code-review-db-file.sqlite" user-emacs-directory)
   "The file used to store the `code-review' database."
   :group 'code-review
   :type 'file)
-
-(declare-function code-review-db-database--eieio-childp "code-review-db.el" (obj) t)
 
 (defclass code-review-db-buffer (closql-object)
   ((closql-table        :initform 'buffer)
@@ -116,41 +109,22 @@
    (buffer              :closql-class code-review-db-buffer))
   :abstract t)
 
-(defclass code-review-db-database (emacsql-sqlite-connection closql-database)
-  ((object-class :initform 'code-review-db-pullreq)))
+(defclass code-review-db-database (closql-database)
+  ((name         :initform "code-review-db")
+   (object-class :initform 'code-review-db-pullreq)
+   (file         :initform 'code-review-db-database-file)
+   (schemata     :initform 'code-review-db-table-schema)
+   (version      :initform 8)))
 
-;;; LOL, why? why did I started the database on version 7? :/
-;;; damn copy and paste from `forge-db'.
-(defconst code-review-db-version 8)
+(defvar code-review-db--override-connection-class nil)
 
-(defconst code-review-db--sqlite-available-p
-  (with-demoted-errors "Code Review initialization: %S"
-    (emacsql-sqlite-ensure-binary)
-    t))
+(defvar code-review-db--sqlite-available-p t)
 
-(defvar code-review-db-connection nil
-  "The EmacSQL database connection.")
-
-(defun code-review-db ()
-  "Start connection."
-  (unless (and code-review-db-connection (emacsql-live-p code-review-db-connection))
-    (make-directory (file-name-directory code-review-db-database-file) t)
-    (closql-db 'code-review-db-database 'code-review-db-connection
-               code-review-db-database-file t)
-    (let* ((db code-review-db-connection)
-           (version (closql--db-get-version db))
-           (version (code-review--db-maybe-update code-review-db-connection version)))
-      (cond
-       ((> version code-review-db-version)
-        (emacsql-close db)
-        (user-error
-         "The Code Review database was created with a newer Code Review version.  %s"
-         "You need to update the Code Review package."))
-       ((< version code-review-db-version)
-        (emacsql-close db)
-        (error "BUG: The Code Review database scheme changed %s"
-               "and there is no upgrade path.")))))
-  code-review-db-connection)
+(defun code-review-db (&optional livep)
+  (condition-case err
+      (closql-db 'code-review-db-database livep code-review-db--override-connection-class)
+    (error (setq code-review-db--sqlite-available-p nil)
+           (signal (car err) (cdr err)))))
 
 ;;; Schema
 
@@ -220,22 +194,17 @@
       [path] :references path [id]
       :on-delete :cascade))))
 
-(cl-defmethod closql--db-init ((db code-review-db-database))
-  "Initialize the DB."
-  (emacsql-with-transaction db
-    (pcase-dolist (`(,table . ,schema) code-review-db-table-schema)
-      (emacsql db [:create-table $i1 $S2] table schema))
-    (closql--db-set-version db code-review-db-version)))
-
-(defun code-review--db-maybe-update (db version)
-  (emacsql-with-transaction db
-    (when (= version 7)
-      (message "Upgrading Code Review database from version 7 to 8...")
-      (emacsql db [:alter-table pullreq :add-column base-ref-name :default nil])
-      (emacsql db [:alter-table pullreq :add-column head-ref-name :default nil])
-      (closql--db-set-version db (setq version 8))
-      (message "Upgrading Code Review database from version 7 to 8...done"))
-    version))
+(cl-defmethod closql--db-update-schema ((db code-review-db-database))
+  (let ((code-version (oref-default 'code-review-db-database version))
+        (version (closql--db-get-version db)))
+    (closql-with-transaction db
+      (when (= version 7)
+        (message "Upgrading Code Review database from version 7 to 8...")
+        (emacsql db [:alter-table pullreq :add-column base-ref-name :default nil])
+        (emacsql db [:alter-table pullreq :add-column head-ref-name :default nil])
+        (closql--db-set-version db (setq version 8))
+        (message "Upgrading Code Review database from version 7 to 8...done"))
+      (cl-call-next-method))))
 
 ;;; Core
 
@@ -436,12 +405,12 @@
                                           :buffer pr-id
                                           :name curr-path
                                           :at-pos-p t)))
-          (emacsql-with-transaction db
+          (closql-with-transaction db
             (closql-insert db buf t)
             (closql-insert db path t)))
       (let* ((paths (oref buf paths))
              (curr-path-re-enabled? nil))
-        (emacsql-with-transaction db
+        (closql-with-transaction db
           ;;; disable all previous ones and enable curr-path is already exists
           (-map
            (lambda (path)
@@ -542,7 +511,7 @@ Very Bad Performance!."
          (if written?
              t
            (when comment
-             (-contains-p (oref comment identifiers) identifier)))))
+             (and (-contains-p (oref comment identifiers) identifier) t)))))
      nil
      paths)))
 
