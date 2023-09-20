@@ -2,7 +2,7 @@
 ;;; Commentary:
 ;;; Code:
 
-(require 'uuidgen)
+(require 'forge)
 (require 'buttercup)
 (require 'code-review-db)
 (require 'code-review-gitlab)
@@ -16,7 +16,7 @@
    :number "num"))
 
 (defconst random-test-db
-  (format "/tmp/code-review-test-db-%s.sqlite" (uuidgen-4)))
+  (format "/tmp/code-review-test-db-%s.sqlite" (forge--uuid)))
 
 (defun with-written-section (fun expected &optional buffer-nil?)
   "Execute magit insert FUN and match against EXPECTED.
