@@ -7,7 +7,6 @@
 (depends-on "transient" "0.3.7")
 (depends-on "a" "1.0.0")
 (depends-on "ghub" "3.5.1")
-(depends-on "uuidgen" "1.2")
 (depends-on "deferred" "0.5.1")
 (depends-on "markdown-mode" "2.4")
 (depends-on "forge" "0.3.0")

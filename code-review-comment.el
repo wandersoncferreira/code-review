@@ -31,6 +31,7 @@
 (require 'code-review-section)
 (require 'code-review-utils)
 (require 'markdown-mode)
+(require 'forge)
 
 (defcustom code-review-comment-buffer-name "*Code Review Comment*"
   "Name of comment buffer."
@@ -268,7 +269,7 @@ Inform if a SUGGESTION-CODE? is being proposed."
                      default-buff-msg))
          (raw-comment `((author (login . ,(oref obj author)))
                         (state . ,(oref obj state))
-                        (comments (nodes ((internal-id . ,(uuidgen-4))
+                        (comments (nodes ((internal-id . ,(forge--uuid))
                                           (bodyText . ,clean-msg)
                                           (path . ,(oref obj path))
                                           (position . ,reply-pos)
@@ -291,7 +292,7 @@ Inform if a SUGGESTION-CODE? is being proposed."
                      default-buff-msg))
          (raw-comment `((author (login . ,(oref obj author)))
                         (state . ,(oref obj state))
-                        (comments (nodes ((internal-id . ,(uuidgen-4))
+                        (comments (nodes ((internal-id . ,(forge--uuid))
                                           (bodyText . ,clean-msg)
                                           (path . ,(oref obj path))
                                           (position . ,(oref obj position))

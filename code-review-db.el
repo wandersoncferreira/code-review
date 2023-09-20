@@ -32,7 +32,7 @@
 (require 'a)
 (require 'closql)
 (require 'eieio)
-(require 'uuidgen)
+(require 'forge)
 (require 'dash)
 
 (defcustom code-review-db-database-file
@@ -283,7 +283,7 @@
 
 (defun code-review-db--pullreq-create (obj)
   "Create a pullreq db object from OBJ."
-  (let* ((pr-id (uuidgen-4)))
+  (let* ((pr-id (forge--uuid)))
     (oset obj id pr-id)
     (closql-insert (code-review-db) obj t)
     (setq code-review-db--pullreq-id pr-id)))
@@ -395,7 +395,7 @@
 (defun code-review-db--curr-path-update (curr-path)
   "Update pullreq (ID) with CURR-PATH."
   (let* ((buf (code-review-db-get-buffer))
-         (new-path-id (uuidgen-4))
+         (new-path-id (forge--uuid))
          (db (code-review-db)))
     (if (not buf)
         (let* ((pr (code-review-db-get-pullreq))

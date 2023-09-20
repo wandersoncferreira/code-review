@@ -4,7 +4,7 @@
 
 (require 'a)
 (require 'dash)
-(require 'uuidgen)
+(require 'forge)
 (require 'buttercup)
 (require 'code-review-db)
 (require 'code-review-gitlab)
@@ -23,7 +23,7 @@
    :number "num"))
 
 (defconst random-test-db
-  (format "/tmp/code-review-test-db-%s.sqlite" (uuidgen-4)))
+  (format "/tmp/code-review-test-db-%s.sqlite" (forge--uuid)))
 
 (describe "pullreq"
   :var (code-review-database-file
